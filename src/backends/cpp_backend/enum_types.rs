@@ -37,10 +37,7 @@ impl BackendItem for CppEnumVariant {
         })
     }
 
-    fn from_ir(
-        input: Self::IrType,
-        _options: Option<&Self::ConversionOptions>,
-    ) -> ConversionResult<Self> {
+    fn from_ir(input: Self::IrType, _options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
         ConversionResult::new(CppEnumVariant {
             name: input.name,
             value: match input.value {
@@ -122,16 +119,11 @@ impl BackendItem for CppEnum {
         })
     }
 
-    fn from_ir(
-        input: Self::IrType,
-        options: Option<&Self::ConversionOptions>,
-    ) -> ConversionResult<Self> {
-        let options: &CppEnumConversionOptions =
-            options.unwrap_or(&CppEnumConversionOptions::DEFAULT);
+    fn from_ir(input: Self::IrType, options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
+        let options: &CppEnumConversionOptions = options.unwrap_or(&CppEnumConversionOptions::DEFAULT);
         let mut result_log = ConversionLog::new();
 
-        let visibility: ConversionResult<CppVisibility> =
-            CppVisibility::from_ir(input.visibility, None);
+        let visibility: ConversionResult<CppVisibility> = CppVisibility::from_ir(input.visibility, None);
         if visibility.log.has_warnings() {
             result_log.add_warnings(visibility.log.warnings);
         }
@@ -167,9 +159,7 @@ impl Default for CppEnumConversionOptions {
 }
 
 impl CppEnumConversionOptions {
-    pub const DEFAULT: Self = Self {
-        is_enum_class: false,
-    };
+    pub const DEFAULT: Self = Self { is_enum_class: false };
 }
 
 /// Render options for C++ enums.

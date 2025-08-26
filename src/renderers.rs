@@ -13,8 +13,7 @@ pub trait DefinitionRenderer: BackendMetadata {
     type RenderOptions: Default;
 
     /// The default render options for this renderer.
-    const DEFAULT_RENDER_OPTIONS: LazyLock<Self::RenderOptions> =
-        LazyLock::new(|| Self::RenderOptions::default());
+    const DEFAULT_RENDER_OPTIONS: LazyLock<Self::RenderOptions> = LazyLock::new(|| Self::RenderOptions::default());
 
     /// Render a language-specific define to a writer.
     ///
@@ -72,8 +71,7 @@ pub trait NamespaceRenderer: BackendMetadata {
     type RenderOptions: Default;
 
     /// The default render options for this renderer.
-    const DEFAULT_RENDER_OPTIONS: LazyLock<Self::RenderOptions> =
-        LazyLock::new(|| Self::RenderOptions::default());
+    const DEFAULT_RENDER_OPTIONS: LazyLock<Self::RenderOptions> = LazyLock::new(|| Self::RenderOptions::default());
 
     /// Render a language-specific namespace to a writer.
     ///
@@ -128,8 +126,7 @@ pub trait ConstantRenderer: BackendMetadata {
     type RenderOptions: Default;
 
     /// The default render options for this renderer.
-    const DEFAULT_RENDER_OPTIONS: LazyLock<Self::RenderOptions> =
-        LazyLock::new(|| Self::RenderOptions::default());
+    const DEFAULT_RENDER_OPTIONS: LazyLock<Self::RenderOptions> = LazyLock::new(|| Self::RenderOptions::default());
 
     /// Render a language-specific constant to a writer.
     ///
@@ -183,8 +180,7 @@ pub trait FunctionRenderer: BackendMetadata {
     type RenderOptions: Default;
 
     /// The default render options for this renderer.
-    const DEFAULT_RENDER_OPTIONS: LazyLock<Self::RenderOptions> =
-        LazyLock::new(|| Self::RenderOptions::default());
+    const DEFAULT_RENDER_OPTIONS: LazyLock<Self::RenderOptions> = LazyLock::new(|| Self::RenderOptions::default());
 
     /// Render a language-specific function to a writer.
     ///
@@ -240,8 +236,7 @@ pub trait EnumRenderer: BackendMetadata {
     type RenderOptions: Default;
 
     /// The default render options for this renderer.
-    const DEFAULT_RENDER_OPTIONS: LazyLock<Self::RenderOptions> =
-        LazyLock::new(|| Self::RenderOptions::default());
+    const DEFAULT_RENDER_OPTIONS: LazyLock<Self::RenderOptions> = LazyLock::new(|| Self::RenderOptions::default());
 
     /// The default variant render options for this renderer.
     const DEFAULT_ENUM_VARIANT_RENDER_OPTIONS: LazyLock<Self::EnumVariantRenderOptions> =
@@ -312,8 +307,7 @@ pub trait StructRenderer: BackendMetadata {
     type RenderOptions: Default;
 
     /// The default render options for this renderer.
-    const DEFAULT_RENDER_OPTIONS: LazyLock<Self::RenderOptions> =
-        LazyLock::new(|| Self::RenderOptions::default());
+    const DEFAULT_RENDER_OPTIONS: LazyLock<Self::RenderOptions> = LazyLock::new(|| Self::RenderOptions::default());
 
     /// Render a language-specific struct to a writer.
     ///
@@ -368,8 +362,7 @@ pub trait InterfaceRenderer: BackendMetadata {
     type RenderOptions: Default;
 
     /// The default render options for this renderer.
-    const DEFAULT_RENDER_OPTIONS: LazyLock<Self::RenderOptions> =
-        LazyLock::new(|| Self::RenderOptions::default());
+    const DEFAULT_RENDER_OPTIONS: LazyLock<Self::RenderOptions> = LazyLock::new(|| Self::RenderOptions::default());
 
     /// Render a language-specific interface to a writer.
     ///

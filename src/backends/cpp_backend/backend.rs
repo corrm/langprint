@@ -3,16 +3,14 @@ use std::io::{self, Write};
 use crate::{
     backends::{BackendFeature, BackendMetadata},
     helper::indent,
-    renderers::{
-        ConstantRenderer, DefinitionRenderer, EnumRenderer, FunctionRenderer, StructRenderer,
-    },
+    renderers::{ConstantRenderer, DefinitionRenderer, EnumRenderer, FunctionRenderer, StructRenderer},
     text::{IndentStyle, NewLineStyle},
 };
 
 use super::{
-    CppConstant, CppConstantRenderOptions, CppDefinition, CppDefinitionRenderOptions, CppEnum,
-    CppEnumRenderOptions, CppFunction, CppFunctionRenderOptions, CppStruct, CppStructRenderOptions,
-    CppVisibility, enum_types::CppEnumVariantRenderOptions,
+    CppConstant, CppConstantRenderOptions, CppDefinition, CppDefinitionRenderOptions, CppEnum, CppEnumRenderOptions,
+    CppFunction, CppFunctionRenderOptions, CppStruct, CppStructRenderOptions, CppVisibility,
+    enum_types::CppEnumVariantRenderOptions,
 };
 
 #[derive(Debug, Clone)]
@@ -131,11 +129,7 @@ impl ConstantRenderer for CppBackend {
         }
 
         // Determine which keyword to use based on options
-        let keyword: &str = if options.use_constexpr {
-            "constexpr"
-        } else {
-            "const"
-        };
+        let keyword: &str = if options.use_constexpr { "constexpr" } else { "const" };
 
         // Add inline if requested
         let inline_prefix: &str = if options.use_inline { "inline " } else { "" };
@@ -175,8 +169,7 @@ impl EnumRenderer for CppBackend {
         let options: &CppEnumRenderOptions = options.unwrap_or(&binding);
 
         let variant_binding = <CppBackend as EnumRenderer>::DEFAULT_ENUM_VARIANT_RENDER_OPTIONS;
-        let variant_options: &CppEnumVariantRenderOptions =
-            variant_options.unwrap_or(&variant_binding);
+        let variant_options: &CppEnumVariantRenderOptions = variant_options.unwrap_or(&variant_binding);
 
         // Add documentation if available and render_docs is enabled
         if options.render_docs {
@@ -310,9 +303,7 @@ impl FunctionRenderer for CppBackend {
 
         // Write documentation
         if options.render_docs {
-            if options.docs_on_definition && options.render_definition
-                || !options.docs_on_definition
-            {
+            if options.docs_on_definition && options.render_definition || !options.docs_on_definition {
                 if let Some(docs) = &input.docs {
                     self.write_docs(docs, indent_level, out)?;
                 }
@@ -441,8 +432,7 @@ impl FunctionRenderer for CppBackend {
             || input.is_deleted
             || input.is_default
             || (input.is_friend && options.render_body_if_friend);
-        let template_ok_to_skip: bool =
-            input.template_params.is_empty() || !options.render_body_if_template;
+        let template_ok_to_skip: bool = input.template_params.is_empty() || !options.render_body_if_template;
         let friend_ok_to_skip: bool = !input.is_friend || !options.render_body_if_friend;
         if !options.force_render_body && base_skip && template_ok_to_skip && friend_ok_to_skip {
             write!(out, ";")?;
@@ -458,8 +448,7 @@ impl FunctionRenderer for CppBackend {
 
                 // Process each line of the body with proper indentation
                 // Increase indent level for function body
-                let body_indent_str: String =
-                    indent(*indent_level + 1, self.indent_size, self.indent_style);
+                let body_indent_str: String = indent(*indent_level + 1, self.indent_size, self.indent_style);
 
                 for line in body_lines {
                     if !line.trim().is_empty() {
@@ -473,8 +462,7 @@ impl FunctionRenderer for CppBackend {
             } else {
                 // Use placeholder for empty body
                 // Increase indent level for function body
-                let body_indent_str: String =
-                    indent(*indent_level + 1, self.indent_size, self.indent_style);
+                let body_indent_str: String = indent(*indent_level + 1, self.indent_size, self.indent_style);
 
                 if self.open_brace_on_new_line {
                     write!(
@@ -685,8 +673,7 @@ impl StructRenderer for CppBackend {
                     _ => current_visibility,
                 };
 
-                let should_print_visibility: bool = effective_visibility
-                    != effective_current_visibility
+                let should_print_visibility: bool = effective_visibility != effective_current_visibility
                     || (index == 0 && options.render_default_visibility);
                 if should_print_visibility {
                     // Add a newline between sections (except before the first section)
@@ -703,8 +690,7 @@ impl StructRenderer for CppBackend {
                         CppVisibility::Protected => "protected",
                         CppVisibility::Private => "private",
                         CppVisibility::Default => {
-                            let default_visibility: &str =
-                                if input.is_class { "private" } else { "public" };
+                            let default_visibility: &str = if input.is_class { "private" } else { "public" };
                             default_visibility
                         }
                     };
@@ -783,8 +769,7 @@ impl StructRenderer for CppBackend {
                     }
                 } else {
                     // No alignment - write normally
-                    let mut field_decl =
-                        String::with_capacity(type_part.len() + field.name.len() + 10);
+                    let mut field_decl = String::with_capacity(type_part.len() + field.name.len() + 10);
                     field_decl.push_str(&type_part);
                     field_decl.push(' ');
                     field_decl.push_str(&field.name);
@@ -863,8 +848,7 @@ impl StructRenderer for CppBackend {
                     _ => current_visibility,
                 };
 
-                let should_print_visibility: bool = effective_visibility
-                    != effective_current_visibility
+                let should_print_visibility: bool = effective_visibility != effective_current_visibility
                     || (is_first_method && options.render_default_visibility);
                 if should_print_visibility {
                     // Decrease indent for visibility label
@@ -876,8 +860,7 @@ impl StructRenderer for CppBackend {
                         CppVisibility::Protected => "protected",
                         CppVisibility::Private => "private",
                         CppVisibility::Default => {
-                            let default_visibility: &str =
-                                if input.is_class { "private" } else { "public" };
+                            let default_visibility: &str = if input.is_class { "private" } else { "public" };
                             default_visibility
                         }
                     };
@@ -898,14 +881,7 @@ impl StructRenderer for CppBackend {
                 }
 
                 // Render the method
-                self.render_function_to::<&str>(
-                    method,
-                    None,
-                    None,
-                    Some(&options.method_options),
-                    indent_level,
-                    out,
-                )?;
+                self.render_function_to::<&str>(method, None, None, Some(&options.method_options), indent_level, out)?;
 
                 if !is_last_method {
                     write!(out, "{}", self.new_line.as_str())?;
@@ -935,12 +911,7 @@ impl StructRenderer for CppBackend {
 }
 
 impl CppBackend {
-    fn write_docs(
-        &self,
-        docs: &Vec<String>,
-        indent_level: &mut i32,
-        out: &mut impl Write,
-    ) -> Result<(), io::Error> {
+    fn write_docs(&self, docs: &Vec<String>, indent_level: &mut i32, out: &mut impl Write) -> Result<(), io::Error> {
         for line in docs {
             match self.docs_style {
                 DocsStyle::DoubleSlash => write!(

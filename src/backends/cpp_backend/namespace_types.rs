@@ -1,8 +1,8 @@
 use crate::{backends::BackendItem, conversion::ConversionResult, ir::LanguageNamespace};
 
 use super::{
-    CppConstant, CppConstantRenderOptions, CppDefinition, CppDefinitionRenderOptions, CppEnum,
-    CppEnumRenderOptions, CppEnumVariantRenderOptions, CppStruct, CppStructRenderOptions,
+    CppConstant, CppConstantRenderOptions, CppDefinition, CppDefinitionRenderOptions, CppEnum, CppEnumRenderOptions,
+    CppEnumVariantRenderOptions, CppStruct, CppStructRenderOptions,
 };
 
 /// Represents a C++ namespace definition.
@@ -30,10 +30,7 @@ impl BackendItem for CppNamespace {
         todo!()
     }
 
-    fn from_ir(
-        input: Self::IrType,
-        _options: Option<&Self::ConversionOptions>,
-    ) -> ConversionResult<Self> {
+    fn from_ir(input: Self::IrType, _options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
         todo!()
     }
 }

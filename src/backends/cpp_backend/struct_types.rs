@@ -5,8 +5,7 @@ use crate::{
 };
 
 use super::{
-    CppField, CppFieldRenderOptions, CppFunction, CppFunctionRenderOptions, CppGenericArgument,
-    CppVisibility,
+    CppField, CppFieldRenderOptions, CppFunction, CppFunctionRenderOptions, CppGenericArgument, CppVisibility,
 };
 
 /// Represents a base/super with its visibility in C++.
@@ -44,8 +43,7 @@ impl BackendItem for CppStruct {
     type ConversionOptions = CppStructConversionOptions;
 
     fn to_ir(self, options: Option<&Self::ConversionOptions>) -> ConversionResult<Self::IrType> {
-        let options: &CppStructConversionOptions =
-            options.unwrap_or(&CppStructConversionOptions::DEFAULT);
+        let options: &CppStructConversionOptions = options.unwrap_or(&CppStructConversionOptions::DEFAULT);
 
         let mut result_log = ConversionLog::new();
 
@@ -115,10 +113,7 @@ impl BackendItem for CppStruct {
         ConversionResult::with_log(lang_struct, result_log)
     }
 
-    fn from_ir(
-        input: Self::IrType,
-        options: Option<&Self::ConversionOptions>,
-    ) -> ConversionResult<Self> {
+    fn from_ir(input: Self::IrType, options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
         let mut result_log = ConversionLog::new();
 
         // Convert fields using CppField's from_ir method
@@ -153,8 +148,7 @@ impl BackendItem for CppStruct {
         let mut bases = Vec::with_capacity(input.bases.len());
 
         for base in input.bases {
-            let visibility_result: ConversionResult<CppVisibility> =
-                CppVisibility::from_ir(base.visibility, None);
+            let visibility_result: ConversionResult<CppVisibility> = CppVisibility::from_ir(base.visibility, None);
 
             // Collect any warnings from visibility conversion
             if visibility_result.log.has_warnings() {
@@ -178,8 +172,7 @@ impl BackendItem for CppStruct {
         }
 
         // Convert visibility
-        let visibility_result: ConversionResult<CppVisibility> =
-            CppVisibility::from_ir(input.visibility, None);
+        let visibility_result: ConversionResult<CppVisibility> = CppVisibility::from_ir(input.visibility, None);
 
         // Collect any warnings from visibility conversion
         if visibility_result.log.has_warnings() {

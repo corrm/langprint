@@ -43,10 +43,7 @@ impl BackendItem for CppVisibility {
         }
     }
 
-    fn from_ir(
-        input: Self::IrType,
-        _options: Option<&Self::ConversionOptions>,
-    ) -> ConversionResult<Self> {
+    fn from_ir(input: Self::IrType, _options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
         match input {
             Visibility::Default => ConversionResult::new(CppVisibility::Default),
             Visibility::Public => ConversionResult::new(CppVisibility::Public),

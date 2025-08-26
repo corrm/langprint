@@ -56,14 +56,10 @@ impl BackendItem for CppField {
         ConversionResult::with_log(language_field, result_log)
     }
 
-    fn from_ir(
-        input: Self::IrType,
-        _options: Option<&Self::ConversionOptions>,
-    ) -> ConversionResult<Self> {
+    fn from_ir(input: Self::IrType, _options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
         let mut result_log = ConversionLog::new();
 
-        let visibility: ConversionResult<CppVisibility> =
-            CppVisibility::from_ir(input.visibility, None);
+        let visibility: ConversionResult<CppVisibility> = CppVisibility::from_ir(input.visibility, None);
 
         if visibility.log.has_warnings() {
             result_log.add_warnings(visibility.log.warnings);

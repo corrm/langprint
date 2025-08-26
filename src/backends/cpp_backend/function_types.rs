@@ -25,10 +25,7 @@ impl BackendItem for CppParameter {
         todo!()
     }
 
-    fn from_ir(
-        input: Self::IrType,
-        _options: Option<&Self::ConversionOptions>,
-    ) -> ConversionResult<Self> {
+    fn from_ir(input: Self::IrType, _options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
         todo!()
     }
 }
@@ -155,17 +152,13 @@ impl BackendItem for CppFunction {
         ConversionResult::with_log(lang_function, result_log)
     }
 
-    fn from_ir(
-        input: Self::IrType,
-        _options: Option<&Self::ConversionOptions>,
-    ) -> ConversionResult<Self> {
+    fn from_ir(input: Self::IrType, _options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
         let mut result_log = ConversionLog::new();
 
         // Convert parameters
         let mut parameters: Vec<CppParameter> = Vec::with_capacity(input.parameters.len());
         for param in &input.parameters {
-            let param_result: ConversionResult<CppParameter> =
-                CppParameter::from_ir(param.clone(), None);
+            let param_result: ConversionResult<CppParameter> = CppParameter::from_ir(param.clone(), None);
 
             // Collect any warnings from parameter conversion
             if param_result.log.has_warnings() {

@@ -57,9 +57,7 @@ pub struct ConversionLog {
 impl ConversionLog {
     /// Create a new empty conversion log.
     pub fn new() -> Self {
-        Self {
-            warnings: Vec::new(),
-        }
+        Self { warnings: Vec::new() }
     }
 }
 
@@ -71,10 +69,7 @@ impl ConversionLog {
     }
 
     /// Add multiple warnings to the log.
-    pub fn add_warnings(
-        &mut self,
-        warnings: impl IntoIterator<Item = ConversionWarning>,
-    ) -> &mut Self {
+    pub fn add_warnings(&mut self, warnings: impl IntoIterator<Item = ConversionWarning>) -> &mut Self {
         self.warnings.extend(warnings);
         self
     }
