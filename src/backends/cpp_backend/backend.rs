@@ -79,10 +79,10 @@ impl DefinitionRenderer for CppBackend {
         }
 
         // Add documentation if available and render_docs is enabled
-        if options.render_docs {
-            if let Some(docs) = &input.docs {
-                self.write_docs(docs, indent_level, out)?;
-            }
+        if options.render_docs
+            && let Some(docs) = &input.docs
+        {
+            self.write_docs(docs, indent_level, out)?;
         }
 
         write!(
@@ -117,10 +117,10 @@ impl ConstantRenderer for CppBackend {
         let options: &CppConstantRenderOptions = options.unwrap_or(&binding);
 
         // Add documentation if available and render_docs is enabled
-        if options.render_docs {
-            if let Some(docs) = &input.docs {
-                self.write_docs(docs, indent_level, out)?;
-            }
+        if options.render_docs
+            && let Some(docs) = &input.docs
+        {
+            self.write_docs(docs, indent_level, out)?;
         }
 
         // Write constant declaration with visibility
@@ -172,10 +172,10 @@ impl EnumRenderer for CppBackend {
         let variant_options: &CppEnumVariantRenderOptions = variant_options.unwrap_or(&variant_binding);
 
         // Add documentation if available and render_docs is enabled
-        if options.render_docs {
-            if let Some(docs) = &input.docs {
-                self.write_docs(docs, indent_level, out)?;
-            }
+        if options.render_docs
+            && let Some(docs) = &input.docs
+        {
+            self.write_docs(docs, indent_level, out)?;
         }
 
         // Write before string if available
@@ -232,10 +232,10 @@ impl EnumRenderer for CppBackend {
         };
 
         for variant in &input.variants {
-            if variant_options.render_docs {
-                if let Some(docs) = &variant.docs {
-                    self.write_docs(docs, indent_level, out)?;
-                }
+            if variant_options.render_docs
+                && let Some(docs) = &variant.docs
+            {
+                self.write_docs(docs, indent_level, out)?;
             }
 
             let variant_name: &String = if variant_options.align_value {
@@ -303,10 +303,10 @@ impl FunctionRenderer for CppBackend {
 
         // Write documentation
         if options.render_docs {
-            if options.docs_on_definition && options.render_definition || !options.docs_on_definition {
-                if let Some(docs) = &input.docs {
-                    self.write_docs(docs, indent_level, out)?;
-                }
+            if (options.docs_on_definition && options.render_definition || !options.docs_on_definition)
+                && let Some(docs) = &input.docs
+            {
+                self.write_docs(docs, indent_level, out)?;
             }
         }
 
@@ -370,10 +370,10 @@ impl FunctionRenderer for CppBackend {
         }
 
         // Write function name
-        if options.render_definition || options.force_render_parent_name {
-            if let Some(parent_name) = &input.parent_name {
-                write!(out, "{}::", parent_name)?;
-            }
+        if (options.render_definition || options.force_render_parent_name)
+            && let Some(parent_name) = &input.parent_name
+        {
+            write!(out, "{}::", parent_name)?;
         }
 
         write!(out, "{}", input.name)?;
@@ -515,10 +515,10 @@ impl StructRenderer for CppBackend {
         }
 
         // Add documentation if available and render_docs is enabled
-        if options.render_docs {
-            if let Some(docs) = &input.docs {
-                self.write_docs(docs, indent_level, out)?;
-            }
+        if options.render_docs
+            && let Some(docs) = &input.docs
+        {
+            self.write_docs(docs, indent_level, out)?;
         }
 
         let indent_str: String = indent(*indent_level, self.indent_size, self.indent_style);
@@ -704,10 +704,10 @@ impl StructRenderer for CppBackend {
                 }
 
                 // Add field documentation if available and render_docs is enabled
-                if options.field_options.render_docs {
-                    if let Some(docs) = &field.docs {
-                        self.write_docs(docs, indent_level, out)?;
-                    }
+                if options.field_options.render_docs
+                    && let Some(docs) = &field.docs
+                {
+                    self.write_docs(docs, indent_level, out)?;
                 }
 
                 // Build field declaration components
@@ -751,10 +751,10 @@ impl StructRenderer for CppBackend {
                     }
 
                     // Add initialization value if present and enabled in options
-                    if let Some(init_value) = &field.initialization_value {
-                        if options.field_options.render_initializers {
-                            name_part.push_str(&format!(" = {}", init_value));
-                        }
+                    if let Some(init_value) = &field.initialization_value
+                        && options.field_options.render_initializers
+                    {
+                        name_part.push_str(&format!(" = {}", init_value));
                     }
 
                     // Add semicolon
@@ -785,10 +785,10 @@ impl StructRenderer for CppBackend {
                     }
 
                     // Add initialization value if present and enabled in options
-                    if let Some(init_value) = &field.initialization_value {
-                        if options.field_options.render_initializers {
-                            field_decl.push_str(&format!(" = {}", init_value));
-                        }
+                    if let Some(init_value) = &field.initialization_value
+                        && options.field_options.render_initializers
+                    {
+                        field_decl.push_str(&format!(" = {}", init_value));
                     }
 
                     // Add semicolon
