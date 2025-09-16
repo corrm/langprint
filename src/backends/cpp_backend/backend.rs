@@ -304,10 +304,10 @@ impl FunctionRenderer for CppBackend {
         // Write documentation
         if options.render_docs
             && (options.docs_on_definition && options.render_definition || !options.docs_on_definition)
-                && let Some(docs) = &input.docs
-            {
-                self.write_docs(docs, indent_level, out)?;
-            }
+            && let Some(docs) = &input.docs
+        {
+            self.write_docs(docs, indent_level, out)?;
+        }
 
         // Write indentation
         let indent_str: String = indent(*indent_level, self.indent_size, self.indent_style);
