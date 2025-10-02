@@ -125,7 +125,7 @@ impl ConstantRenderer for CppBackend {
 
         // Write constant declaration with visibility
         if input.visibility != CppVisibility::Default {
-            writeln!(out, "{}:", input.visibility)?;
+            write!(out, "{}:{}", input.visibility, self.new_line.as_str())?;
         }
 
         // Determine which keyword to use based on options
@@ -135,15 +135,16 @@ impl ConstantRenderer for CppBackend {
         let inline_prefix: &str = if options.use_inline { "inline " } else { "" };
 
         // Write constant declaration
-        writeln!(
+        write!(
             out,
-            "{}{}{} {} {} = {};",
+            "{}{}{} {} {} = {};{}",
             indent(*indent_level, self.indent_size, self.indent_style),
             inline_prefix,
             keyword,
             input.data_type,
             input.name,
-            input.value
+            input.value,
+            self.new_line.as_str(),
         )?;
 
         Ok(())
