@@ -9,13 +9,20 @@ pub struct LanguageBase {
     pub visibility: Visibility,
 }
 
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub enum LanguageStructKind {
+    Struct,
+    Class,
+    Union
+}
+
 /// Represents a struct/class in a language-agnostic way.
 #[derive(Debug, Clone)]
 pub struct LanguageStruct {
     /// The visibility of the struct/class.
     pub visibility: Visibility,
-    /// Whether the struct/class is a class.
-    pub is_class: bool,
+    /// Struct kind.
+    pub struct_kind: LanguageStructKind,
     /// Whether the struct/class is abstract.
     pub is_abstract: bool,
     /// Whether the struct/class is final.

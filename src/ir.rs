@@ -17,5 +17,5 @@ pub use language_field::LanguageField;
 pub use language_function::{LanguageFunction, LanguageFunctionParameter};
 pub use language_generic_argument::LanguageGenericArgument;
 pub use language_namespace::LanguageNamespace;
-pub use language_struct::{LanguageBase, LanguageStruct};
+pub use language_struct::{LanguageBase, LanguageStruct, LanguageStructKind};
 pub use visibility::Visibility;

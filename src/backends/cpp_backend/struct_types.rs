@@ -1,11 +1,11 @@
+use super::{
+    CppField, CppFieldRenderOptions, CppFunction, CppFunctionRenderOptions, CppGenericArgument, CppVisibility,
+};
+use crate::ir::LanguageStructKind;
 use crate::{
     backends::BackendItem,
     conversion::{ConversionLog, ConversionResult},
     ir::{LanguageBase, LanguageGenericArgument, LanguageStruct, Visibility},
-};
-
-use super::{
-    CppField, CppFieldRenderOptions, CppFunction, CppFunctionRenderOptions, CppGenericArgument, CppVisibility,
 };
 
 /// Represents a base/super with its visibility in C++.
@@ -17,11 +17,19 @@ pub struct CppBase {
     pub visibility: CppVisibility,
 }
 
+/// Represents a C++ struct kind.
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub enum CppStructKind {
+    Struct,
+    Class,
+    Union,
+}
+
 /// Represents a C++ struct definition.
 #[derive(Debug, Clone)]
 pub struct CppStruct {
-    /// Whether the struct is a class.
-    pub is_class: bool,
+    /// Struct kind.
+    pub struct_kind: CppStructKind,
     /// Whether the struct is final.
     pub is_final: bool,
     /// The name of the struct.
@@ -99,7 +107,11 @@ impl BackendItem for CppStruct {
 
         let lang_struct = LanguageStruct {
             visibility: Visibility::Default,
-            is_class: self.is_class,
+            struct_kind: match self.struct_kind {
+                CppStructKind::Struct => LanguageStructKind::Struct,
+                CppStructKind::Class => LanguageStructKind::Class,
+                CppStructKind::Union => LanguageStructKind::Union,
+            },
             is_abstract: options.final_to_abstract && !self.is_final,
             is_final: self.is_final,
             name: self.name.clone(),
@@ -180,7 +192,11 @@ impl BackendItem for CppStruct {
         }
 
         let cpp_struct = CppStruct {
-            is_class: input.is_class,
+            struct_kind: match input.struct_kind {
+                LanguageStructKind::Struct => CppStructKind::Struct,
+                LanguageStructKind::Class => CppStructKind::Class,
+                LanguageStructKind::Union => CppStructKind::Union,
+            },
             is_final: input.is_final,
             name: input.name.clone(),
             template_params,

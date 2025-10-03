@@ -1,16 +1,16 @@
 use std::io::{self, Write};
 
+use super::{
+    CppConstant, CppConstantRenderOptions, CppDefinition, CppDefinitionRenderOptions, CppEnum, CppEnumRenderOptions,
+    CppFunction, CppFunctionRenderOptions, CppStruct, CppStructRenderOptions, CppVisibility,
+    enum_types::CppEnumVariantRenderOptions,
+};
+use crate::backends::cpp_backend::struct_types::CppStructKind;
 use crate::{
     backends::{BackendFeature, BackendMetadata},
     helper::indent,
     renderers::{ConstantRenderer, DefinitionRenderer, EnumRenderer, FunctionRenderer, StructRenderer},
     text::{IndentStyle, NewLineStyle},
-};
-
-use super::{
-    CppConstant, CppConstantRenderOptions, CppDefinition, CppDefinitionRenderOptions, CppEnum, CppEnumRenderOptions,
-    CppFunction, CppFunctionRenderOptions, CppStruct, CppStructRenderOptions, CppVisibility,
-    enum_types::CppEnumVariantRenderOptions,
 };
 
 #[derive(Debug, Clone)]
@@ -553,10 +553,10 @@ impl StructRenderer for CppBackend {
         }
 
         // Write struct declaration
-        if input.is_class {
-            write!(out, "{}class {}", indent_str, input.name)?;
-        } else {
-            write!(out, "{}struct {}", indent_str, input.name)?;
+        match input.struct_kind {
+            CppStructKind::Class => write!(out, "{}class {}", indent_str, input.name)?,
+            CppStructKind::Struct => write!(out, "{}struct {}", indent_str, input.name)?,
+            CppStructKind::Union => write!(out, "{}union {}", indent_str, input.name)?,
         }
 
         if input.is_final {
@@ -652,24 +652,20 @@ impl StructRenderer for CppBackend {
             for (index, field) in input.fields.iter().enumerate() {
                 // Compare visibilities, handling the case where Default might be effectively the same as Public/Private
                 let effective_visibility = match field.visibility {
-                    CppVisibility::Default => {
-                        if input.is_class {
-                            CppVisibility::Private
-                        } else {
-                            CppVisibility::Public
-                        }
-                    }
+                    CppVisibility::Default => match input.struct_kind {
+                        CppStructKind::Class => CppVisibility::Private,
+                        CppStructKind::Union => CppVisibility::Private,
+                        CppStructKind::Struct => CppVisibility::Public,
+                    },
                     _ => field.visibility,
                 };
 
                 let effective_current_visibility = match current_visibility {
-                    CppVisibility::Default => {
-                        if input.is_class {
-                            CppVisibility::Private
-                        } else {
-                            CppVisibility::Public
-                        }
-                    }
+                    CppVisibility::Default => match input.struct_kind {
+                        CppStructKind::Class => CppVisibility::Private,
+                        CppStructKind::Union => CppVisibility::Private,
+                        CppStructKind::Struct => CppVisibility::Public,
+                    },
                     _ => current_visibility,
                 };
 
@@ -689,10 +685,11 @@ impl StructRenderer for CppBackend {
                         CppVisibility::Public => "public",
                         CppVisibility::Protected => "protected",
                         CppVisibility::Private => "private",
-                        CppVisibility::Default => {
-                            let default_visibility: &str = if input.is_class { "private" } else { "public" };
-                            default_visibility
-                        }
+                        CppVisibility::Default => match input.struct_kind {
+                            CppStructKind::Class => "private",
+                            CppStructKind::Union => "private",
+                            CppStructKind::Struct => "public",
+                        },
                     };
                     write!(
                         out,
@@ -828,10 +825,10 @@ impl StructRenderer for CppBackend {
                 // Compare visibilities, handling the case where Default might be effectively the same as Public/Private
                 let effective_visibility: CppVisibility = match method.visibility {
                     CppVisibility::Default => {
-                        if input.is_class {
-                            CppVisibility::Private
-                        } else {
-                            CppVisibility::Public
+                        match input.struct_kind {
+                            CppStructKind::Class => CppVisibility::Private,
+                            CppStructKind::Union => CppVisibility::Private,
+                            CppStructKind::Struct => CppVisibility::Public,
                         }
                     }
                     _ => method.visibility,
@@ -839,10 +836,10 @@ impl StructRenderer for CppBackend {
 
                 let effective_current_visibility: CppVisibility = match current_visibility {
                     CppVisibility::Default => {
-                        if input.is_class {
-                            CppVisibility::Private
-                        } else {
-                            CppVisibility::Public
+                        match input.struct_kind {
+                            CppStructKind::Class => CppVisibility::Private,
+                            CppStructKind::Union => CppVisibility::Private,
+                            CppStructKind::Struct => CppVisibility::Public,
                         }
                     }
                     _ => current_visibility,
@@ -860,8 +857,11 @@ impl StructRenderer for CppBackend {
                         CppVisibility::Protected => "protected",
                         CppVisibility::Private => "private",
                         CppVisibility::Default => {
-                            let default_visibility: &str = if input.is_class { "private" } else { "public" };
-                            default_visibility
+                            match input.struct_kind {
+                                CppStructKind::Class => "private",
+                                CppStructKind::Union => "private",
+                                CppStructKind::Struct => "public",
+                            }
                         }
                     };
 
