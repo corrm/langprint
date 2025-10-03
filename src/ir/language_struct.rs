@@ -13,7 +13,7 @@ pub struct LanguageBase {
 pub enum LanguageStructKind {
     Struct,
     Class,
-    Union
+    Union,
 }
 
 /// Represents a struct/class in a language-agnostic way.
