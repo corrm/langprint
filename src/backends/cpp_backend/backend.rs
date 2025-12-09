@@ -1,9 +1,9 @@
 use std::io::{self, Write};
 
 use super::{
-    enum_types::CppEnumVariantRenderOptions, CppConstant, CppConstantRenderOptions, CppDefinition, CppDefinitionRenderOptions, CppEnum,
-    CppEnumRenderOptions, CppFunction, CppFunctionRenderOptions, CppStruct, CppStructRenderOptions,
-    CppVisibility,
+    CppConstant, CppConstantRenderOptions, CppDefinition, CppDefinitionRenderOptions, CppEnum, CppEnumRenderOptions,
+    CppFunction, CppFunctionRenderOptions, CppStruct, CppStructRenderOptions, CppVisibility,
+    enum_types::CppEnumVariantRenderOptions,
 };
 use crate::backends::cpp_backend::struct_types::CppStructKind;
 use crate::{
