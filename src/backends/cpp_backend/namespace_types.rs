@@ -30,7 +30,7 @@ impl BackendItem for CppNamespace {
         todo!()
     }
 
-    fn from_ir(input: Self::IrType, _options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
+    fn from_ir(_input: Self::IrType, _options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
         todo!()
     }
 }

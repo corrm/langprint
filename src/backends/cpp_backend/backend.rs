@@ -107,8 +107,8 @@ impl ConstantRenderer for CppBackend {
     fn render_constant_to<S: AsRef<str>>(
         &self,
         input: &Self::ConstantType,
-        before: Option<S>,
-        after: Option<S>,
+        _before: Option<S>,
+        _after: Option<S>,
         options: Option<&Self::RenderOptions>,
         indent_level: &mut i32,
         out: &mut impl Write,

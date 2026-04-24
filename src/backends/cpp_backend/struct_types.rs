@@ -125,7 +125,7 @@ impl BackendItem for CppStruct {
         ConversionResult::with_log(lang_struct, result_log)
     }
 
-    fn from_ir(input: Self::IrType, options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
+    fn from_ir(input: Self::IrType, _options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
         let mut result_log = ConversionLog::new();
 
         // Convert fields using CppField's from_ir method
