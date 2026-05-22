@@ -6,6 +6,7 @@ use std::{
 use crate::backends::{BackendItem, BackendMetadata};
 
 /// Trait for rendering defines.
+#[allow(clippy::declare_interior_mutable_const)]
 pub trait DefinitionRenderer: BackendMetadata {
     /// The type of define to render.
     type DefineType: BackendItem;
@@ -64,6 +65,7 @@ pub trait DefinitionRenderer: BackendMetadata {
 }
 
 // Trait for rendering namespaces.
+#[allow(clippy::declare_interior_mutable_const)]
 pub trait NamespaceRenderer: BackendMetadata {
     /// The namespace type for this renderer.
     type NamespaceType: BackendItem;
@@ -118,6 +120,7 @@ pub trait NamespaceRenderer: BackendMetadata {
     }
 }
 
+#[allow(clippy::declare_interior_mutable_const)]
 /// Trait for rendering constants.
 pub trait ConstantRenderer: BackendMetadata {
     /// The constant type for this renderer.
@@ -172,6 +175,7 @@ pub trait ConstantRenderer: BackendMetadata {
     }
 }
 
+#[allow(clippy::declare_interior_mutable_const)]
 /// Trait for rendering functions.
 pub trait FunctionRenderer: BackendMetadata {
     /// The function type for this renderer.
@@ -226,6 +230,7 @@ pub trait FunctionRenderer: BackendMetadata {
     }
 }
 
+#[allow(clippy::declare_interior_mutable_const)]
 /// Trait for rendering enums.
 pub trait EnumRenderer: BackendMetadata {
     /// The enum type for this renderer.
@@ -299,6 +304,7 @@ pub trait EnumRenderer: BackendMetadata {
     }
 }
 
+#[allow(clippy::declare_interior_mutable_const)]
 /// Trait for rendering structs.
 pub trait StructRenderer: BackendMetadata {
     /// The struct type for this renderer.
@@ -354,6 +360,7 @@ pub trait StructRenderer: BackendMetadata {
     }
 }
 
+#[allow(clippy::declare_interior_mutable_const)]
 /// Trait for rendering interfaces.
 pub trait InterfaceRenderer: BackendMetadata {
     /// The interface type for this renderer.

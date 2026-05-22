@@ -27,4 +27,9 @@ impl NewLineStyle {
             NewLineStyle::CRLF => 2,
         }
     }
+
+    /// Returns `false` since all newline styles have non-zero length.
+    pub const fn is_empty(&self) -> bool {
+        false
+    }
 }
