@@ -303,7 +303,8 @@ impl FunctionRenderer for CppBackend {
         }
 
         // Write documentation: render docs if rendering AND (docs_on_definition implies render_definition)
-        if options.render_docs && (!options.docs_on_definition || options.render_definition)
+        if options.render_docs
+            && (!options.docs_on_definition || options.render_definition)
             && let Some(docs) = &input.docs
         {
             self.write_docs(docs, indent_level, out)?;
