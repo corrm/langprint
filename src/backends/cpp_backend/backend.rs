@@ -358,7 +358,7 @@ impl FunctionRenderer for CppBackend {
             }
 
             if input.is_virtual {
-                write!(out, "virtual ")?;
+                write!(out, "/* virtual */ ")?;
             }
         }
 
