@@ -21,6 +21,8 @@ pub struct CppField {
     pub array_size: Option<String>,
     /// Bit field size (can be a number or a macro/define name).
     pub bit_field_size: Option<String>,
+    /// Over-alignment for this field (`alignas(N)`); `None` = natural alignment.
+    pub alignment: Option<u32>,
     /// Whether the field is static.
     pub is_static: bool,
     /// Whether the field is const.
@@ -48,6 +50,7 @@ impl BackendItem for CppField {
             visibility: self.visibility.to_ir(None).value,
             array_size: self.array_size,
             bit_field_size: self.bit_field_size,
+            alignment: self.alignment,
             initialization_value: self.initialization_value,
             inline_comment: self.inline_comment,
             docs: self.docs,
@@ -71,6 +74,7 @@ impl BackendItem for CppField {
             visibility: visibility.value,
             array_size: input.array_size,
             bit_field_size: input.bit_field_size,
+            alignment: input.alignment,
             is_static: false, // Default value as IR doesn't have this concept
             is_const: false,  // Default value as IR doesn't have this concept
             is_inline: false, // Default value as IR doesn't have this concept

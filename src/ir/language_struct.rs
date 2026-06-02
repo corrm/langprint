@@ -27,6 +27,8 @@ pub struct LanguageStruct {
     pub is_abstract: bool,
     /// Whether the struct/class is final.
     pub is_final: bool,
+    /// Over-alignment for the struct/class (`alignas(N)`); `None` = natural alignment.
+    pub alignment: Option<u32>,
     /// The name of the struct/class.
     pub name: String,
     /// Generic arguments for the struct/class (e.g., template parameters in C++).

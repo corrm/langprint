@@ -32,6 +32,8 @@ pub struct CppStruct {
     pub struct_kind: CppStructKind,
     /// Whether the struct is final.
     pub is_final: bool,
+    /// Over-alignment for the struct (`alignas(N)`); `None` = natural alignment.
+    pub alignment: Option<u32>,
     /// The name of the struct.
     pub name: String,
     /// Template parameters for the struct/class (C++ templates).
@@ -114,6 +116,7 @@ impl BackendItem for CppStruct {
             },
             is_abstract: options.final_to_abstract && !self.is_final,
             is_final: self.is_final,
+            alignment: self.alignment,
             name: self.name.clone(),
             generic_args,
             bases,
@@ -198,6 +201,7 @@ impl BackendItem for CppStruct {
                 LanguageStructKind::Union => CppStructKind::Union,
             },
             is_final: input.is_final,
+            alignment: input.alignment,
             name: input.name.clone(),
             template_params,
             bases,

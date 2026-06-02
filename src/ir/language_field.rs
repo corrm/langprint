@@ -15,6 +15,8 @@ pub struct LanguageField {
     pub array_size: Option<String>,
     /// Bit field size (can be a number or a macro/define name).
     pub bit_field_size: Option<String>,
+    /// Over-alignment for this field (`alignas(N)`); `None` = natural alignment.
+    pub alignment: Option<u32>,
     /// Optional initialization value for the field.
     pub initialization_value: Option<String>,
     /// Inline comment for the field.

@@ -553,10 +553,14 @@ impl StructRenderer for CppBackend {
         }
 
         // Write struct declaration
+        let alignas_prefix: String = match input.alignment {
+            Some(n) => format!("alignas({}) ", n),
+            None => String::new(),
+        };
         match input.struct_kind {
-            CppStructKind::Class => write!(out, "{}class {}", indent_str, input.name)?,
-            CppStructKind::Struct => write!(out, "{}struct {}", indent_str, input.name)?,
-            CppStructKind::Union => write!(out, "{}union {}", indent_str, input.name)?,
+            CppStructKind::Class => write!(out, "{}class {}{}", indent_str, alignas_prefix, input.name)?,
+            CppStructKind::Struct => write!(out, "{}struct {}{}", indent_str, alignas_prefix, input.name)?,
+            CppStructKind::Union => write!(out, "{}union {}{}", indent_str, alignas_prefix, input.name)?,
         }
 
         if input.is_final {
@@ -614,6 +618,9 @@ impl StructRenderer for CppBackend {
                 // Calculate max widths from all fields
                 for field in &input.fields {
                     let mut type_width: usize = 0;
+                    if let Some(n) = field.alignment {
+                        type_width += format!("alignas({}) ", n).len();
+                    }
                     if field.is_inline {
                         type_width += "inline ".len();
                     }
@@ -709,6 +716,9 @@ impl StructRenderer for CppBackend {
 
                 // Build field declaration components
                 let mut type_part = String::new();
+                if let Some(n) = field.alignment {
+                    type_part.push_str(&format!("alignas({}) ", n));
+                }
                 if field.is_inline {
                     type_part.push_str("inline ");
                 }
@@ -940,5 +950,88 @@ impl CppBackend {
         }
 
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::backends::cpp_backend::struct_types::CppStructKind;
+    use crate::backends::cpp_backend::{CppField, CppStruct};
+
+    fn test_backend() -> CppBackend {
+        CppBackend {
+            new_line: NewLineStyle::LF,
+            open_brace_on_new_line: false,
+            docs_style: DocsStyle::DoubleSlash,
+            indent_style: IndentStyle::Spaces,
+            indent_size: 4,
+        }
+    }
+
+    fn plain_field(name: &str, field_type: &str, alignment: Option<u32>) -> CppField {
+        CppField {
+            name: name.to_string(),
+            field_type: field_type.to_string(),
+            visibility: CppVisibility::Public,
+            array_size: None,
+            bit_field_size: None,
+            alignment,
+            is_static: false,
+            is_const: false,
+            is_inline: false,
+            initialization_value: None,
+            inline_comment: None,
+            docs: None,
+        }
+    }
+
+    fn struct_with(alignment: Option<u32>, fields: Vec<CppField>) -> CppStruct {
+        CppStruct {
+            struct_kind: CppStructKind::Struct,
+            is_final: false,
+            alignment,
+            name: "Foo".to_string(),
+            template_params: Vec::new(),
+            bases: Vec::new(),
+            fields,
+            methods: Vec::new(),
+            docs: None,
+        }
+    }
+
+    #[test]
+    fn renders_alignas_on_field() {
+        let backend: CppBackend = test_backend();
+        let input: CppStruct = struct_with(
+            None,
+            vec![
+                plain_field("normal", "int", None),
+                plain_field("cctor_thread", "size_t", Some(8)),
+            ],
+        );
+
+        let mut indent_level: i32 = 0;
+        let output: String = backend
+            .render_struct::<&str>(&input, None, None, None, &mut indent_level)
+            .expect("render struct");
+
+        assert!(
+            output.contains("alignas(8) size_t cctor_thread;"),
+            "output was: {output}"
+        );
+    }
+
+    #[test]
+    fn renders_alignas_on_struct() {
+        let backend: CppBackend = test_backend();
+        let input: CppStruct = struct_with(Some(16), vec![plain_field("normal", "int", None)]);
+
+        let mut indent_level: i32 = 0;
+        let output: String = backend
+            .render_struct::<&str>(&input, None, None, None, &mut indent_level)
+            .expect("render struct");
+
+        assert!(output.contains("struct alignas(16) Foo"), "output was: {output}");
     }
 }
