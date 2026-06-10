@@ -6,6 +6,7 @@ pub mod backends;
 pub mod conversion;
 mod helper;
 pub mod ir;
+pub mod project_gen;
 pub mod renderers;
 pub mod text;
 
