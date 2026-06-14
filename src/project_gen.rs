@@ -16,12 +16,13 @@ use thiserror::Error;
 pub mod cargo;
 pub mod cmake;
 pub mod makefile;
+pub mod vs_common;
 pub mod vsln;
 
 pub use cargo::CargoGenerator;
 pub use cmake::CmakeGenerator;
 pub use makefile::MakefileGenerator;
-pub use vsln::VslnGenerator;
+pub use vsln::{SlnxGenerator, VslnGenerator};
 
 /// The language family a [`LanguageStandard`] belongs to.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
