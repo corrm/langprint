@@ -7,7 +7,10 @@
 //! equivalent. The spec's [`Arch`](super::Arch) is not baked in either: for
 //! Cargo the architecture is a build-time choice (`cargo build --target`).
 //! The manifest is driven by the project name, the Rust edition, and the
-//! [`OutputKind`].
+//! [`OutputKind`]. The spec's
+//! [`exception_handling`](ProjectSpec::exception_handling) and
+//! [`precompiled_header`](ProjectSpec::precompiled_header) are intentionally
+//! NOT emitted — neither has a Rust/Cargo analogue.
 
 use std::{fmt::Write as _, path::Path};
 
@@ -86,6 +89,8 @@ mod tests {
             platform: Platform::Any,
             arch: Arch::X64,
             output_kind,
+            exception_handling: None,
+            precompiled_header: None,
         }
     }
 

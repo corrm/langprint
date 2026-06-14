@@ -107,6 +107,22 @@ impl CmakeGenerator {
             out.push_str(")\n");
         }
 
+        if let Some(pch) = &spec.precompiled_header {
+            let _ = writeln!(
+                out,
+                "target_precompile_headers({name} PRIVATE \"{}\")",
+                path_to_forward_slashes(&pch.header)
+            );
+        }
+
+        if let Some(handling) = spec.exception_handling {
+            let _ = writeln!(
+                out,
+                "target_compile_options({name} PRIVATE $<$<CXX_COMPILER_ID:MSVC>:{}>)",
+                handling.msvc_flag()
+            );
+        }
+
         Ok(out)
     }
 }
@@ -127,7 +143,7 @@ mod tests {
     use std::path::PathBuf;
 
     use super::*;
-    use crate::project_gen::{Arch, LanguageStandard, Platform};
+    use crate::project_gen::{Arch, ExceptionHandling, LanguageStandard, Platform, PrecompiledHeader};
 
     fn sample_spec() -> ProjectSpec {
         ProjectSpec {
@@ -143,6 +159,8 @@ mod tests {
             platform: Platform::Any,
             arch: Arch::X64,
             output_kind: OutputKind::SharedLib,
+            exception_handling: None,
+            precompiled_header: None,
         }
     }
 
@@ -189,6 +207,40 @@ add_executable(VampireSurvivors
 target_compile_features(VampireSurvivors PUBLIC cxx_std_17)
 ";
         assert_eq!(contents, expected);
+    }
+
+    #[test]
+    fn renders_exception_handling_and_precompiled_header() {
+        let spec = ProjectSpec {
+            sources: vec![PathBuf::from("pch.cpp"), PathBuf::from("Assembly-CSharp.cpp")],
+            headers: vec![PathBuf::from("pch.h")],
+            exception_handling: Some(ExceptionHandling::Asynchronous),
+            precompiled_header: Some(PrecompiledHeader {
+                header: PathBuf::from("pch.h"),
+                create_source: PathBuf::from("pch.cpp"),
+            }),
+            ..sample_spec()
+        };
+        let contents = CmakeGenerator::new().render(&spec).unwrap();
+        assert!(
+            contents
+                .lines()
+                .any(|line| line == "target_precompile_headers(VampireSurvivors PRIVATE \"pch.h\")"),
+            "missing target_precompile_headers line:\n{contents}"
+        );
+        assert!(
+            contents
+                .lines()
+                .any(|line| line == "target_compile_options(VampireSurvivors PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/EHa>)"),
+            "missing target_compile_options line:\n{contents}"
+        );
+    }
+
+    #[test]
+    fn omits_exception_handling_and_pch_when_unset() {
+        let contents = CmakeGenerator::new().render(&sample_spec()).unwrap();
+        assert!(!contents.contains("target_precompile_headers"));
+        assert!(!contents.contains("target_compile_options"));
     }
 
     #[test]

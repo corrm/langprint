@@ -191,6 +191,47 @@ pub enum OutputKind {
     Executable,
 }
 
+/// The C++ exception-handling model requested from the compiler.
+///
+/// Maps to MSVC `/EH*`. Toolchains without an `/EH` analogue (GCC / Clang on
+/// non-Windows) leave exceptions at their default and ignore this.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ExceptionHandling {
+    /// Synchronous C++ exceptions; `extern "C"` assumed non-throwing (MSVC `/EHsc`).
+    Standard,
+    /// Synchronous C++ exceptions plus asynchronous structured (SEH) unwinding (MSVC `/EHa`).
+    Asynchronous,
+}
+
+impl ExceptionHandling {
+    /// The MSBuild `<ExceptionHandling>` element value.
+    #[must_use]
+    pub fn msbuild_value(self) -> &'static str {
+        match self {
+            Self::Standard => "Sync",
+            Self::Asynchronous => "Async",
+        }
+    }
+
+    /// The MSVC / clang-cl command-line flag.
+    #[must_use]
+    pub fn msvc_flag(self) -> &'static str {
+        match self {
+            Self::Standard => "/EHsc",
+            Self::Asynchronous => "/EHa",
+        }
+    }
+}
+
+/// A precompiled header for the generated project.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PrecompiledHeader {
+    /// The header that is precompiled and used by every translation unit (e.g. `pch.h`).
+    pub header: PathBuf,
+    /// The translation unit that *creates* the precompiled header (e.g. `pch.cpp`).
+    pub create_source: PathBuf,
+}
+
 /// Engine-neutral description of a generated SDK as a buildable project.
 ///
 /// All paths in [`sources`](Self::sources), [`headers`](Self::headers), and
@@ -218,6 +259,13 @@ pub struct ProjectSpec {
     pub arch: Arch,
     /// The kind of artifact the project builds.
     pub output_kind: OutputKind,
+    /// Requested C++ exception-handling model. `None` leaves it at the
+    /// compiler default. Honored by the Visual Studio and CMake generators;
+    /// ignored by Makefile/Cargo.
+    pub exception_handling: Option<ExceptionHandling>,
+    /// Precompiled-header configuration. `None` disables PCH. Honored by the
+    /// Visual Studio and CMake generators; ignored by Makefile/Cargo.
+    pub precompiled_header: Option<PrecompiledHeader>,
 }
 
 impl ProjectSpec {
@@ -241,6 +289,8 @@ impl ProjectSpec {
             platform: Platform::Any,
             arch: Arch::X64,
             output_kind,
+            exception_handling: None,
+            precompiled_header: None,
         }
     }
 }
@@ -302,6 +352,14 @@ pub enum ProjectGenError {
     /// The spec has no source files, so no project could be generated.
     #[error("project spec `{0}` has no source files")]
     NoSources(String),
+
+    /// The precompiled-header configuration is inconsistent with the spec's
+    /// source/header lists (its creator source or header is missing).
+    #[error("invalid precompiled header: {reason}")]
+    InvalidPrecompiledHeader {
+        /// Why the precompiled-header configuration was rejected.
+        reason: &'static str,
+    },
 }
 
 /// Emits build-system project file(s) for a [`ProjectSpec`].
@@ -374,11 +432,16 @@ pub(crate) fn validate_spec(spec: &ProjectSpec) -> Result<(), ProjectGenError> {
             reason: "name may only contain characters in [A-Za-z0-9_.+-]",
         });
     }
+    let pch_paths = spec
+        .precompiled_header
+        .iter()
+        .flat_map(|pch| [&pch.header, &pch.create_source]);
     for path in spec
         .sources
         .iter()
         .chain(spec.headers.iter())
         .chain(spec.include_dirs.iter())
+        .chain(pch_paths)
     {
         if !path.is_relative() || path.to_string_lossy().chars().any(char::is_whitespace) {
             return Err(ProjectGenError::InvalidPath { path: path.clone() });
@@ -387,6 +450,18 @@ pub(crate) fn validate_spec(spec: &ProjectSpec) -> Result<(), ProjectGenError> {
     for (name, value) in &spec.defines {
         if value.as_deref().is_some_and(|v| v.contains(';')) {
             return Err(ProjectGenError::InvalidDefine { name: name.clone() });
+        }
+    }
+    if let Some(pch) = &spec.precompiled_header {
+        if !spec.sources.contains(&pch.create_source) {
+            return Err(ProjectGenError::InvalidPrecompiledHeader {
+                reason: "create_source must be one of the spec's sources",
+            });
+        }
+        if !spec.headers.contains(&pch.header) {
+            return Err(ProjectGenError::InvalidPrecompiledHeader {
+                reason: "header must be one of the spec's headers",
+            });
         }
     }
     Ok(())
@@ -537,5 +612,50 @@ mod tests {
             ..valid_spec()
         };
         assert!(validate_spec(&spec).is_ok());
+    }
+
+    fn spec_with_pch() -> ProjectSpec {
+        let mut spec = valid_spec();
+        spec.sources.push(PathBuf::from("pch.cpp"));
+        spec.headers.push(PathBuf::from("pch.h"));
+        spec.precompiled_header = Some(PrecompiledHeader {
+            header: PathBuf::from("pch.h"),
+            create_source: PathBuf::from("pch.cpp"),
+        });
+        spec
+    }
+
+    #[test]
+    fn validate_accepts_consistent_precompiled_header() {
+        assert!(validate_spec(&spec_with_pch()).is_ok());
+    }
+
+    #[test]
+    fn validate_rejects_pch_create_source_not_in_sources() {
+        let mut spec = spec_with_pch();
+        spec.sources.retain(|s| s != Path::new("pch.cpp"));
+        let err = validate_spec(&spec).unwrap_err();
+        assert!(matches!(err, ProjectGenError::InvalidPrecompiledHeader { .. }));
+    }
+
+    #[test]
+    fn validate_rejects_pch_header_not_in_headers() {
+        let mut spec = spec_with_pch();
+        spec.headers.retain(|h| h != Path::new("pch.h"));
+        let err = validate_spec(&spec).unwrap_err();
+        assert!(matches!(err, ProjectGenError::InvalidPrecompiledHeader { .. }));
+    }
+
+    #[test]
+    fn validate_rejects_pch_path_with_whitespace() {
+        let mut spec = valid_spec();
+        spec.sources.push(PathBuf::from("p ch.cpp"));
+        spec.headers.push(PathBuf::from("p ch.h"));
+        spec.precompiled_header = Some(PrecompiledHeader {
+            header: PathBuf::from("p ch.h"),
+            create_source: PathBuf::from("p ch.cpp"),
+        });
+        let err = validate_spec(&spec).unwrap_err();
+        assert!(matches!(err, ProjectGenError::InvalidPath { .. }));
     }
 }

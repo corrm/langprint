@@ -1,7 +1,11 @@
 //! GNU Make project generator — emits a Unix `Makefile`.
 //!
 //! Header files are not listed in the Makefile — the compiler finds them via
-//! the `-I` include directories.
+//! the `-I` include directories. The spec's
+//! [`exception_handling`](super::ProjectSpec::exception_handling) and
+//! [`precompiled_header`](super::ProjectSpec::precompiled_header) are
+//! intentionally NOT emitted: the GNU/Clang toolchain has no MSVC `/EH*` or
+//! MSBuild precompiled-header analogue.
 
 use std::{collections::BTreeSet, fmt::Write as _, path::Path};
 
@@ -186,6 +190,8 @@ mod tests {
             platform: Platform::Any,
             arch: Arch::X64,
             output_kind: OutputKind::SharedLib,
+            exception_handling: None,
+            precompiled_header: None,
         }
     }
 

@@ -117,6 +117,21 @@ pub(crate) fn render_vcxproj(spec: &ProjectSpec, family: LanguageFamily, guid: &
         }
         LanguageFamily::CSharp | LanguageFamily::Rust => {}
     }
+    if let Some(handling) = spec.exception_handling {
+        let _ = writeln!(
+            out,
+            "      <ExceptionHandling>{}</ExceptionHandling>",
+            handling.msbuild_value()
+        );
+    }
+    if let Some(pch) = &spec.precompiled_header {
+        out.push_str("      <PrecompiledHeader>Use</PrecompiledHeader>\n");
+        let _ = writeln!(
+            out,
+            "      <PrecompiledHeaderFile>{}</PrecompiledHeaderFile>",
+            xml_escape(&path_to_back_slashes(&pch.header))
+        );
+    }
     if !spec.include_dirs.is_empty() {
         let dirs = spec
             .include_dirs
@@ -146,11 +161,18 @@ pub(crate) fn render_vcxproj(spec: &ProjectSpec, family: LanguageFamily, guid: &
 
     out.push_str("  <ItemGroup>\n");
     for source in &spec.sources {
-        let _ = writeln!(
-            out,
-            "    <ClCompile Include=\"{}\" />",
-            xml_escape(&path_to_back_slashes(source))
-        );
+        let include = xml_escape(&path_to_back_slashes(source));
+        let is_pch_creator = spec
+            .precompiled_header
+            .as_ref()
+            .is_some_and(|pch| source == &pch.create_source);
+        if is_pch_creator {
+            let _ = writeln!(out, "    <ClCompile Include=\"{include}\">");
+            out.push_str("      <PrecompiledHeader>Create</PrecompiledHeader>\n");
+            out.push_str("    </ClCompile>\n");
+        } else {
+            let _ = writeln!(out, "    <ClCompile Include=\"{include}\" />");
+        }
     }
     out.push_str("  </ItemGroup>\n");
     if !spec.headers.is_empty() {

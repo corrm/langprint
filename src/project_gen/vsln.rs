@@ -156,7 +156,10 @@ mod tests {
     use std::path::PathBuf;
 
     use super::*;
-    use crate::project_gen::{Arch, LanguageFamily, LanguageStandard, OutputKind, vs_common::deterministic_guid};
+    use crate::project_gen::{
+        Arch, ExceptionHandling, LanguageFamily, LanguageStandard, OutputKind, PrecompiledHeader,
+        vs_common::deterministic_guid,
+    };
 
     fn sample_spec() -> ProjectSpec {
         ProjectSpec {
@@ -172,6 +175,8 @@ mod tests {
             platform: Platform::Windows,
             arch: Arch::X64,
             output_kind: OutputKind::SharedLib,
+            exception_handling: None,
+            precompiled_header: None,
         }
     }
 
@@ -507,6 +512,42 @@ EndGlobal
             let from_slnx = std::fs::read_to_string(slnx_dir.path().join(file)).unwrap();
             assert_eq!(from_vsln, from_slnx, "{file} differs between the two VS generators");
         }
+    }
+
+    #[test]
+    fn eha_and_pch_render_in_vcxproj() {
+        let spec = ProjectSpec {
+            sources: vec![
+                PathBuf::from("dllmain.cpp"),
+                PathBuf::from("pch.cpp"),
+                PathBuf::from("Assembly-CSharp.cpp"),
+            ],
+            headers: vec![PathBuf::from("pch.h")],
+            exception_handling: Some(ExceptionHandling::Asynchronous),
+            precompiled_header: Some(PrecompiledHeader {
+                header: PathBuf::from("pch.h"),
+                create_source: PathBuf::from("pch.cpp"),
+            }),
+            ..sample_spec()
+        };
+        let contents = vs_common::render_vcxproj(&spec, LanguageFamily::Cpp, "{GUID}");
+        assert!(contents.contains("      <ExceptionHandling>Async</ExceptionHandling>\n"));
+        assert!(contents.contains("      <PrecompiledHeader>Use</PrecompiledHeader>\n"));
+        assert!(contents.contains("      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>\n"));
+        assert!(contents.contains(
+            "    <ClCompile Include=\"pch.cpp\">\n      <PrecompiledHeader>Create</PrecompiledHeader>\n    </ClCompile>\n"
+        ));
+        // Non-creator sources keep the self-closing form.
+        assert!(contents.contains("    <ClCompile Include=\"dllmain.cpp\" />\n"));
+        assert!(contents.contains("    <ClCompile Include=\"Assembly-CSharp.cpp\" />\n"));
+    }
+
+    #[test]
+    fn no_pch_or_eha_when_fields_unset() {
+        let contents = vs_common::render_vcxproj(&sample_spec(), LanguageFamily::Cpp, "{GUID}");
+        assert!(!contents.contains("<ExceptionHandling>"));
+        assert!(!contents.contains("<PrecompiledHeader>"));
+        assert!(!contents.contains("<PrecompiledHeaderFile>"));
     }
 
     #[test]
