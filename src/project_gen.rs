@@ -325,6 +325,37 @@ pub trait ProjectGenerator {
     fn generate(&self, spec: &ProjectSpec, output_dir: &Path) -> Result<(), ProjectGenError>;
 }
 
+/// `true` if `c` is allowed in a [`ProjectSpec`] name (`[A-Za-z0-9_.+-]`).
+fn is_allowed_name_char(c: char) -> bool {
+    c.is_ascii_alphanumeric() || matches!(c, '_' | '.' | '+' | '-')
+}
+
+/// Sanitize an arbitrary string into a valid [`ProjectSpec`] name.
+///
+/// Every character outside `[A-Za-z0-9_.+-]` is replaced with `_`. An input
+/// that is empty (or becomes empty) yields `"Project"`, so the result always
+/// satisfies [`validate_spec`]'s non-empty and charset invariants.
+///
+/// # Arguments
+///
+/// * `raw` - The raw, possibly-invalid name (e.g. a game title).
+///
+/// # Returns
+///
+/// A name containing only `[A-Za-z0-9_.+-]`, never empty.
+#[must_use]
+pub fn sanitize_project_name(raw: &str) -> String {
+    let sanitized: String = raw
+        .chars()
+        .map(|c| if is_allowed_name_char(c) { c } else { '_' })
+        .collect();
+    if sanitized.is_empty() {
+        "Project".to_string()
+    } else {
+        sanitized
+    }
+}
+
 /// Validate a [`ProjectSpec`] before any generator renders it.
 ///
 /// Enforces the invariants every generator relies on: a non-empty name made
@@ -337,7 +368,6 @@ pub(crate) fn validate_spec(spec: &ProjectSpec) -> Result<(), ProjectGenError> {
             reason: "name is empty",
         });
     }
-    let is_allowed_name_char = |c: char| c.is_ascii_alphanumeric() || matches!(c, '_' | '.' | '+' | '-');
     if !spec.name.chars().all(is_allowed_name_char) {
         return Err(ProjectGenError::InvalidName {
             name: spec.name.clone(),
@@ -483,5 +513,29 @@ mod tests {
         spec.defines.push(("LIST".to_string(), Some("a;b".to_string())));
         let err = validate_spec(&spec).unwrap_err();
         assert!(matches!(err, ProjectGenError::InvalidDefine { name } if name == "LIST"));
+    }
+
+    #[test]
+    fn sanitize_project_name_replaces_invalid_characters() {
+        assert_eq!(sanitize_project_name("Tom & Jerry!"), "Tom___Jerry_");
+    }
+
+    #[test]
+    fn sanitize_project_name_maps_empty_to_project() {
+        assert_eq!(sanitize_project_name(""), "Project");
+    }
+
+    #[test]
+    fn sanitize_project_name_leaves_valid_name_unchanged() {
+        assert_eq!(sanitize_project_name("Already_Valid-1.0+x"), "Already_Valid-1.0+x");
+    }
+
+    #[test]
+    fn validate_accepts_sanitized_special_char_name() {
+        let spec = ProjectSpec {
+            name: sanitize_project_name("Tom & Jerry!"),
+            ..valid_spec()
+        };
+        assert!(validate_spec(&spec).is_ok());
     }
 }

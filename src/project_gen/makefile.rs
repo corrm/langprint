@@ -328,8 +328,8 @@ clean:
             platform: Platform::Windows,
             ..sample_spec()
         };
-        let dir = std::env::temp_dir();
-        let err = MakefileGenerator::new().generate(&spec, &dir).unwrap_err();
+        let dir = tempfile::tempdir().unwrap();
+        let err = MakefileGenerator::new().generate(&spec, dir.path()).unwrap_err();
         assert!(matches!(
             err,
             ProjectGenError::IncompatiblePlatform {

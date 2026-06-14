@@ -472,8 +472,8 @@ EndGlobal
             platform: Platform::Linux,
             ..sample_spec()
         };
-        let dir = std::env::temp_dir();
-        let err = VslnGenerator::new().generate(&spec, &dir).unwrap_err();
+        let dir = tempfile::tempdir().unwrap();
+        let err = VslnGenerator::new().generate(&spec, dir.path()).unwrap_err();
         assert!(matches!(
             err,
             ProjectGenError::IncompatiblePlatform {
@@ -497,16 +497,14 @@ EndGlobal
     #[test]
     fn slnx_vcxproj_and_filters_byte_identical_to_vsln() {
         let spec = sample_spec();
-        let vsln_dir = std::env::temp_dir().join("langprint_vsln_eq_vsln");
-        let slnx_dir = std::env::temp_dir().join("langprint_vsln_eq_slnx");
-        std::fs::create_dir_all(&vsln_dir).unwrap();
-        std::fs::create_dir_all(&slnx_dir).unwrap();
-        VslnGenerator::new().generate(&spec, &vsln_dir).unwrap();
-        SlnxGenerator::new().generate(&spec, &slnx_dir).unwrap();
+        let vsln_dir = tempfile::tempdir().unwrap();
+        let slnx_dir = tempfile::tempdir().unwrap();
+        VslnGenerator::new().generate(&spec, vsln_dir.path()).unwrap();
+        SlnxGenerator::new().generate(&spec, slnx_dir.path()).unwrap();
 
         for file in ["VampireSurvivors.vcxproj", "VampireSurvivors.vcxproj.filters"] {
-            let from_vsln = std::fs::read_to_string(vsln_dir.join(file)).unwrap();
-            let from_slnx = std::fs::read_to_string(slnx_dir.join(file)).unwrap();
+            let from_vsln = std::fs::read_to_string(vsln_dir.path().join(file)).unwrap();
+            let from_slnx = std::fs::read_to_string(slnx_dir.path().join(file)).unwrap();
             assert_eq!(from_vsln, from_slnx, "{file} differs between the two VS generators");
         }
     }
@@ -517,7 +515,8 @@ EndGlobal
             language_standard: LanguageStandard::Rust2024,
             ..sample_spec()
         };
-        let err = SlnxGenerator::new().generate(&spec, &std::env::temp_dir()).unwrap_err();
+        let dir = tempfile::tempdir().unwrap();
+        let err = SlnxGenerator::new().generate(&spec, dir.path()).unwrap_err();
         assert!(matches!(
             err,
             ProjectGenError::UnsupportedLanguage {
@@ -533,7 +532,8 @@ EndGlobal
             platform: Platform::Linux,
             ..sample_spec()
         };
-        let err = SlnxGenerator::new().generate(&spec, &std::env::temp_dir()).unwrap_err();
+        let dir = tempfile::tempdir().unwrap();
+        let err = SlnxGenerator::new().generate(&spec, dir.path()).unwrap_err();
         assert!(matches!(
             err,
             ProjectGenError::IncompatiblePlatform {

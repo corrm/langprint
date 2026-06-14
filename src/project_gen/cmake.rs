@@ -221,8 +221,8 @@ target_compile_features(VampireSurvivors PUBLIC cxx_std_17)
             sources: Vec::new(),
             ..sample_spec()
         };
-        let dir = std::env::temp_dir();
-        let err = CmakeGenerator::new().generate(&spec, &dir).unwrap_err();
+        let dir = tempfile::tempdir().unwrap();
+        let err = CmakeGenerator::new().generate(&spec, dir.path()).unwrap_err();
         assert!(matches!(err, ProjectGenError::NoSources(name) if name == "VampireSurvivors"));
     }
 
@@ -232,8 +232,8 @@ target_compile_features(VampireSurvivors PUBLIC cxx_std_17)
             name: "Bad Name".to_string(),
             ..sample_spec()
         };
-        let dir = std::env::temp_dir();
-        let err = CmakeGenerator::new().generate(&spec, &dir).unwrap_err();
+        let dir = tempfile::tempdir().unwrap();
+        let err = CmakeGenerator::new().generate(&spec, dir.path()).unwrap_err();
         assert!(matches!(err, ProjectGenError::InvalidName { name, .. } if name == "Bad Name"));
     }
 }
