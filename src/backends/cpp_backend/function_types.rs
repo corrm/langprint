@@ -247,6 +247,10 @@ pub struct CppFunctionRenderOptions {
     pub render_body_if_template: bool,
     /// Whether to render the function body if it's a friend function.
     pub render_body_if_friend: bool,
+    /// Whether to emit the `inline` specifier on an out-of-line definition
+    /// (`render_definition == true`). Required for member-template definitions
+    /// emitted into a header so they don't violate the ODR across translation units.
+    pub inline_definition: bool,
     /// Whether to use `typename` as the default keyword for type parameters.
     pub use_typename_default: bool,
 }
@@ -266,6 +270,7 @@ impl CppFunctionRenderOptions {
         force_render_body: false,
         render_body_if_template: true,
         render_body_if_friend: true,
+        inline_definition: false,
         use_typename_default: true,
     };
 }

@@ -343,7 +343,8 @@ impl FunctionRenderer for CppBackend {
             write!(out, ">{}{}", self.new_line.as_str(), indent_str)?;
         }
 
-        // Write function modifiers
+        // Write function modifiers. `friend`/`static`/`virtual`/`inline` are written
+        // only for declarations (an out-of-line definition may not repeat them).
         if !options.render_definition {
             if input.is_friend {
                 write!(out, "friend ")?;
@@ -360,6 +361,11 @@ impl FunctionRenderer for CppBackend {
             if input.is_virtual {
                 write!(out, "/* virtual */ ")?;
             }
+        } else if options.inline_definition {
+            // An out-of-line member-template definition emitted into a header must be
+            // `inline` to avoid ODR violations across the many translation units that
+            // include it.
+            write!(out, "inline ")?;
         }
 
         // Write return type
