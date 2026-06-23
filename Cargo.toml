@@ -12,7 +12,7 @@ categories = ["development-tools", "template-engine"]
 publish = true
 
 [dependencies]
-thiserror = { workspace = true }
+thiserror = "2"
 
 [dev-dependencies]
-tempfile = { workspace = true }
+tempfile = "3.27"
