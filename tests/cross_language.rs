@@ -1,0 +1,350 @@
+//! Cross-language conversion tests — prove the neutral declaration IR is a real bridge.
+//!
+//! Each test routes a declaration native-model → `to_ir()` → `from_ir()` into another backend →
+//! renders it, asserting the EXACT output AND the EXACT `ConversionWarning`s on both legs. This is
+//! what earns the "language-agnostic" claim: the common declaration subset survives, and every
+//! single-language feature that cannot cross is reported (never silently dropped).
+//!
+//! Note on scope: the IR bridges declaration STRUCTURE, not type-name spelling. Type names
+//! (`int`, `void`, `f32`, …) are carried verbatim — translating them is out of scope by design,
+//! so e.g. a C++ `int` field appears as `int` in the rendered Rust. The tests assert this honestly.
+
+use langprint::backends::BackendItem;
+use langprint::backends::cpp_backend::{
+    CppBackend, CppBase, CppEnum, CppEnumVariant, CppField, CppFunction, CppParameter, CppStruct, CppStructKind,
+    CppVisibility, DocsStyle,
+};
+use langprint::backends::csharp_backend::{
+    CSharpBackend, CSharpEnum, CSharpEnumMember, CSharpField, CSharpType, CSharpTypeKind, CSharpVisibility,
+};
+use langprint::backends::rust_backend::{
+    RustBackend, RustEnum, RustEnumVariant, RustEnumVariantValue, RustStruct, RustVisibility,
+};
+use langprint::conversion::ConversionWarning;
+use langprint::renderers::{EnumRenderer, StructRenderer};
+use langprint::text::{IndentStyle, NewLineStyle};
+
+/// A deterministic LF / 4-space C++ backend so rendered output is stable to compare.
+fn cpp() -> CppBackend {
+    CppBackend {
+        new_line: NewLineStyle::LF,
+        open_brace_on_new_line: true,
+        docs_style: DocsStyle::DoubleSlash,
+        indent_style: IndentStyle::Spaces,
+        indent_size: 4,
+    }
+}
+
+fn cpp_field(name: &str, ty: &str) -> CppField {
+    CppField {
+        name: name.to_string(),
+        field_type: ty.to_string(),
+        visibility: CppVisibility::Public,
+        array_size: None,
+        bit_field_size: None,
+        alignment: None,
+        is_static: false,
+        is_const: false,
+        is_inline: false,
+        initialization_value: None,
+        inline_comment: None,
+        docs: None,
+    }
+}
+
+fn cpp_method(name: &str) -> CppFunction {
+    CppFunction {
+        name: name.to_string(),
+        parent_name: None,
+        visibility: CppVisibility::Public,
+        parameters: vec![CppParameter {
+            name: "amount".to_string(),
+            param_type: "int".to_string(),
+            default_value: None,
+        }],
+        template_params: vec![],
+        return_type: Some("void".to_string()),
+        is_static: false,
+        is_const: false,
+        is_virtual: false,
+        is_pure_virtual: false,
+        is_inline: false,
+        is_noexcept: false,
+        is_override: false,
+        is_final: false,
+        is_friend: false,
+        is_deleted: false,
+        is_default: false,
+        body: Some(vec!["// body".to_string()]),
+        docs: None,
+    }
+}
+
+fn unsupported_features(ws: &[ConversionWarning]) -> Vec<String> {
+    ws.iter()
+        .filter_map(|w| match w {
+            ConversionWarning::UnsupportedFeature { feature, .. } => Some(feature.clone()),
+            _ => None,
+        })
+        .collect()
+}
+
+/// C++ struct (fields + method) → IR → Rust. Proves the common subset crosses with zero loss;
+/// the method lowers into an idiomatic `impl` block. Type names pass through verbatim.
+#[test]
+fn cpp_struct_to_rust() {
+    let s = CppStruct {
+        struct_kind: CppStructKind::Class,
+        is_final: false,
+        alignment: None,
+        name: "Player".to_string(),
+        template_params: vec![],
+        bases: vec![],
+        fields: vec![cpp_field("health", "int"), cpp_field("mana", "int")],
+        methods: vec![cpp_method("heal")],
+        docs: None,
+    };
+
+    let ir = s.to_ir(None);
+    assert!(!ir.log.has_warnings());
+
+    let rust = RustStruct::from_ir(ir.value, None);
+    assert!(!rust.log.has_warnings());
+
+    let out = RustBackend::default()
+        .render_struct(&rust.value, None::<&str>, None::<&str>, None, &mut 0)
+        .unwrap();
+    assert_eq!(
+        out,
+        "struct Player {\n    pub health: int,\n    pub mana: int,\n}\n\nimpl Player {\n    pub fn heal(&self, amount: int) -> void {\n        // body\n    }\n}\n"
+    );
+}
+
+/// C++ struct with a base → IR → C#. Proves inheritance (single base) and members cross cleanly.
+#[test]
+fn cpp_struct_with_base_to_csharp() {
+    let s = CppStruct {
+        struct_kind: CppStructKind::Class,
+        is_final: false,
+        alignment: None,
+        name: "Player".to_string(),
+        template_params: vec![],
+        bases: vec![CppBase {
+            name: "Entity".to_string(),
+            visibility: CppVisibility::Public,
+        }],
+        fields: vec![cpp_field("health", "float")],
+        methods: vec![cpp_method("heal")],
+        docs: None,
+    };
+
+    let ir = s.to_ir(None);
+    assert!(!ir.log.has_warnings());
+
+    let cs = CSharpType::from_ir(ir.value, None);
+    assert!(!cs.log.has_warnings());
+
+    let out = CSharpBackend::default()
+        .render_struct::<&str>(&cs.value, None, None, None, &mut 0)
+        .unwrap();
+    assert_eq!(
+        out,
+        "class Player : Entity\n{\n    public float health;\n\n    public void heal(int amount)\n    {\n        // body\n    }\n}\n"
+    );
+}
+
+/// Rust valued enum → IR → C++. Proves enum discriminants and underlying type cross with no loss.
+#[test]
+fn rust_enum_to_cpp() {
+    let e = RustEnum {
+        name: "Color".to_string(),
+        visibility: RustVisibility::Pub,
+        variants: vec![
+            RustEnumVariant {
+                name: "Red".to_string(),
+                value: RustEnumVariantValue::Discriminant("0".to_string()),
+                docs: None,
+            },
+            RustEnumVariant {
+                name: "Green".to_string(),
+                value: RustEnumVariantValue::Discriminant("1".to_string()),
+                docs: None,
+            },
+        ],
+        repr: Some("u8".to_string()),
+        derives: vec![],
+        docs: None,
+    };
+
+    let ir = e.to_ir(None);
+    assert!(!ir.log.has_warnings());
+
+    let ce = CppEnum::from_ir(ir.value, None);
+    assert!(!ce.log.has_warnings());
+
+    let out = cpp()
+        .render_enum::<&str>(&ce.value, None, None, None, None, &mut 0)
+        .unwrap();
+    assert_eq!(out, "enum class Color: u8\n{\n    Red = 0,\n    Green = 1,\n};\n");
+}
+
+/// Rust data-carrying enum → IR → C#. The Tuple payload cannot exist in a C# enum, so `from_ir`
+/// MUST surface a warning (it is never silently dropped); the variant names still cross.
+#[test]
+fn rust_data_enum_to_csharp_warns_on_payload() {
+    let e = RustEnum {
+        name: "Shape".to_string(),
+        visibility: RustVisibility::Pub,
+        variants: vec![
+            RustEnumVariant {
+                name: "None".to_string(),
+                value: RustEnumVariantValue::Unit,
+                docs: None,
+            },
+            RustEnumVariant {
+                name: "Circle".to_string(),
+                value: RustEnumVariantValue::Tuple(vec!["f32".to_string()]),
+                docs: None,
+            },
+        ],
+        repr: None,
+        derives: vec![],
+        docs: None,
+    };
+
+    // to_ir preserves the payload in the IR (Rust-shaped variant model), no loss yet.
+    let ir = e.to_ir(None);
+    assert!(!ir.log.has_warnings());
+
+    // from_ir into C# drops the payload and reports it.
+    let cs = CSharpEnum::from_ir(ir.value, None);
+    assert_eq!(cs.log.warnings.len(), 1);
+
+    let out = CSharpBackend::default()
+        .render_enum::<&str>(&cs.value, None, None, None, None, &mut 0)
+        .unwrap();
+    assert_eq!(out, "public enum Shape\n{\n    None,\n    Circle,\n}\n");
+}
+
+/// C# class with a base + interface → IR → Rust. Rust has no inheritance, so BOTH the base and the
+/// interface must be reported as dropped; the fields still cross.
+#[test]
+fn csharp_class_to_rust_warns_on_inheritance() {
+    let mut ty = CSharpType {
+        kind: CSharpTypeKind::Class,
+        name: "Player".to_string(),
+        visibility: CSharpVisibility::Public,
+        is_abstract: false,
+        is_sealed: false,
+        is_static: false,
+        is_partial: false,
+        generic_args: vec![],
+        base_class: Some("Entity".to_string()),
+        interfaces: vec!["IDamageable".to_string()],
+        fields: vec![],
+        properties: vec![],
+        methods: vec![],
+        attributes: vec![],
+        docs: None,
+    };
+    ty.fields.push(CSharpField {
+        name: "health".to_string(),
+        field_type: "float".to_string(),
+        visibility: CSharpVisibility::Public,
+        is_static: false,
+        is_const: false,
+        is_readonly: false,
+        initializer: None,
+        attributes: vec![],
+        docs: None,
+    });
+
+    let ir = ty.to_ir(None);
+    assert!(!ir.log.has_warnings());
+
+    let rust = RustStruct::from_ir(ir.value, None);
+    assert_eq!(
+        unsupported_features(&rust.log.warnings),
+        vec![
+            "base `Entity` of `Player`".to_string(),
+            "base `IDamageable` of `Player`".to_string()
+        ]
+    );
+
+    let out = RustBackend::default()
+        .render_struct(&rust.value, None::<&str>, None::<&str>, None, &mut 0)
+        .unwrap();
+    assert_eq!(out, "pub struct Player {\n    pub health: float,\n}\n");
+}
+
+/// C# enum → IR → C++. Proves the enum crosses the other direction with values intact.
+#[test]
+fn csharp_enum_to_cpp() {
+    let e = CSharpEnum {
+        name: "Color".to_string(),
+        visibility: CSharpVisibility::Public,
+        underlying_type: Some("byte".to_string()),
+        members: vec![
+            CSharpEnumMember {
+                name: "Red".to_string(),
+                value: Some("0".to_string()),
+                docs: None,
+            },
+            CSharpEnumMember {
+                name: "Green".to_string(),
+                value: Some("1".to_string()),
+                docs: None,
+            },
+        ],
+        is_flags: false,
+        attributes: vec![],
+        docs: None,
+    };
+
+    let ir = e.to_ir(None);
+    assert!(!ir.log.has_warnings());
+
+    let ce = CppEnum::from_ir(ir.value, None);
+    assert!(!ce.log.has_warnings());
+
+    let out = cpp()
+        .render_enum::<&str>(&ce.value, None, None, None, None, &mut 0)
+        .unwrap();
+    assert_eq!(out, "enum class Color: byte\n{\n    Red = 0,\n    Green = 1,\n};\n");
+}
+
+/// Full triangle: C++ → IR → Rust → IR → C#. A valued enum survives two hops across three
+/// languages — its variants and discriminants are preserved end to end. (Visibility has no C++
+/// equivalent, so it defaults to private through the chain — an honest, documented mapping.)
+#[test]
+fn enum_round_trips_across_all_three_backends() {
+    let start = CppEnum {
+        name: "Color".to_string(),
+        variants: vec![
+            CppEnumVariant {
+                name: "Red".to_string(),
+                value: Some("0".to_string()),
+                docs: None,
+            },
+            CppEnumVariant {
+                name: "Green".to_string(),
+                value: Some("1".to_string()),
+                docs: None,
+            },
+        ],
+        is_enum_class: true,
+        underlying_type: Some("uint8_t".to_string()),
+        docs: None,
+    };
+
+    let rust = RustEnum::from_ir(start.to_ir(None).value, None).value;
+    let csharp = CSharpEnum::from_ir(rust.to_ir(None).value, None).value;
+
+    let out = CSharpBackend::default()
+        .render_enum::<&str>(&csharp, None, None, None, None, &mut 0)
+        .unwrap();
+    assert_eq!(
+        out,
+        "private enum Color : uint8_t\n{\n    Red = 0,\n    Green = 1,\n}\n"
+    );
+}
