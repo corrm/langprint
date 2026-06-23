@@ -1,10 +1,17 @@
 use crate::{
     backends::BackendItem,
     conversion::{ConversionLog, ConversionResult},
+    convert::{ConversionConfig, IdentifierKind, rename_identifier},
     ir::LanguageNamespace,
+    type_map::TargetLanguage,
 };
 
-use super::{RustConstant, RustDefinition, RustEnum, RustStruct, RustVisibility};
+use super::{
+    RustConstant, RustConstantRenderOptions, RustDefinition, RustDefinitionRenderOptions, RustEnum,
+    RustEnumConversionOptions, RustEnumRenderOptions, RustEnumVariantRenderOptions, RustFunction,
+    RustFunctionConversionOptions, RustFunctionRenderOptions, RustStruct, RustStructConversionOptions,
+    RustStructRenderOptions, RustVisibility,
+};
 
 /// Convert an optional list of native items to their IR form, collecting any warnings.
 fn module_items_to_ir<T: BackendItem>(items: Option<Vec<T>>, log: &mut ConversionLog) -> Option<Vec<T::IrType>> {
@@ -20,13 +27,18 @@ fn module_items_to_ir<T: BackendItem>(items: Option<Vec<T>>, log: &mut Conversio
     })
 }
 
-/// Convert an optional list of IR items to their native form, collecting any warnings.
-fn module_items_from_ir<T: BackendItem>(items: Option<Vec<T::IrType>>, log: &mut ConversionLog) -> Option<Vec<T>> {
+/// Convert an optional list of IR items to their native form, threading conversion options and
+/// collecting any warnings.
+fn module_items_from_ir<T: BackendItem>(
+    items: Option<Vec<T::IrType>>,
+    options: Option<&T::ConversionOptions>,
+    log: &mut ConversionLog,
+) -> Option<Vec<T>> {
     items.map(|items| {
         items
             .into_iter()
             .map(|item| {
-                let result = T::from_ir(item, None);
+                let result = T::from_ir(item, options);
                 log.add_warnings(result.log.warnings);
                 result.value
             })
@@ -49,6 +61,8 @@ pub struct RustModule {
     pub enums: Option<Vec<RustEnum>>,
     /// The structs in the module.
     pub structs: Option<Vec<RustStruct>>,
+    /// The free functions in the module.
+    pub functions: Option<Vec<RustFunction>>,
     /// The submodules in the module.
     pub modules: Option<Vec<RustModule>>,
     /// Optional documentation for the module.
@@ -72,6 +86,7 @@ impl BackendItem for RustModule {
             constants: module_items_to_ir(self.constants, &mut log),
             enums: module_items_to_ir(self.enums, &mut log),
             structs: module_items_to_ir(self.structs, &mut log),
+            functions: module_items_to_ir(self.functions, &mut log),
             namespaces: module_items_to_ir(self.modules, &mut log),
             docs: self.docs,
         };
@@ -79,20 +94,33 @@ impl BackendItem for RustModule {
         ConversionResult::with_log(language_namespace, log)
     }
 
-    fn from_ir(input: Self::IrType, _options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
+    fn from_ir(input: Self::IrType, options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
         let mut log = ConversionLog::new();
+        let config = options.map(|options| options.config.clone()).unwrap_or_default();
 
         let visibility = RustVisibility::from_ir(input.visibility, None);
         log.add_warnings(visibility.log.warnings);
 
+        let name = {
+            let renamed = rename_identifier(&config, &input.name, TargetLanguage::Rust, IdentifierKind::Namespace);
+            log.add_warnings(renamed.log.warnings);
+            renamed.value
+        };
+
+        let enum_options = RustEnumConversionOptions { config: config.clone() };
+        let struct_options = RustStructConversionOptions { config: config.clone() };
+        let function_options = RustFunctionConversionOptions { config: config.clone() };
+        let module_options = RustModuleConversionOptions { config: config.clone() };
+
         let rust_module = RustModule {
-            name: input.name,
+            name,
             visibility: visibility.value,
-            defines: module_items_from_ir::<RustDefinition>(input.defines, &mut log),
-            constants: module_items_from_ir::<RustConstant>(input.constants, &mut log),
-            enums: module_items_from_ir::<RustEnum>(input.enums, &mut log),
-            structs: module_items_from_ir::<RustStruct>(input.structs, &mut log),
-            modules: module_items_from_ir::<RustModule>(input.namespaces, &mut log),
+            defines: module_items_from_ir::<RustDefinition>(input.defines, None, &mut log),
+            constants: module_items_from_ir::<RustConstant>(input.constants, None, &mut log),
+            enums: module_items_from_ir::<RustEnum>(input.enums, Some(&enum_options), &mut log),
+            structs: module_items_from_ir::<RustStruct>(input.structs, Some(&struct_options), &mut log),
+            functions: module_items_from_ir::<RustFunction>(input.functions, Some(&function_options), &mut log),
+            modules: module_items_from_ir::<RustModule>(input.namespaces, Some(&module_options), &mut log),
             docs: input.docs,
         };
 
@@ -101,15 +129,19 @@ impl BackendItem for RustModule {
 }
 
 /// Conversion options for Rust modules.
-#[derive(Debug, Clone)]
-pub struct RustModuleConversionOptions {}
-
-impl Default for RustModuleConversionOptions {
-    fn default() -> Self {
-        Self::DEFAULT.clone()
-    }
+#[derive(Debug, Clone, Default)]
+pub struct RustModuleConversionOptions {
+    /// Cross-language conversion configuration (type mapping + renaming).
+    pub config: ConversionConfig,
 }
 
-impl RustModuleConversionOptions {
-    pub const DEFAULT: Self = Self {};
+/// Render options for Rust modules.
+#[derive(Debug, Clone, Default)]
+pub struct RustModuleRenderOptions {
+    pub define_options: RustDefinitionRenderOptions,
+    pub constant_options: RustConstantRenderOptions,
+    pub enum_options: RustEnumRenderOptions,
+    pub enum_variant_options: RustEnumVariantRenderOptions,
+    pub struct_options: RustStructRenderOptions,
+    pub function_options: RustFunctionRenderOptions,
 }

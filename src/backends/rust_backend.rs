@@ -24,6 +24,6 @@ pub use function_types::{
     RustParameterConversionOptions, RustSelfKind,
 };
 pub use generic_types::RustGenericArgument;
-pub use namespace_types::{RustModule, RustModuleConversionOptions};
+pub use namespace_types::{RustModule, RustModuleConversionOptions, RustModuleRenderOptions};
 pub use struct_types::{RustStruct, RustStructConversionOptions, RustStructRenderOptions};
 pub use visibility::{RustVisibility, RustVisibilityConversionOptions};

@@ -24,7 +24,7 @@ pub use function_types::{
     CSharpParameterConversionOptions,
 };
 pub use generic_types::CSharpGenericArgument;
-pub use namespace_types::{CSharpNamespace, CSharpNamespaceConversionOptions};
+pub use namespace_types::{CSharpNamespace, CSharpNamespaceConversionOptions, CSharpNamespaceRenderOptions};
 pub use property_types::CSharpProperty;
 pub use struct_types::{CSharpType, CSharpTypeConversionOptions, CSharpTypeKind, CSharpTypeRenderOptions};
 pub use visibility::{CSharpVisibility, CSharpVisibilityConversionOptions};

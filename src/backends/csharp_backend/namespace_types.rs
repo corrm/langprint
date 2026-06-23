@@ -1,10 +1,16 @@
 use crate::{
     backends::BackendItem,
     conversion::{ConversionLog, ConversionResult, ConversionWarning},
+    convert::{ConversionConfig, IdentifierKind, rename_identifier},
     ir::{LanguageNamespace, Visibility},
+    type_map::TargetLanguage,
 };
 
-use super::{CSharpConstant, CSharpDefinition, CSharpEnum, CSharpType};
+use super::{
+    CSharpConstant, CSharpConstantRenderOptions, CSharpDefinition, CSharpDefinitionRenderOptions, CSharpEnum,
+    CSharpEnumConversionOptions, CSharpEnumRenderOptions, CSharpEnumVariantRenderOptions, CSharpType,
+    CSharpTypeConversionOptions, CSharpTypeRenderOptions,
+};
 
 /// Convert an optional list of native items to their IR form, collecting any warnings.
 fn items_to_ir<T: BackendItem>(items: Option<Vec<T>>, log: &mut ConversionLog) -> Option<Vec<T::IrType>> {
@@ -20,13 +26,18 @@ fn items_to_ir<T: BackendItem>(items: Option<Vec<T>>, log: &mut ConversionLog) -
     })
 }
 
-/// Convert an optional list of IR items to their native form, collecting any warnings.
-fn items_from_ir<T: BackendItem>(items: Option<Vec<T::IrType>>, log: &mut ConversionLog) -> Option<Vec<T>> {
+/// Convert an optional list of IR items to their native form, threading conversion options and
+/// collecting any warnings.
+fn items_from_ir<T: BackendItem>(
+    items: Option<Vec<T::IrType>>,
+    options: Option<&T::ConversionOptions>,
+    log: &mut ConversionLog,
+) -> Option<Vec<T>> {
     items.map(|items| {
         items
             .into_iter()
             .map(|item| {
-                let result = T::from_ir(item, None);
+                let result = T::from_ir(item, options);
                 log.add_warnings(result.log.warnings);
                 result.value
             })
@@ -76,14 +87,16 @@ impl BackendItem for CSharpNamespace {
             constants: items_to_ir(self.constants, &mut log),
             enums: items_to_ir(self.enums, &mut log),
             structs: items_to_ir(self.types, &mut log),
+            functions: None,
             namespaces: items_to_ir(self.namespaces, &mut log),
             docs: self.docs,
         };
         ConversionResult::with_log(language_namespace, log)
     }
 
-    fn from_ir(input: Self::IrType, _options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
+    fn from_ir(input: Self::IrType, options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
         let mut log = ConversionLog::new();
+        let config = options.map(|options| options.config.clone()).unwrap_or_default();
 
         if input.visibility != Visibility::Default {
             log.add_warning(ConversionWarning::UnsupportedFeature {
@@ -91,14 +104,30 @@ impl BackendItem for CSharpNamespace {
                 resolution: "C# namespaces have no visibility specifier; dropped".to_string(),
             });
         }
+        if input.functions.is_some() {
+            log.add_warning(ConversionWarning::UnsupportedFeature {
+                feature: format!("free functions in namespace `{}`", input.name),
+                resolution: "C# has no namespace-level free functions; dropped".to_string(),
+            });
+        }
+
+        let name = {
+            let renamed = rename_identifier(&config, &input.name, TargetLanguage::CSharp, IdentifierKind::Namespace);
+            log.add_warnings(renamed.log.warnings);
+            renamed.value
+        };
+
+        let enum_options = CSharpEnumConversionOptions { config: config.clone() };
+        let type_options = CSharpTypeConversionOptions { config: config.clone() };
+        let namespace_options = CSharpNamespaceConversionOptions { config: config.clone() };
 
         let csharp_namespace = CSharpNamespace {
-            name: input.name,
-            defines: items_from_ir::<CSharpDefinition>(input.defines, &mut log),
-            constants: items_from_ir::<CSharpConstant>(input.constants, &mut log),
-            enums: items_from_ir::<CSharpEnum>(input.enums, &mut log),
-            types: items_from_ir::<CSharpType>(input.structs, &mut log),
-            namespaces: items_from_ir::<CSharpNamespace>(input.namespaces, &mut log),
+            name,
+            defines: items_from_ir::<CSharpDefinition>(input.defines, None, &mut log),
+            constants: items_from_ir::<CSharpConstant>(input.constants, None, &mut log),
+            enums: items_from_ir::<CSharpEnum>(input.enums, Some(&enum_options), &mut log),
+            types: items_from_ir::<CSharpType>(input.structs, Some(&type_options), &mut log),
+            namespaces: items_from_ir::<CSharpNamespace>(input.namespaces, Some(&namespace_options), &mut log),
             file_scoped: false,
             docs: input.docs,
         };
@@ -107,15 +136,18 @@ impl BackendItem for CSharpNamespace {
 }
 
 /// Conversion options for C# namespaces.
-#[derive(Debug, Clone)]
-pub struct CSharpNamespaceConversionOptions {}
-
-impl Default for CSharpNamespaceConversionOptions {
-    fn default() -> Self {
-        Self::DEFAULT.clone()
-    }
+#[derive(Debug, Clone, Default)]
+pub struct CSharpNamespaceConversionOptions {
+    /// Cross-language conversion configuration (type mapping + renaming).
+    pub config: ConversionConfig,
 }
 
-impl CSharpNamespaceConversionOptions {
-    pub const DEFAULT: Self = Self {};
+/// Render options for C# namespaces.
+#[derive(Debug, Clone, Default)]
+pub struct CSharpNamespaceRenderOptions {
+    pub define_options: CSharpDefinitionRenderOptions,
+    pub constant_options: CSharpConstantRenderOptions,
+    pub enum_options: CSharpEnumRenderOptions,
+    pub enum_variant_options: CSharpEnumVariantRenderOptions,
+    pub type_options: CSharpTypeRenderOptions,
 }

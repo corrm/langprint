@@ -58,6 +58,8 @@ pub enum IdentifierKind {
     Field,
     /// An enum member name.
     EnumMember,
+    /// A namespace / module name.
+    Namespace,
 }
 
 /// The case style an identifier is rewritten into.
@@ -72,7 +74,7 @@ fn convention(language: TargetLanguage, kind: IdentifierKind) -> Option<CaseStyl
     match language {
         TargetLanguage::Cpp => None,
         TargetLanguage::Rust => match kind {
-            IdentifierKind::Function | IdentifierKind::Field => Some(CaseStyle::Snake),
+            IdentifierKind::Function | IdentifierKind::Field | IdentifierKind::Namespace => Some(CaseStyle::Snake),
             IdentifierKind::Type | IdentifierKind::EnumMember => None,
         },
         TargetLanguage::CSharp => Some(CaseStyle::Pascal),

@@ -128,6 +128,15 @@ language's convention (Rust `snake_case` fns/fields; C# `PascalCase` types/metho
 members; C++ left verbatim) and reports each change as `ConversionWarning::NamingConventionChanged`.
 Set `rename: false` to keep identifiers exactly as written.
 
+## Namespaces
+
+Namespaces/modules are first-class and render across every backend — C++ `namespace X { … }`,
+Rust `mod x { … }`, C# `namespace X { … }` — nesting their defines, constants, enums, structs, free
+functions, and child namespaces via the same per-member renderers. Cross-language conversion threads
+the `ConversionConfig` into every member, so type mapping and renaming apply throughout (e.g. a Rust
+`mod` name is snake_cased, a C# namespace PascalCased). Where a target cannot express a member — C#
+has no namespace-level free functions — it is dropped with a `ConversionWarning`, never silently.
+
 ## Backends
 
 | Language | Native model prefix | Notable features modelled |

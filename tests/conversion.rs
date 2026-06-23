@@ -293,6 +293,7 @@ fn namespace_round_trips_nested_members_without_warnings() {
         constants: None,
         enums: Some(vec![scoped_enum("Mode")]),
         structs: None,
+        functions: None,
         namespaces: None,
     };
 
@@ -318,6 +319,7 @@ fn namespace_round_trips_nested_members_without_warnings() {
             methods: vec![clean_function("len")],
             docs: None,
         }]),
+        functions: None,
         namespaces: Some(vec![inner]),
     };
 

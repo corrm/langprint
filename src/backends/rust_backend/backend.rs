@@ -3,13 +3,13 @@ use std::io::{self, Write};
 use super::{
     RustConstant, RustConstantRenderOptions, RustDefinition, RustDefinitionRenderOptions, RustEnum,
     RustEnumRenderOptions, RustEnumVariantRenderOptions, RustEnumVariantValue, RustField, RustFunction,
-    RustFunctionRenderOptions, RustStruct, RustStructRenderOptions,
+    RustFunctionRenderOptions, RustModule, RustModuleRenderOptions, RustStruct, RustStructRenderOptions,
     generic_types::{render_generic_decls, render_generic_uses},
 };
 use crate::{
     backends::{BackendFeature, BackendMetadata},
     helper::indent,
-    renderers::{ConstantRenderer, DefinitionRenderer, EnumRenderer, FunctionRenderer, StructRenderer},
+    renderers::{ConstantRenderer, DefinitionRenderer, EnumRenderer, FunctionRenderer, NamespaceRenderer, StructRenderer},
     text::{IndentStyle, NewLineStyle},
 };
 
@@ -372,6 +372,125 @@ impl FunctionRenderer for RustBackend {
         if let Some(after) = after {
             write!(out, "{}", after.as_ref())?;
         }
+        Ok(())
+    }
+}
+
+impl NamespaceRenderer for RustBackend {
+    type NamespaceType = RustModule;
+    type RenderOptions = RustModuleRenderOptions;
+
+    fn render_namespace_to<S: AsRef<str>>(
+        &self,
+        input: &Self::NamespaceType,
+        before: Option<S>,
+        after: Option<S>,
+        options: Option<&Self::RenderOptions>,
+        indent_level: &mut i32,
+        out: &mut impl Write,
+    ) -> Result<(), io::Error> {
+        let binding = <RustBackend as NamespaceRenderer>::DEFAULT_RENDER_OPTIONS;
+        let options: &RustModuleRenderOptions = options.unwrap_or(&binding);
+
+        if let Some(before) = before {
+            write!(out, "{}", before.as_ref())?;
+        }
+        if let Some(docs) = &input.docs {
+            self.write_docs(docs, *indent_level, out)?;
+        }
+
+        write!(
+            out,
+            "{}{}mod {} {{{}",
+            self.indent(*indent_level),
+            input.visibility.prefix(),
+            input.name,
+            self.new_line.as_str()
+        )?;
+
+        *indent_level += 1;
+        let mut body_level: i32 = *indent_level;
+        let mut blocks: Vec<String> = Vec::new();
+
+        if let Some(defines) = &input.defines {
+            for define in defines {
+                blocks.push(self.render_definition(
+                    define,
+                    None::<&str>,
+                    None::<&str>,
+                    Some(&options.define_options),
+                    &mut body_level,
+                )?);
+            }
+        }
+        if let Some(constants) = &input.constants {
+            for constant in constants {
+                blocks.push(self.render_constant(
+                    constant,
+                    None::<&str>,
+                    None::<&str>,
+                    Some(&options.constant_options),
+                    &mut body_level,
+                )?);
+            }
+        }
+        if let Some(enums) = &input.enums {
+            for enum_ in enums {
+                blocks.push(self.render_enum(
+                    enum_,
+                    None::<&str>,
+                    None::<&str>,
+                    Some(&options.enum_options),
+                    Some(&options.enum_variant_options),
+                    &mut body_level,
+                )?);
+            }
+        }
+        if let Some(structs) = &input.structs {
+            for struct_ in structs {
+                blocks.push(self.render_struct(
+                    struct_,
+                    None::<&str>,
+                    None::<&str>,
+                    Some(&options.struct_options),
+                    &mut body_level,
+                )?);
+            }
+        }
+        if let Some(functions) = &input.functions {
+            for function in functions {
+                blocks.push(self.render_function(
+                    function,
+                    None::<&str>,
+                    None::<&str>,
+                    Some(&options.function_options),
+                    &mut body_level,
+                )?);
+            }
+        }
+        if let Some(modules) = &input.modules {
+            for module in modules {
+                blocks.push(self.render_namespace(module, None::<&str>, None::<&str>, Some(options), &mut body_level)?);
+            }
+        }
+        *indent_level -= 1;
+
+        let separator = format!("{}{}", self.new_line.as_str(), self.new_line.as_str());
+        let body = blocks
+            .iter()
+            .map(|block| block.trim_end_matches(self.new_line.as_str()))
+            .collect::<Vec<&str>>()
+            .join(&separator);
+        if !body.is_empty() {
+            write!(out, "{}{}", body, self.new_line.as_str())?;
+        }
+
+        write!(out, "{}}}{}", self.indent(*indent_level), self.new_line.as_str())?;
+
+        if let Some(after) = after {
+            write!(out, "{}", after.as_ref())?;
+        }
+
         Ok(())
     }
 }
