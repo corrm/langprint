@@ -19,5 +19,5 @@ pub use field_types::{CppField, CppFieldConversionOptions, CppFieldRenderOptions
 pub use function_types::{CppFunction, CppFunctionRenderOptions, CppParameter};
 pub use generic_types::CppGenericArgument;
 pub use namespace_types::{CppNamespace, CppNamespaceRenderOptions};
-pub use struct_types::{CppBase, CppStruct, CppStructRenderOptions};
+pub use struct_types::{CppBase, CppStruct, CppStructKind, CppStructRenderOptions};
 pub use visibility::CppVisibility;

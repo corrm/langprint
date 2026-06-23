@@ -52,9 +52,7 @@ impl BackendItem for CppStruct {
     type IrType = LanguageStruct;
     type ConversionOptions = CppStructConversionOptions;
 
-    fn to_ir(self, options: Option<&Self::ConversionOptions>) -> ConversionResult<Self::IrType> {
-        let options: &CppStructConversionOptions = options.unwrap_or(&CppStructConversionOptions::DEFAULT);
-
+    fn to_ir(self, _options: Option<&Self::ConversionOptions>) -> ConversionResult<Self::IrType> {
         let mut result_log = ConversionLog::new();
 
         // Convert fields using CppField's to_ir method
@@ -70,6 +68,9 @@ impl BackendItem for CppStruct {
 
             fields.push(field_result.value);
         }
+
+        // A C++ type is abstract iff it declares at least one pure-virtual method.
+        let is_abstract = self.methods.iter().any(|method| method.is_pure_virtual);
 
         // Convert methods
         let mut methods = Vec::with_capacity(self.methods.len());
@@ -121,7 +122,7 @@ impl BackendItem for CppStruct {
                 CppStructKind::Class => LanguageStructKind::Class,
                 CppStructKind::Union => LanguageStructKind::Union,
             },
-            is_abstract: options.final_to_abstract && !self.is_final,
+            is_abstract,
             is_final: self.is_final,
             name: self.name.clone(),
             generic_args,
@@ -220,11 +221,9 @@ impl BackendItem for CppStruct {
     }
 }
 
+/// Conversion options for C++ structs.
 #[derive(Debug, Clone)]
-pub struct CppStructConversionOptions {
-    /// Whether to convert final to abstract.
-    pub final_to_abstract: bool,
-}
+pub struct CppStructConversionOptions {}
 
 impl Default for CppStructConversionOptions {
     fn default() -> Self {
@@ -233,9 +232,7 @@ impl Default for CppStructConversionOptions {
 }
 
 impl CppStructConversionOptions {
-    pub const DEFAULT: Self = Self {
-        final_to_abstract: false,
-    };
+    pub const DEFAULT: Self = Self {};
 }
 
 /// Render options for C++ structs.

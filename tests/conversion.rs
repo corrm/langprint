@@ -287,3 +287,31 @@ fn namespace_round_trips_nested_members_without_warnings() {
     assert_eq!(nested[0].defines.as_ref().map(Vec::len), Some(1));
     assert_eq!(nested[0].enums.as_ref().map(Vec::len), Some(1));
 }
+
+fn struct_with_methods(name: &str, methods: Vec<CppFunction>) -> CppStruct {
+    CppStruct {
+        struct_kind: CppStructKind::Class,
+        is_final: false,
+        alignment: None,
+        name: name.to_string(),
+        template_params: vec![],
+        bases: vec![],
+        fields: vec![],
+        methods,
+        docs: None,
+    }
+}
+
+#[test]
+fn struct_is_abstract_is_derived_from_a_pure_virtual_method() {
+    // A C++ type is abstract iff it declares at least one pure-virtual method.
+    let mut pure = clean_function("draw");
+    pure.is_pure_virtual = true;
+    let abstract_struct = struct_with_methods("Shape", vec![pure]).to_ir(None).value;
+    assert!(abstract_struct.is_abstract);
+
+    let concrete_struct = struct_with_methods("Square", vec![clean_function("draw")])
+        .to_ir(None)
+        .value;
+    assert!(!concrete_struct.is_abstract);
+}

@@ -257,8 +257,6 @@ pub struct CppFunctionRenderOptions {
     pub render_docs: bool,
     /// Whether to add documentation comments before definitions.
     pub docs_on_definition: bool,
-    /// Whether to force rendering the parent name (class or struct) before the function name.
-    pub force_render_parent_name: bool,
     /// Whether to force rendering the function body.
     pub force_render_body: bool,
     /// Whether to render the function body if it's a template.
@@ -284,7 +282,6 @@ impl CppFunctionRenderOptions {
         render_definition: false,
         render_docs: true,
         docs_on_definition: false,
-        force_render_parent_name: false,
         force_render_body: false,
         render_body_if_template: true,
         render_body_if_friend: true,

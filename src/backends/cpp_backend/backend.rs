@@ -376,7 +376,7 @@ impl FunctionRenderer for CppBackend {
         }
 
         // Write function name
-        if (options.render_definition || options.force_render_parent_name)
+        if options.render_definition
             && let Some(parent_name) = &input.parent_name
         {
             write!(out, "{}::", parent_name)?;
