@@ -80,6 +80,16 @@ fn cpp_method(name: &str) -> CppFunction {
     }
 }
 
+fn rust_field(name: &str, ty: &str) -> langprint::backends::rust_backend::RustField {
+    langprint::backends::rust_backend::RustField {
+        name: name.to_string(),
+        field_type: ty.to_string(),
+        visibility: RustVisibility::Pub,
+        attributes: vec![],
+        docs: None,
+    }
+}
+
 fn unsupported_features(ws: &[ConversionWarning]) -> Vec<String> {
     ws.iter()
         .filter_map(|w| match w {
@@ -311,6 +321,92 @@ fn csharp_enum_to_cpp() {
         .render_enum::<&str>(&ce.value, None, None, None, None, &mut 0)
         .unwrap();
     assert_eq!(out, "enum class Color: byte\n{\n    Red = 0,\n    Green = 1,\n};\n");
+}
+
+/// Rust data-carrying enum → IR → C++. A C++ enum holds no per-variant data, so `from_ir` MUST
+/// surface a warning for every Tuple/Struct payload (never silently dropped — guards the fix in
+/// `CppEnumVariant::from_ir`, where these payloads were once mapped to `None` with no report). The
+/// variant names still cross and render as plain enumerators.
+#[test]
+fn rust_data_enum_to_cpp_warns_on_payload() {
+    let e = RustEnum {
+        name: "Shape".to_string(),
+        visibility: RustVisibility::Pub,
+        variants: vec![
+            RustEnumVariant {
+                name: "Circle".to_string(),
+                value: RustEnumVariantValue::Tuple(vec!["f32".to_string()]),
+                docs: None,
+            },
+            RustEnumVariant {
+                name: "Rect".to_string(),
+                value: RustEnumVariantValue::Tuple(vec!["f32".to_string(), "f32".to_string()]),
+                docs: None,
+            },
+        ],
+        repr: None,
+        derives: vec![],
+        docs: None,
+    };
+
+    // to_ir keeps the payloads in the IR (Rust-shaped variant model); no loss yet.
+    let ir = e.to_ir(None);
+    assert!(!ir.log.has_warnings());
+
+    // from_ir into C++ drops both payloads and reports each one — never silently.
+    let ce = CppEnum::from_ir(ir.value, None);
+    assert_eq!(
+        unsupported_features(&ce.log.warnings),
+        vec![
+            "data-carrying payload on enum variant `Circle`".to_string(),
+            "data-carrying payload on enum variant `Rect`".to_string()
+        ]
+    );
+
+    let out = cpp()
+        .render_enum::<&str>(&ce.value, None, None, None, None, &mut 0)
+        .unwrap();
+    assert_eq!(out, "enum class Shape\n{\nCircle\nRect\n};\n");
+}
+
+/// Rust struct → IR → C#. `RustStruct::to_ir` marks the type `is_final` (a Rust struct is not
+/// subclassable), which lowers to `is_sealed` on a C# value type. C# structs are *implicitly*
+/// sealed, so the `sealed` modifier is invalid syntax on a struct — the renderer MUST omit it.
+/// Guards the `CSharpTypeKind::can_be_sealed()` fix (it once emitted `public sealed struct`).
+#[test]
+fn rust_struct_to_csharp_renders_struct_without_sealed() {
+    let s = RustStruct {
+        name: "Vec3".to_string(),
+        visibility: RustVisibility::Pub,
+        generic_args: vec![],
+        fields: vec![rust_field("x", "f32"), rust_field("y", "f32"), rust_field("z", "f32")],
+        methods: vec![],
+        derives: vec![],
+        attributes: vec![],
+        is_tuple: false,
+        docs: None,
+    };
+
+    let ir = s.to_ir(None);
+    assert!(!ir.log.has_warnings());
+    // The IR carries the non-subclassable fact verbatim.
+    assert!(ir.value.is_final);
+
+    let cs = CSharpType::from_ir(ir.value, None);
+    assert!(!cs.log.has_warnings());
+    // Internally the C# type IS sealed on a Struct kind — the exact bug-B condition.
+    assert!(cs.value.is_sealed);
+    assert_eq!(cs.value.kind, CSharpTypeKind::Struct);
+
+    let out = CSharpBackend::default()
+        .render_struct::<&str>(&cs.value, None, None, None, &mut 0)
+        .unwrap();
+    // ...yet `sealed` MUST NOT appear in the rendered C#.
+    assert!(!out.contains("sealed"));
+    assert_eq!(
+        out,
+        "public struct Vec3\n{\n    public f32 x;\n    public f32 y;\n    public f32 z;\n}\n"
+    );
 }
 
 /// Full triangle: C++ → IR → Rust → IR → C#. A valued enum survives two hops across three
