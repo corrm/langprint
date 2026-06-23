@@ -29,6 +29,13 @@ impl CSharpTypeKind {
             CSharpTypeKind::Record => "record",
         }
     }
+
+    /// Whether the `sealed` modifier is valid for this kind. Structs are implicitly
+    /// sealed and interfaces cannot be sealed in C#, so `sealed` only applies to
+    /// `class` and `record`.
+    pub fn can_be_sealed(&self) -> bool {
+        matches!(self, CSharpTypeKind::Class | CSharpTypeKind::Record)
+    }
 }
 
 /// Represents a C# type declaration (class / struct / interface / record).

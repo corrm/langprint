@@ -38,15 +38,28 @@ impl BackendItem for CppEnumVariant {
     }
 
     fn from_ir(input: Self::IrType, _options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
-        ConversionResult::new(CppEnumVariant {
-            name: input.name,
-            value: match input.value {
-                EnumVariantValue::NoValue => None,
-                EnumVariantValue::Value(value) => Some(value),
-                _ => None,
+        let mut log = ConversionLog::new();
+
+        let value = match input.value {
+            EnumVariantValue::NoValue => None,
+            EnumVariantValue::Value(value) => Some(value),
+            EnumVariantValue::Tuple(_) | EnumVariantValue::Struct(_) => {
+                log.add_warning(ConversionWarning::UnsupportedFeature {
+                    feature: format!("data-carrying payload on enum variant `{}`", input.name),
+                    resolution: "C++ enums hold no per-variant data; payload dropped".to_string(),
+                });
+                None
+            }
+        };
+
+        ConversionResult::with_log(
+            CppEnumVariant {
+                name: input.name,
+                value,
+                docs: input.docs,
             },
-            docs: input.docs,
-        })
+            log,
+        )
     }
 }
 
@@ -139,14 +152,19 @@ impl BackendItem for CppEnum {
             result_log.add_warnings(visibility.log.warnings);
         }
 
+        let mut variants = Vec::with_capacity(input.variants.len());
+        for variant in input.variants {
+            let converted: ConversionResult<CppEnumVariant> = CppEnumVariant::from_ir(variant, None);
+            if converted.log.has_warnings() {
+                result_log.add_warnings(converted.log.warnings);
+            }
+            variants.push(converted.value);
+        }
+
         ConversionResult::with_log(
             CppEnum {
                 name: input.name,
-                variants: input
-                    .variants
-                    .into_iter()
-                    .map(|variant: EnumVariant| CppEnumVariant::from_ir(variant, None).value)
-                    .collect(),
+                variants,
                 underlying_type: input.underlying_type,
                 is_enum_class: options.is_enum_class,
                 docs: input.docs,

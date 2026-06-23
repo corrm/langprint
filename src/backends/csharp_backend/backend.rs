@@ -510,7 +510,7 @@ impl StructRenderer for CSharpBackend {
         if input.is_abstract {
             write!(out, "abstract ")?;
         }
-        if input.is_sealed {
+        if input.is_sealed && input.kind.can_be_sealed() {
             write!(out, "sealed ")?;
         }
         if input.is_partial {
