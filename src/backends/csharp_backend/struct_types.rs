@@ -1,10 +1,15 @@
 use crate::{
     backends::BackendItem,
     conversion::{ConversionLog, ConversionResult, ConversionWarning},
+    convert::{ConversionConfig, IdentifierKind, rename_identifier},
     ir::{LanguageBase, LanguageField, LanguageStruct, LanguageStructKind, Visibility},
+    type_map::TargetLanguage,
 };
 
-use super::{CSharpField, CSharpGenericArgument, CSharpMethod, CSharpProperty, CSharpVisibility};
+use super::{
+    CSharpField, CSharpFieldConversionOptions, CSharpGenericArgument, CSharpMethod, CSharpMethodConversionOptions,
+    CSharpProperty, CSharpVisibility,
+};
 
 /// The kind of a C# type declaration.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -172,13 +177,20 @@ impl BackendItem for CSharpType {
             methods.push(result.value);
         }
 
+        let mut generic_args = Vec::with_capacity(self.generic_args.len());
+        for generic in &self.generic_args {
+            let result = generic.to_ir();
+            log.add_warnings(result.log.warnings);
+            generic_args.push(result.value);
+        }
+
         let language_struct = LanguageStruct {
             visibility: visibility.value,
             struct_kind,
             is_abstract: self.is_abstract,
             is_final: self.is_sealed,
             name: self.name,
-            generic_args: self.generic_args.iter().map(CSharpGenericArgument::to_ir).collect(),
+            generic_args,
             bases,
             fields,
             methods,
@@ -187,8 +199,9 @@ impl BackendItem for CSharpType {
         ConversionResult::with_log(language_struct, log)
     }
 
-    fn from_ir(input: Self::IrType, _options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
+    fn from_ir(input: Self::IrType, options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
         let mut log = ConversionLog::new();
+        let config = options.map(|options| options.config.clone()).unwrap_or_default();
 
         let mut kind = match input.struct_kind {
             LanguageStructKind::Class => CSharpTypeKind::Class,
@@ -211,6 +224,9 @@ impl BackendItem for CSharpType {
             kind = CSharpTypeKind::Class;
         }
 
+        let name = rename_identifier(&config, &input.name, TargetLanguage::CSharp, IdentifierKind::Type);
+        log.add_warnings(name.log.warnings);
+
         let visibility = CSharpVisibility::from_ir(input.visibility, None);
         log.add_warnings(visibility.log.warnings);
 
@@ -218,29 +234,38 @@ impl BackendItem for CSharpType {
         let base_class = bases.next().map(|base| base.name);
         let interfaces = bases.map(|base| base.name).collect();
 
+        let field_options = CSharpFieldConversionOptions { config: config.clone() };
         let mut fields = Vec::with_capacity(input.fields.len());
         for field in input.fields {
-            let result = CSharpField::from_ir(field, None);
+            let result = CSharpField::from_ir(field, Some(&field_options));
             log.add_warnings(result.log.warnings);
             fields.push(result.value);
         }
 
+        let method_options = CSharpMethodConversionOptions { config: config.clone() };
         let mut methods = Vec::with_capacity(input.methods.len());
         for method in input.methods {
-            let result = CSharpMethod::from_ir(method, None);
+            let result = CSharpMethod::from_ir(method, Some(&method_options));
             log.add_warnings(result.log.warnings);
             methods.push(result.value);
         }
 
+        let mut generic_args = Vec::with_capacity(input.generic_args.len());
+        for generic in &input.generic_args {
+            let result = CSharpGenericArgument::from_ir(generic);
+            log.add_warnings(result.log.warnings);
+            generic_args.push(result.value);
+        }
+
         let csharp_type = CSharpType {
             kind,
-            name: input.name,
+            name: name.value,
             visibility: visibility.value,
             is_abstract: input.is_abstract,
             is_sealed: input.is_final,
             is_static: false,
             is_partial: false,
-            generic_args: input.generic_args.iter().map(CSharpGenericArgument::from_ir).collect(),
+            generic_args,
             base_class,
             interfaces,
             fields,
@@ -254,17 +279,10 @@ impl BackendItem for CSharpType {
 }
 
 /// Conversion options for C# types.
-#[derive(Debug, Clone)]
-pub struct CSharpTypeConversionOptions {}
-
-impl Default for CSharpTypeConversionOptions {
-    fn default() -> Self {
-        Self::DEFAULT.clone()
-    }
-}
-
-impl CSharpTypeConversionOptions {
-    pub const DEFAULT: Self = Self {};
+#[derive(Debug, Clone, Default)]
+pub struct CSharpTypeConversionOptions {
+    /// Cross-language conversion configuration (type mapping + renaming).
+    pub config: ConversionConfig,
 }
 
 /// Render options for C# types.

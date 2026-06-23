@@ -126,7 +126,7 @@ fn cpp_struct_to_rust() {
         .unwrap();
     assert_eq!(
         out,
-        "struct Player {\n    pub health: int,\n    pub mana: int,\n}\n\nimpl Player {\n    pub fn heal(&self, amount: int) -> void {\n        // body\n    }\n}\n"
+        "struct Player {\n    pub health: i32,\n    pub mana: i32,\n}\n\nimpl Player {\n    pub fn heal(&self, amount: i32) {\n        // body\n    }\n}\n"
     );
 }
 
@@ -152,14 +152,27 @@ fn cpp_struct_with_base_to_csharp() {
     assert!(!ir.log.has_warnings());
 
     let cs = CSharpType::from_ir(ir.value, None);
-    assert!(!cs.log.has_warnings());
+    // Idiomatic C# renaming PascalCases the field and method; each change is reported.
+    assert_eq!(
+        cs.log.warnings,
+        vec![
+            ConversionWarning::NamingConventionChanged {
+                original: "health".to_string(),
+                converted: "Health".to_string(),
+            },
+            ConversionWarning::NamingConventionChanged {
+                original: "heal".to_string(),
+                converted: "Heal".to_string(),
+            },
+        ]
+    );
 
     let out = CSharpBackend::default()
         .render_struct::<&str>(&cs.value, None, None, None, &mut 0)
         .unwrap();
     assert_eq!(
         out,
-        "class Player : Entity\n{\n    public float health;\n\n    public void heal(int amount)\n    {\n        // body\n    }\n}\n"
+        "class Player : Entity\n{\n    public float Health;\n\n    public void Heal(int amount)\n    {\n        // body\n    }\n}\n"
     );
 }
 
@@ -195,7 +208,7 @@ fn rust_enum_to_cpp() {
     let out = cpp()
         .render_enum::<&str>(&ce.value, None, None, None, None, &mut 0)
         .unwrap();
-    assert_eq!(out, "enum class Color: u8\n{\n    Red = 0,\n    Green = 1,\n};\n");
+    assert_eq!(out, "enum class Color: uint8_t\n{\n    Red = 0,\n    Green = 1,\n};\n");
 }
 
 /// Rust data-carrying enum → IR → C#. The Tuple payload cannot exist in a C# enum, so `from_ir`
@@ -284,7 +297,7 @@ fn csharp_class_to_rust_warns_on_inheritance() {
     let out = RustBackend::default()
         .render_struct(&rust.value, None::<&str>, None::<&str>, None, &mut 0)
         .unwrap();
-    assert_eq!(out, "pub struct Player {\n    pub health: float,\n}\n");
+    assert_eq!(out, "pub struct Player {\n    pub health: f32,\n}\n");
 }
 
 /// C# enum → IR → C++. Proves the enum crosses the other direction with values intact.
@@ -320,7 +333,7 @@ fn csharp_enum_to_cpp() {
     let out = cpp()
         .render_enum::<&str>(&ce.value, None, None, None, None, &mut 0)
         .unwrap();
-    assert_eq!(out, "enum class Color: byte\n{\n    Red = 0,\n    Green = 1,\n};\n");
+    assert_eq!(out, "enum class Color: uint8_t\n{\n    Red = 0,\n    Green = 1,\n};\n");
 }
 
 /// Rust data-carrying enum → IR → C++. A C++ enum holds no per-variant data, so `from_ir` MUST
@@ -393,7 +406,24 @@ fn rust_struct_to_csharp_renders_struct_without_sealed() {
     assert!(ir.value.is_final);
 
     let cs = CSharpType::from_ir(ir.value, None);
-    assert!(!cs.log.has_warnings());
+    // Idiomatic C# renaming PascalCases each field; the field type `f32` maps to `float`.
+    assert_eq!(
+        cs.log.warnings,
+        vec![
+            ConversionWarning::NamingConventionChanged {
+                original: "x".to_string(),
+                converted: "X".to_string(),
+            },
+            ConversionWarning::NamingConventionChanged {
+                original: "y".to_string(),
+                converted: "Y".to_string(),
+            },
+            ConversionWarning::NamingConventionChanged {
+                original: "z".to_string(),
+                converted: "Z".to_string(),
+            },
+        ]
+    );
     // Internally the C# type IS sealed on a Struct kind — the exact bug-B condition.
     assert!(cs.value.is_sealed);
     assert_eq!(cs.value.kind, CSharpTypeKind::Struct);
@@ -405,7 +435,7 @@ fn rust_struct_to_csharp_renders_struct_without_sealed() {
     assert!(!out.contains("sealed"));
     assert_eq!(
         out,
-        "public struct Vec3\n{\n    public f32 x;\n    public f32 y;\n    public f32 z;\n}\n"
+        "public struct Vec3\n{\n    public float X;\n    public float Y;\n    public float Z;\n}\n"
     );
 }
 
@@ -434,22 +464,19 @@ fn enum_round_trips_across_all_three_backends() {
     };
 
     let rust = RustEnum::from_ir(start.to_ir(None).value, None).value;
+    // The C++ underlying type `uint8_t` is re-spelled to Rust's `u8` on the way in.
+    assert_eq!(rust.repr, Some("u8".to_string()));
 
-    // The C++ underlying type `uint8_t` is not a valid Rust `repr`, so the Rust→IR leg drops it
-    // (with a warning) rather than shipping an invalid enum base onward to C#.
+    // `u8` is a valid integral repr, so the Rust→IR leg carries it onward with no loss.
     let rust_to_ir = rust.to_ir(None);
-    assert_eq!(
-        rust_to_ir.log.warnings,
-        vec![ConversionWarning::UnsupportedFeature {
-            feature: "#[repr(uint8_t)] on enum `Color`".to_string(),
-            resolution: "only integral reprs map to an enum underlying type; dropped".to_string(),
-        }]
-    );
+    assert!(!rust_to_ir.log.has_warnings());
 
     let csharp = CSharpEnum::from_ir(rust_to_ir.value, None).value;
+    // ...and it lands in C# as `byte`.
+    assert_eq!(csharp.underlying_type, Some("byte".to_string()));
 
     let out = CSharpBackend::default()
         .render_enum::<&str>(&csharp, None, None, None, None, &mut 0)
         .unwrap();
-    assert_eq!(out, "private enum Color\n{\n    Red = 0,\n    Green = 1,\n}\n");
+    assert_eq!(out, "private enum Color : byte\n{\n    Red = 0,\n    Green = 1,\n}\n");
 }

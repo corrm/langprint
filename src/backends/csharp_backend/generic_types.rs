@@ -1,3 +1,4 @@
+use crate::conversion::{ConversionLog, ConversionResult, ConversionWarning};
 use crate::ir::LanguageGenericArgument;
 
 /// Represents a C# generic type parameter (e.g. `T` with an optional `where` constraint).
@@ -11,21 +12,44 @@ pub struct CSharpGenericArgument {
 
 impl CSharpGenericArgument {
     /// Project this C# generic parameter into the neutral IR.
-    pub(crate) fn to_ir(&self) -> LanguageGenericArgument {
-        LanguageGenericArgument {
+    ///
+    /// A C# generic parameter carries no default or kind keyword, so the result never warns.
+    pub(crate) fn to_ir(&self) -> ConversionResult<LanguageGenericArgument> {
+        ConversionResult::new(LanguageGenericArgument {
             name: self.name.clone(),
             keyword: String::new(),
             default_value: None,
             where_clause: self.constraints.clone(),
-        }
+        })
     }
 
     /// Build a C# generic parameter from a neutral IR generic argument.
-    pub(crate) fn from_ir(input: &LanguageGenericArgument) -> Self {
-        CSharpGenericArgument {
-            name: input.name.clone(),
-            constraints: input.where_clause.clone(),
+    ///
+    /// C# cannot express a generic default or a lifetime/const-generic kind, so either is reported
+    /// as dropped.
+    pub(crate) fn from_ir(input: &LanguageGenericArgument) -> ConversionResult<Self> {
+        let mut log = ConversionLog::new();
+
+        if input.default_value.is_some() {
+            log.add_warning(ConversionWarning::UnsupportedFeature {
+                feature: format!("default on generic parameter `{}`", input.name),
+                resolution: "C# has no generic parameter defaults; the default was dropped".to_string(),
+            });
         }
+        if !input.keyword.is_empty() {
+            log.add_warning(ConversionWarning::UnsupportedFeature {
+                feature: format!("`{}` generic parameter `{}`", input.keyword, input.name),
+                resolution: "C# has no lifetime/const-generic parameters; the kind was dropped".to_string(),
+            });
+        }
+
+        ConversionResult::with_log(
+            CSharpGenericArgument {
+                name: input.name.clone(),
+                constraints: input.where_clause.clone(),
+            },
+            log,
+        )
     }
 }
 

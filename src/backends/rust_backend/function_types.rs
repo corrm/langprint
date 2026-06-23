@@ -1,7 +1,9 @@
 use crate::{
     backends::BackendItem,
     conversion::{ConversionLog, ConversionResult, ConversionWarning},
+    convert::{ConversionConfig, IdentifierKind, map_type, rename_identifier},
     ir::{LanguageFunction, LanguageFunctionParameter},
+    type_map::{PrimitiveType, TargetLanguage},
 };
 
 use super::{RustGenericArgument, RustVisibility};
@@ -52,8 +54,9 @@ impl BackendItem for RustParameter {
         })
     }
 
-    fn from_ir(input: Self::IrType, _options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
+    fn from_ir(input: Self::IrType, options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
         let mut log = ConversionLog::new();
+        let config = options.map(|options| options.config.clone()).unwrap_or_default();
 
         if input.default_value.is_some() {
             log.add_warning(ConversionWarning::UnsupportedFeature {
@@ -62,10 +65,13 @@ impl BackendItem for RustParameter {
             });
         }
 
+        let param_type = map_type(&config, &input.param_type, TargetLanguage::Rust);
+        log.add_warnings(param_type.log.warnings);
+
         ConversionResult::with_log(
             RustParameter {
                 name: input.name,
-                param_type: input.param_type,
+                param_type: param_type.value,
             },
             log,
         )
@@ -73,17 +79,10 @@ impl BackendItem for RustParameter {
 }
 
 /// Conversion options for Rust parameters.
-#[derive(Debug, Clone)]
-pub struct RustParameterConversionOptions {}
-
-impl Default for RustParameterConversionOptions {
-    fn default() -> Self {
-        Self::DEFAULT.clone()
-    }
-}
-
-impl RustParameterConversionOptions {
-    pub const DEFAULT: Self = Self {};
+#[derive(Debug, Clone, Default)]
+pub struct RustParameterConversionOptions {
+    /// Cross-language conversion configuration (type mapping + renaming).
+    pub config: ConversionConfig,
 }
 
 /// Represents a Rust function or method.
@@ -167,7 +166,12 @@ impl BackendItem for RustFunction {
             parameters.push(result.value);
         }
 
-        let generic_args = self.generic_args.iter().map(RustGenericArgument::to_ir).collect();
+        let mut generic_args = Vec::with_capacity(self.generic_args.len());
+        for generic in &self.generic_args {
+            let result = generic.to_ir();
+            log.add_warnings(result.log.warnings);
+            generic_args.push(result.value);
+        }
 
         ConversionResult::with_log(
             LanguageFunction {
@@ -188,8 +192,9 @@ impl BackendItem for RustFunction {
         )
     }
 
-    fn from_ir(input: Self::IrType, _options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
+    fn from_ir(input: Self::IrType, options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
         let mut log = ConversionLog::new();
+        let config = options.map(|options| options.config.clone()).unwrap_or_default();
 
         if input.is_virtual {
             log.add_warning(ConversionWarning::UnsupportedFeature {
@@ -216,17 +221,37 @@ impl BackendItem for RustFunction {
             });
         }
 
+        let name = rename_identifier(&config, &input.name, TargetLanguage::Rust, IdentifierKind::Function);
+        log.add_warnings(name.log.warnings);
+
         let visibility = RustVisibility::from_ir(input.visibility, None);
         log.add_warnings(visibility.log.warnings);
 
+        let parameter_options = RustParameterConversionOptions { config: config.clone() };
         let mut parameters = Vec::with_capacity(input.parameters.len());
         for parameter in input.parameters {
-            let result = RustParameter::from_ir(parameter, None);
+            let result = RustParameter::from_ir(parameter, Some(&parameter_options));
             log.add_warnings(result.log.warnings);
             parameters.push(result.value);
         }
 
-        let generic_args = input.generic_args.iter().map(RustGenericArgument::from_ir).collect();
+        let mut generic_args = Vec::with_capacity(input.generic_args.len());
+        for generic in &input.generic_args {
+            let result = RustGenericArgument::from_ir(generic);
+            log.add_warnings(result.log.warnings);
+            generic_args.push(result.value);
+        }
+
+        // A `void`/unit return is idiomatically expressed by omitting the return type in Rust.
+        let return_type = match input.return_type {
+            Some(return_type) if config.type_map.resolve(&return_type) == Some(PrimitiveType::Void) => None,
+            Some(return_type) => {
+                let mapped = map_type(&config, &return_type, TargetLanguage::Rust);
+                log.add_warnings(mapped.log.warnings);
+                Some(mapped.value)
+            }
+            None => None,
+        };
 
         let self_kind = if input.is_static {
             RustSelfKind::None
@@ -236,12 +261,12 @@ impl BackendItem for RustFunction {
 
         ConversionResult::with_log(
             RustFunction {
-                name: input.name,
+                name: name.value,
                 visibility: visibility.value,
                 self_kind,
                 parameters,
                 generic_args,
-                return_type: input.return_type,
+                return_type,
                 is_unsafe: false,
                 is_async: false,
                 is_const: false,
@@ -255,17 +280,10 @@ impl BackendItem for RustFunction {
 }
 
 /// Conversion options for Rust functions.
-#[derive(Debug, Clone)]
-pub struct RustFunctionConversionOptions {}
-
-impl Default for RustFunctionConversionOptions {
-    fn default() -> Self {
-        Self::DEFAULT.clone()
-    }
-}
-
-impl RustFunctionConversionOptions {
-    pub const DEFAULT: Self = Self {};
+#[derive(Debug, Clone, Default)]
+pub struct RustFunctionConversionOptions {
+    /// Cross-language conversion configuration (type mapping + renaming).
+    pub config: ConversionConfig,
 }
 
 /// Render options for Rust functions.

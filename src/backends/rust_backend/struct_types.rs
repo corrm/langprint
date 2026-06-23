@@ -1,10 +1,14 @@
 use crate::{
     backends::BackendItem,
     conversion::{ConversionLog, ConversionResult, ConversionWarning},
+    convert::ConversionConfig,
     ir::{LanguageStruct, LanguageStructKind},
 };
 
-use super::{RustField, RustFunction, RustGenericArgument, RustVisibility};
+use super::{
+    RustField, RustFieldConversionOptions, RustFunction, RustFunctionConversionOptions, RustGenericArgument,
+    RustVisibility,
+};
 
 /// Represents a Rust struct, together with the methods rendered in its `impl` block.
 #[derive(Debug, Clone)]
@@ -72,7 +76,12 @@ impl BackendItem for RustStruct {
             methods.push(result.value);
         }
 
-        let generic_args = self.generic_args.iter().map(RustGenericArgument::to_ir).collect();
+        let mut generic_args = Vec::with_capacity(self.generic_args.len());
+        for generic in &self.generic_args {
+            let result = generic.to_ir();
+            log.add_warnings(result.log.warnings);
+            generic_args.push(result.value);
+        }
 
         ConversionResult::with_log(
             LanguageStruct {
@@ -92,8 +101,9 @@ impl BackendItem for RustStruct {
         )
     }
 
-    fn from_ir(input: Self::IrType, _options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
+    fn from_ir(input: Self::IrType, options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
         let mut log = ConversionLog::new();
+        let config = options.map(|options| options.config.clone()).unwrap_or_default();
 
         if input.struct_kind == LanguageStructKind::Union {
             log.add_warning(ConversionWarning::UnsupportedFeature {
@@ -117,21 +127,28 @@ impl BackendItem for RustStruct {
         let visibility = RustVisibility::from_ir(input.visibility, None);
         log.add_warnings(visibility.log.warnings);
 
+        let field_options = RustFieldConversionOptions { config: config.clone() };
         let mut fields = Vec::with_capacity(input.fields.len());
         for field in input.fields {
-            let result = RustField::from_ir(field, None);
+            let result = RustField::from_ir(field, Some(&field_options));
             log.add_warnings(result.log.warnings);
             fields.push(result.value);
         }
 
+        let function_options = RustFunctionConversionOptions { config: config.clone() };
         let mut methods = Vec::with_capacity(input.methods.len());
         for method in input.methods {
-            let result = RustFunction::from_ir(method, None);
+            let result = RustFunction::from_ir(method, Some(&function_options));
             log.add_warnings(result.log.warnings);
             methods.push(result.value);
         }
 
-        let generic_args = input.generic_args.iter().map(RustGenericArgument::from_ir).collect();
+        let mut generic_args = Vec::with_capacity(input.generic_args.len());
+        for generic in &input.generic_args {
+            let result = RustGenericArgument::from_ir(generic);
+            log.add_warnings(result.log.warnings);
+            generic_args.push(result.value);
+        }
 
         ConversionResult::with_log(
             RustStruct {
@@ -151,17 +168,10 @@ impl BackendItem for RustStruct {
 }
 
 /// Conversion options for Rust structs.
-#[derive(Debug, Clone)]
-pub struct RustStructConversionOptions {}
-
-impl Default for RustStructConversionOptions {
-    fn default() -> Self {
-        Self::DEFAULT.clone()
-    }
-}
-
-impl RustStructConversionOptions {
-    pub const DEFAULT: Self = Self {};
+#[derive(Debug, Clone, Default)]
+pub struct RustStructConversionOptions {
+    /// Cross-language conversion configuration (type mapping + renaming).
+    pub config: ConversionConfig,
 }
 
 /// Render options for Rust structs.

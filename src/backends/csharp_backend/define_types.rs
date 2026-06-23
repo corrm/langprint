@@ -1,5 +1,43 @@
 use crate::{backends::BackendItem, conversion::ConversionResult, ir::LanguageDefinition};
 
+/// Infer the C# `const` type for a define value.
+///
+/// # Arguments
+///
+/// * `value` - The define's value expression.
+///
+/// # Returns
+///
+/// The C# keyword type (`bool`/`string`/`char`/`int`/`long`/`double`) the literal denotes, or
+/// `None` when the value is not a recognized literal (the caller falls back to a configured type).
+pub fn infer_const_type(value: &str) -> Option<&'static str> {
+    let value = value.trim();
+    if value == "true" || value == "false" {
+        return Some("bool");
+    }
+    if value.len() >= 2 && value.starts_with('"') && value.ends_with('"') {
+        return Some("string");
+    }
+    if value.len() >= 2 && value.starts_with('\'') && value.ends_with('\'') {
+        return Some("char");
+    }
+    if let Some(hex) = value.strip_prefix("0x").or_else(|| value.strip_prefix("0X"))
+        && i64::from_str_radix(hex, 16).is_ok()
+    {
+        return Some("int");
+    }
+    if value.parse::<i32>().is_ok() {
+        return Some("int");
+    }
+    if value.parse::<i64>().is_ok() {
+        return Some("long");
+    }
+    if value.parse::<f64>().is_ok() {
+        return Some("double");
+    }
+    None
+}
+
 /// Represents a preprocessor-style define lowered into C#.
 ///
 /// C# has no value-carrying `#define`, so a define is rendered as a `public const`

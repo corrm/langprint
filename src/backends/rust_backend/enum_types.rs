@@ -1,7 +1,9 @@
 use crate::{
     backends::BackendItem,
     conversion::{ConversionLog, ConversionResult, ConversionWarning},
+    convert::{ConversionConfig, map_type},
     ir::{EnumVariant, EnumVariantValue, LanguageEnum},
+    type_map::TargetLanguage,
 };
 
 use super::RustVisibility;
@@ -111,11 +113,21 @@ impl BackendItem for RustEnum {
         )
     }
 
-    fn from_ir(input: Self::IrType, _options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
+    fn from_ir(input: Self::IrType, options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
         let mut log = ConversionLog::new();
+        let config = options.map(|options| options.config.clone()).unwrap_or_default();
 
         let visibility = RustVisibility::from_ir(input.visibility, None);
         log.add_warnings(visibility.log.warnings);
+
+        let repr = match input.underlying_type {
+            Some(underlying_type) => {
+                let mapped = map_type(&config, &underlying_type, TargetLanguage::Rust);
+                log.add_warnings(mapped.log.warnings);
+                Some(mapped.value)
+            }
+            None => None,
+        };
 
         let variants = input
             .variants
@@ -137,7 +149,7 @@ impl BackendItem for RustEnum {
                 name: input.name,
                 visibility: visibility.value,
                 variants,
-                repr: input.underlying_type,
+                repr,
                 derives: Vec::new(),
                 docs: input.docs,
             },
@@ -147,17 +159,10 @@ impl BackendItem for RustEnum {
 }
 
 /// Conversion options for Rust enums.
-#[derive(Debug, Clone)]
-pub struct RustEnumConversionOptions {}
-
-impl Default for RustEnumConversionOptions {
-    fn default() -> Self {
-        Self::DEFAULT.clone()
-    }
-}
-
-impl RustEnumConversionOptions {
-    pub const DEFAULT: Self = Self {};
+#[derive(Debug, Clone, Default)]
+pub struct RustEnumConversionOptions {
+    /// Cross-language conversion configuration (type mapping + renaming).
+    pub config: ConversionConfig,
 }
 
 /// Render options for Rust enum variants.

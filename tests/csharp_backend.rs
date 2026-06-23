@@ -229,7 +229,8 @@ fn class_round_trips_through_ir() {
     assert_eq!(back.base_class.as_deref(), Some("Entity"));
     assert_eq!(back.interfaces, vec!["IDamageable".to_string()]);
     assert_eq!(back.fields.len(), 1);
-    assert_eq!(back.fields[0].name, "health");
+    // `from_ir` applies C#'s PascalCase convention to the non-idiomatic field name.
+    assert_eq!(back.fields[0].name, "Health");
     assert_eq!(back.fields[0].field_type, "float");
     assert_eq!(back.methods.len(), 1);
     assert_eq!(back.methods[0].name, "Heal");

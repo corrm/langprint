@@ -1,7 +1,9 @@
 use crate::{
     backends::BackendItem,
     conversion::{ConversionLog, ConversionResult, ConversionWarning},
+    convert::{ConversionConfig, map_type},
     ir::{LanguageFunction, LanguageFunctionParameter, LanguageGenericArgument},
+    type_map::TargetLanguage,
 };
 
 use super::{CppGenericArgument, CppVisibility};
@@ -29,27 +31,26 @@ impl BackendItem for CppParameter {
         })
     }
 
-    fn from_ir(input: Self::IrType, _options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
-        ConversionResult::new(CppParameter {
-            name: input.name,
-            param_type: input.param_type,
-            default_value: input.default_value,
-        })
+    fn from_ir(input: Self::IrType, options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
+        let config = options.map(|options| options.config.clone()).unwrap_or_default();
+        let param_type = map_type(&config, &input.param_type, TargetLanguage::Cpp);
+
+        ConversionResult::with_log(
+            CppParameter {
+                name: input.name,
+                param_type: param_type.value,
+                default_value: input.default_value,
+            },
+            param_type.log,
+        )
     }
 }
 
 /// Conversion options for C++ parameters.
-#[derive(Debug, Clone)]
-pub struct CppParameterConversionOptions {}
-
-impl Default for CppParameterConversionOptions {
-    fn default() -> Self {
-        Self::DEFAULT.clone()
-    }
-}
-
-impl CppParameterConversionOptions {
-    pub const DEFAULT: Self = Self {};
+#[derive(Debug, Clone, Default)]
+pub struct CppParameterConversionOptions {
+    /// Cross-language conversion configuration (type mapping + renaming).
+    pub config: ConversionConfig,
 }
 
 /// Represents a C++ function definition.
@@ -170,13 +171,16 @@ impl BackendItem for CppFunction {
         ConversionResult::with_log(lang_function, result_log)
     }
 
-    fn from_ir(input: Self::IrType, _options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
+    fn from_ir(input: Self::IrType, options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
         let mut result_log = ConversionLog::new();
+        let config = options.map(|options| options.config.clone()).unwrap_or_default();
 
         // Convert parameters
+        let parameter_options = CppParameterConversionOptions { config: config.clone() };
         let mut parameters: Vec<CppParameter> = Vec::with_capacity(input.parameters.len());
         for param in &input.parameters {
-            let param_result: ConversionResult<CppParameter> = CppParameter::from_ir(param.clone(), None);
+            let param_result: ConversionResult<CppParameter> =
+                CppParameter::from_ir(param.clone(), Some(&parameter_options));
 
             // Collect any warnings from parameter conversion
             if param_result.log.has_warnings() {
@@ -185,6 +189,15 @@ impl BackendItem for CppFunction {
 
             parameters.push(param_result.value);
         }
+
+        let return_type = match input.return_type {
+            Some(return_type) => {
+                let mapped = map_type(&config, &return_type, TargetLanguage::Cpp);
+                result_log.add_warnings(mapped.log.warnings);
+                Some(mapped.value)
+            }
+            None => None,
+        };
 
         // Convert generic arguments to template parameters
         let mut template_params = Vec::with_capacity(input.generic_args.len());
@@ -210,7 +223,7 @@ impl BackendItem for CppFunction {
             visibility: visibility_result.value,
             parameters,
             template_params,
-            return_type: input.return_type,
+            return_type,
             is_static: input.is_static,
             is_const: false,
             // In C++, virtual is determined by is_abstract or is_virtual
@@ -233,17 +246,10 @@ impl BackendItem for CppFunction {
 }
 
 /// Conversion options for C++ functions.
-#[derive(Debug, Clone)]
-pub struct CppFunctionConversionOptions {}
-
-impl Default for CppFunctionConversionOptions {
-    fn default() -> Self {
-        Self::DEFAULT.clone()
-    }
-}
-
-impl CppFunctionConversionOptions {
-    pub const DEFAULT: Self = Self {};
+#[derive(Debug, Clone, Default)]
+pub struct CppFunctionConversionOptions {
+    /// Cross-language conversion configuration (type mapping + renaming).
+    pub config: ConversionConfig,
 }
 
 /// Render options for C++ functions.

@@ -1,7 +1,9 @@
 use crate::{
     backends::BackendItem,
     conversion::{ConversionLog, ConversionResult, ConversionWarning},
+    convert::{ConversionConfig, map_type},
     ir::LanguageField,
+    type_map::TargetLanguage,
 };
 
 use super::CppVisibility;
@@ -96,8 +98,9 @@ impl BackendItem for CppField {
         ConversionResult::with_log(language_field, result_log)
     }
 
-    fn from_ir(input: Self::IrType, _options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
+    fn from_ir(input: Self::IrType, options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
         let mut result_log = ConversionLog::new();
+        let config = options.map(|options| options.config.clone()).unwrap_or_default();
 
         let visibility: ConversionResult<CppVisibility> = CppVisibility::from_ir(input.visibility, None);
 
@@ -105,9 +108,12 @@ impl BackendItem for CppField {
             result_log.add_warnings(visibility.log.warnings);
         }
 
+        let field_type = map_type(&config, &input.field_type, TargetLanguage::Cpp);
+        result_log.add_warnings(field_type.log.warnings);
+
         let cpp_field = CppField {
             name: input.name,
-            field_type: input.field_type,
+            field_type: field_type.value,
             visibility: visibility.value,
             array_size: None,
             bit_field_size: None,
@@ -125,17 +131,10 @@ impl BackendItem for CppField {
 }
 
 /// Conversion options for C++ fields.
-#[derive(Debug, Clone)]
-pub struct CppFieldConversionOptions {}
-
-impl Default for CppFieldConversionOptions {
-    fn default() -> Self {
-        Self::DEFAULT.clone()
-    }
-}
-
-impl CppFieldConversionOptions {
-    pub const DEFAULT: Self = Self {};
+#[derive(Debug, Clone, Default)]
+pub struct CppFieldConversionOptions {
+    /// Cross-language conversion configuration (type mapping + renaming).
+    pub config: ConversionConfig,
 }
 
 /// Render options for C++ fields.

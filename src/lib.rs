@@ -8,11 +8,17 @@
 
 pub mod backends;
 pub mod conversion;
+pub mod convert;
 mod helper;
 pub mod ir;
+pub mod naming;
 pub mod project_gen;
 pub mod renderers;
 pub mod text;
+pub mod type_map;
+
+pub use convert::ConversionConfig;
+pub use type_map::{PrimitiveType, TargetLanguage, TypeMap};
 
 /// Get a list of available backend names
 pub fn available_backends() -> Vec<&'static str> {

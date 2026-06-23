@@ -1,10 +1,12 @@
 use super::{
-    CppField, CppFieldRenderOptions, CppFunction, CppFunctionRenderOptions, CppGenericArgument, CppVisibility,
+    CppField, CppFieldConversionOptions, CppFieldRenderOptions, CppFunction, CppFunctionConversionOptions,
+    CppFunctionRenderOptions, CppGenericArgument, CppVisibility,
 };
 use crate::ir::LanguageStructKind;
 use crate::{
     backends::BackendItem,
     conversion::{ConversionLog, ConversionResult, ConversionWarning},
+    convert::ConversionConfig,
     ir::{LanguageBase, LanguageGenericArgument, LanguageStruct, Visibility},
 };
 
@@ -135,14 +137,16 @@ impl BackendItem for CppStruct {
         ConversionResult::with_log(lang_struct, result_log)
     }
 
-    fn from_ir(input: Self::IrType, _options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
+    fn from_ir(input: Self::IrType, options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
         let mut result_log = ConversionLog::new();
+        let config = options.map(|options| options.config.clone()).unwrap_or_default();
 
         // Convert fields using CppField's from_ir method
+        let field_options = CppFieldConversionOptions { config: config.clone() };
         let mut fields = Vec::with_capacity(input.fields.len());
 
         for field in &input.fields {
-            let field_result = CppField::from_ir(field.clone(), None);
+            let field_result = CppField::from_ir(field.clone(), Some(&field_options));
 
             // Collect any warnings from field conversion
             if field_result.log.has_warnings() {
@@ -153,10 +157,11 @@ impl BackendItem for CppStruct {
         }
 
         // Convert methods using CppFunction's from_ir method
+        let function_options = CppFunctionConversionOptions { config: config.clone() };
         let mut methods = Vec::with_capacity(input.methods.len());
 
         for method in &input.methods {
-            let method_result = CppFunction::from_ir(method.clone(), None);
+            let method_result = CppFunction::from_ir(method.clone(), Some(&function_options));
 
             // Collect any warnings from method conversion
             if method_result.log.has_warnings() {
@@ -222,17 +227,10 @@ impl BackendItem for CppStruct {
 }
 
 /// Conversion options for C++ structs.
-#[derive(Debug, Clone)]
-pub struct CppStructConversionOptions {}
-
-impl Default for CppStructConversionOptions {
-    fn default() -> Self {
-        Self::DEFAULT.clone()
-    }
-}
-
-impl CppStructConversionOptions {
-    pub const DEFAULT: Self = Self {};
+#[derive(Debug, Clone, Default)]
+pub struct CppStructConversionOptions {
+    /// Cross-language conversion configuration (type mapping + renaming).
+    pub config: ConversionConfig,
 }
 
 /// Render options for C++ structs.

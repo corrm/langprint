@@ -1,7 +1,9 @@
 use crate::{
     backends::BackendItem,
     conversion::{ConversionLog, ConversionResult, ConversionWarning},
+    convert::{ConversionConfig, IdentifierKind, map_type, rename_identifier},
     ir::LanguageField,
+    type_map::TargetLanguage,
 };
 
 use super::RustVisibility;
@@ -51,8 +53,9 @@ impl BackendItem for RustField {
         )
     }
 
-    fn from_ir(input: Self::IrType, _options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
+    fn from_ir(input: Self::IrType, options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
         let mut log = ConversionLog::new();
+        let config = options.map(|options| options.config.clone()).unwrap_or_default();
 
         if input.is_static {
             log.add_warning(ConversionWarning::UnsupportedFeature {
@@ -67,13 +70,19 @@ impl BackendItem for RustField {
             });
         }
 
+        let name = rename_identifier(&config, &input.name, TargetLanguage::Rust, IdentifierKind::Field);
+        log.add_warnings(name.log.warnings);
+
+        let field_type = map_type(&config, &input.field_type, TargetLanguage::Rust);
+        log.add_warnings(field_type.log.warnings);
+
         let visibility = RustVisibility::from_ir(input.visibility, None);
         log.add_warnings(visibility.log.warnings);
 
         ConversionResult::with_log(
             RustField {
-                name: input.name,
-                field_type: input.field_type,
+                name: name.value,
+                field_type: field_type.value,
                 visibility: visibility.value,
                 attributes: Vec::new(),
                 docs: input.docs,
@@ -84,17 +93,10 @@ impl BackendItem for RustField {
 }
 
 /// Conversion options for Rust fields.
-#[derive(Debug, Clone)]
-pub struct RustFieldConversionOptions {}
-
-impl Default for RustFieldConversionOptions {
-    fn default() -> Self {
-        Self::DEFAULT.clone()
-    }
-}
-
-impl RustFieldConversionOptions {
-    pub const DEFAULT: Self = Self {};
+#[derive(Debug, Clone, Default)]
+pub struct RustFieldConversionOptions {
+    /// Cross-language conversion configuration (type mapping + renaming).
+    pub config: ConversionConfig,
 }
 
 /// Render options for Rust fields.

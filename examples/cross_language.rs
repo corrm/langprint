@@ -4,10 +4,13 @@
 //! Run with: `cargo run -p langprint --example cross_language`
 
 use langprint::backends::BackendItem;
-use langprint::backends::csharp_backend::{CSharpBackend, CSharpField, CSharpType, CSharpTypeKind, CSharpVisibility};
+use langprint::backends::csharp_backend::{
+    CSharpBackend, CSharpField, CSharpType, CSharpTypeConversionOptions, CSharpTypeKind, CSharpVisibility,
+};
 use langprint::backends::rust_backend::{RustBackend, RustField, RustStruct, RustVisibility};
 use langprint::conversion::ConversionWarning;
 use langprint::renderers::StructRenderer;
+use langprint::{ConversionConfig, PrimitiveType, TargetLanguage, TypeMap};
 
 fn rust_field(name: &str, ty: &str) -> RustField {
     RustField {
@@ -104,4 +107,29 @@ fn main() {
         .render_struct(&rust_boss.value, None::<&str>, None::<&str>, None, &mut 0)
         .expect("render Rust");
     println!("\n== Rust (converted from the C# class — inheritance dropped) ==\n{boss_src}");
+
+    // Customize the conversion: extend the built-in TypeMap with a game type, override an output
+    // spelling, and turn off idiomatic renaming. The map is exposed for exactly this.
+    let mut type_map = TypeMap::builtin();
+    type_map.insert_spelling("FString", PrimitiveType::Str);
+    type_map.set_output(PrimitiveType::Str, TargetLanguage::CSharp, "string");
+    let config = ConversionConfig::new(type_map, false);
+    let options = CSharpTypeConversionOptions { config };
+
+    let actor = RustStruct {
+        name: "Actor".to_string(),
+        visibility: RustVisibility::Pub,
+        generic_args: vec![],
+        fields: vec![rust_field("display_name", "FString"), rust_field("health", "f32")],
+        methods: vec![],
+        derives: vec![],
+        attributes: vec![],
+        is_tuple: false,
+        docs: None,
+    };
+    let actor_cs = CSharpType::from_ir(actor.to_ir(None).value, Some(&options));
+    let actor_src = CSharpBackend::default()
+        .render_struct::<&str>(&actor_cs.value, None, None, None, &mut 0)
+        .expect("render C#");
+    println!("\n== C# (custom TypeMap: FString->string; renaming off) ==\n{actor_src}");
 }

@@ -88,12 +88,12 @@ and the same declaration, converted into C#, renders as:
 ```csharp
 public struct Player
 {
-    public f32 health;
+    public float Health;
 }
 ```
 
-> Note: the IR bridges declaration **structure**, not type-name *spelling*. Type names (`f32`,
-> `int`, `void`, …) are carried verbatim — translating them is out of scope by design.
+The Rust `f32` is re-spelled to C# `float` and the field is PascalCased — see *Customizing
+conversion* below for how both are controlled.
 
 A complete, runnable version of this flow lives in
 [`examples/cross_language.rs`](examples/cross_language.rs):
@@ -101,6 +101,32 @@ A complete, runnable version of this flow lives in
 ```sh
 cargo run -p langprint --example cross_language
 ```
+
+## Customizing conversion
+
+Cross-language `from_ir` is driven by a `ConversionConfig { type_map, rename }`, carried on each
+backend's conversion options (defaulting to the built-in map with renaming on).
+
+**TypeMap** re-spells primitive types across languages. The built-in table covers the common
+primitives (`f32`↔`float`, `uint8_t`↔`u8`↔`byte`, `i32`↔`int`↔`int32_t`, …); a type it does not
+recognize is emitted verbatim **and** reported with a `ConversionWarning`. You can override, extend,
+or clear it:
+
+```rust
+use langprint::{ConversionConfig, PrimitiveType, TargetLanguage, TypeMap};
+
+let mut type_map = TypeMap::builtin();
+type_map.insert_spelling("FString", PrimitiveType::Str);          // recognize a game type
+type_map.set_output(PrimitiveType::Str, TargetLanguage::CSharp, "string"); // override output
+// type_map.clear();                                              // start from nothing
+
+let config = ConversionConfig::new(type_map, /* rename = */ false);
+```
+
+**Renaming.** With `rename` on (the default), `from_ir` rewrites identifiers to the target
+language's convention (Rust `snake_case` fns/fields; C# `PascalCase` types/methods/fields/enum
+members; C++ left verbatim) and reports each change as `ConversionWarning::NamingConventionChanged`.
+Set `rename: false` to keep identifiers exactly as written.
 
 ## Backends
 

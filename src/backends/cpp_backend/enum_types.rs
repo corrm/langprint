@@ -1,7 +1,9 @@
 use crate::{
     backends::BackendItem,
     conversion::{ConversionLog, ConversionResult, ConversionWarning},
+    convert::{ConversionConfig, map_type},
     ir::{EnumVariant, EnumVariantValue, LanguageEnum, Visibility},
+    type_map::TargetLanguage,
 };
 
 use super::CppVisibility;
@@ -144,13 +146,23 @@ impl BackendItem for CppEnum {
     }
 
     fn from_ir(input: Self::IrType, options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
-        let options: &CppEnumConversionOptions = options.unwrap_or(&CppEnumConversionOptions::DEFAULT);
+        let default_options = CppEnumConversionOptions::default();
+        let options: &CppEnumConversionOptions = options.unwrap_or(&default_options);
         let mut result_log = ConversionLog::new();
 
         let visibility: ConversionResult<CppVisibility> = CppVisibility::from_ir(input.visibility, None);
         if visibility.log.has_warnings() {
             result_log.add_warnings(visibility.log.warnings);
         }
+
+        let underlying_type = match input.underlying_type {
+            Some(underlying_type) => {
+                let mapped = map_type(&options.config, &underlying_type, TargetLanguage::Cpp);
+                result_log.add_warnings(mapped.log.warnings);
+                Some(mapped.value)
+            }
+            None => None,
+        };
 
         let mut variants = Vec::with_capacity(input.variants.len());
         for variant in input.variants {
@@ -165,7 +177,7 @@ impl BackendItem for CppEnum {
             CppEnum {
                 name: input.name,
                 variants,
-                underlying_type: input.underlying_type,
+                underlying_type,
                 is_enum_class: options.is_enum_class,
                 docs: input.docs,
             },
@@ -179,16 +191,17 @@ impl BackendItem for CppEnum {
 pub struct CppEnumConversionOptions {
     /// Whether to convert the enum to a C++ enum class.
     pub is_enum_class: bool,
+    /// Cross-language conversion configuration (type mapping + renaming).
+    pub config: ConversionConfig,
 }
 
 impl Default for CppEnumConversionOptions {
     fn default() -> Self {
-        Self::DEFAULT.clone()
+        Self {
+            is_enum_class: true,
+            config: ConversionConfig::default(),
+        }
     }
-}
-
-impl CppEnumConversionOptions {
-    pub const DEFAULT: Self = Self { is_enum_class: true };
 }
 
 /// Render options for C++ enums.

@@ -154,7 +154,8 @@ fn function_round_trips_signature_without_warnings() {
     assert!(function.is_override);
     assert_eq!(function.parameters.len(), 1);
     assert_eq!(function.parameters[0].name, "x");
-    assert_eq!(function.parameters[0].param_type, "int");
+    // `from_ir` canonicalizes primitive spellings to the target language via the TypeMap.
+    assert_eq!(function.parameters[0].param_type, "int32_t");
     // Native-only modifiers lower back to their defaults.
     assert!(!function.is_const);
     assert!(!function.is_noexcept);

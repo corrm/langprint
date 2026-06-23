@@ -1,7 +1,9 @@
 use crate::{
     backends::BackendItem,
     conversion::{ConversionLog, ConversionResult, ConversionWarning},
+    convert::{ConversionConfig, IdentifierKind, map_type, rename_identifier},
     ir::LanguageField,
+    type_map::TargetLanguage,
 };
 
 use super::CSharpVisibility;
@@ -69,11 +71,22 @@ impl BackendItem for CSharpField {
         ConversionResult::with_log(field, log)
     }
 
-    fn from_ir(input: Self::IrType, _options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
+    fn from_ir(input: Self::IrType, options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
+        let mut log = ConversionLog::new();
+        let config = options.map(|options| options.config.clone()).unwrap_or_default();
+
+        let name = rename_identifier(&config, &input.name, TargetLanguage::CSharp, IdentifierKind::Field);
+        log.add_warnings(name.log.warnings);
+
+        let field_type = map_type(&config, &input.field_type, TargetLanguage::CSharp);
+        log.add_warnings(field_type.log.warnings);
+
         let visibility = CSharpVisibility::from_ir(input.visibility, None);
+        log.add_warnings(visibility.log.warnings);
+
         let field = CSharpField {
-            name: input.name,
-            field_type: input.field_type,
+            name: name.value,
+            field_type: field_type.value,
             visibility: visibility.value,
             is_static: input.is_static,
             is_const: input.is_const,
@@ -82,22 +95,15 @@ impl BackendItem for CSharpField {
             attributes: Vec::new(),
             docs: input.docs,
         };
-        ConversionResult::with_log(field, visibility.log)
+        ConversionResult::with_log(field, log)
     }
 }
 
 /// Conversion options for C# fields.
-#[derive(Debug, Clone)]
-pub struct CSharpFieldConversionOptions {}
-
-impl Default for CSharpFieldConversionOptions {
-    fn default() -> Self {
-        Self::DEFAULT.clone()
-    }
-}
-
-impl CSharpFieldConversionOptions {
-    pub const DEFAULT: Self = Self {};
+#[derive(Debug, Clone, Default)]
+pub struct CSharpFieldConversionOptions {
+    /// Cross-language conversion configuration (type mapping + renaming).
+    pub config: ConversionConfig,
 }
 
 /// Render options for C# fields.

@@ -14,10 +14,12 @@ pub mod visibility;
 pub use backend::{CppBackend, DocsStyle};
 pub use constant_types::{CppConstant, CppConstantRenderOptions};
 pub use define_types::{CppDefinition, CppDefinitionRenderOptions};
-pub use enum_types::{CppEnum, CppEnumRenderOptions, CppEnumVariant, CppEnumVariantRenderOptions};
+pub use enum_types::{CppEnum, CppEnumConversionOptions, CppEnumRenderOptions, CppEnumVariant, CppEnumVariantRenderOptions};
 pub use field_types::{CppField, CppFieldConversionOptions, CppFieldRenderOptions};
-pub use function_types::{CppFunction, CppFunctionRenderOptions, CppParameter};
+pub use function_types::{
+    CppFunction, CppFunctionConversionOptions, CppFunctionRenderOptions, CppParameter, CppParameterConversionOptions,
+};
 pub use generic_types::CppGenericArgument;
 pub use namespace_types::{CppNamespace, CppNamespaceRenderOptions};
-pub use struct_types::{CppBase, CppStruct, CppStructKind, CppStructRenderOptions};
+pub use struct_types::{CppBase, CppStruct, CppStructConversionOptions, CppStructKind, CppStructRenderOptions};
 pub use visibility::CppVisibility;

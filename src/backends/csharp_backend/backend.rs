@@ -316,7 +316,7 @@ impl DefinitionRenderer for CSharpBackend {
                 out,
                 "{}public const {} {} = {};{}",
                 self.indent(*indent_level),
-                options.const_type,
+                super::define_types::infer_const_type(value).unwrap_or(options.const_type),
                 input.name,
                 value,
                 self.new_line.as_str()

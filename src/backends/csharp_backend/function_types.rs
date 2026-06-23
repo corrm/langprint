@@ -1,7 +1,9 @@
 use crate::{
     backends::BackendItem,
     conversion::{ConversionLog, ConversionResult, ConversionWarning},
+    convert::{ConversionConfig, IdentifierKind, map_type, rename_identifier},
     ir::{LanguageFunction, LanguageFunctionParameter},
+    type_map::{PrimitiveType, TargetLanguage},
 };
 
 use super::{CSharpGenericArgument, CSharpVisibility};
@@ -29,27 +31,26 @@ impl BackendItem for CSharpParameter {
         })
     }
 
-    fn from_ir(input: Self::IrType, _options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
-        ConversionResult::new(CSharpParameter {
-            name: input.name,
-            param_type: input.param_type,
-            default_value: input.default_value,
-        })
+    fn from_ir(input: Self::IrType, options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
+        let config = options.map(|options| options.config.clone()).unwrap_or_default();
+        let param_type = map_type(&config, &input.param_type, TargetLanguage::CSharp);
+
+        ConversionResult::with_log(
+            CSharpParameter {
+                name: input.name,
+                param_type: param_type.value,
+                default_value: input.default_value,
+            },
+            param_type.log,
+        )
     }
 }
 
 /// Conversion options for C# parameters.
-#[derive(Debug, Clone)]
-pub struct CSharpParameterConversionOptions {}
-
-impl Default for CSharpParameterConversionOptions {
-    fn default() -> Self {
-        Self::DEFAULT.clone()
-    }
-}
-
-impl CSharpParameterConversionOptions {
-    pub const DEFAULT: Self = Self {};
+#[derive(Debug, Clone, Default)]
+pub struct CSharpParameterConversionOptions {
+    /// Cross-language conversion configuration (type mapping + renaming).
+    pub config: ConversionConfig,
 }
 
 /// Represents a C# method.
@@ -115,11 +116,18 @@ impl BackendItem for CSharpMethod {
             parameters.push(result.value);
         }
 
+        let mut generic_args = Vec::with_capacity(self.generic_args.len());
+        for generic in &self.generic_args {
+            let result = generic.to_ir();
+            log.add_warnings(result.log.warnings);
+            generic_args.push(result.value);
+        }
+
         let function = LanguageFunction {
             name: self.name,
             visibility: visibility.value,
             parameters,
-            generic_args: self.generic_args.iter().map(CSharpGenericArgument::to_ir).collect(),
+            generic_args,
             return_type: self.return_type,
             is_static: self.is_static,
             is_abstract: self.is_abstract,
@@ -132,25 +140,48 @@ impl BackendItem for CSharpMethod {
         ConversionResult::with_log(function, log)
     }
 
-    fn from_ir(input: Self::IrType, _options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
+    fn from_ir(input: Self::IrType, options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
         let mut log = ConversionLog::new();
+        let config = options.map(|options| options.config.clone()).unwrap_or_default();
+
+        let name = rename_identifier(&config, &input.name, TargetLanguage::CSharp, IdentifierKind::Function);
+        log.add_warnings(name.log.warnings);
 
         let visibility = CSharpVisibility::from_ir(input.visibility, None);
         log.add_warnings(visibility.log.warnings);
 
+        let parameter_options = CSharpParameterConversionOptions { config: config.clone() };
         let mut parameters = Vec::with_capacity(input.parameters.len());
         for param in input.parameters {
-            let result = CSharpParameter::from_ir(param, None);
+            let result = CSharpParameter::from_ir(param, Some(&parameter_options));
             log.add_warnings(result.log.warnings);
             parameters.push(result.value);
         }
 
+        let mut generic_args = Vec::with_capacity(input.generic_args.len());
+        for generic in &input.generic_args {
+            let result = CSharpGenericArgument::from_ir(generic);
+            log.add_warnings(result.log.warnings);
+            generic_args.push(result.value);
+        }
+
+        // A `void`/unit return is the absence of a return type in C# (`None` renders `void`).
+        let return_type = match input.return_type {
+            Some(return_type) if config.type_map.resolve(&return_type) == Some(PrimitiveType::Void) => None,
+            Some(return_type) => {
+                let mapped = map_type(&config, &return_type, TargetLanguage::CSharp);
+                log.add_warnings(mapped.log.warnings);
+                Some(mapped.value)
+            }
+            None => None,
+        };
+
         let method = CSharpMethod {
-            name: input.name,
+            name: name.value,
             visibility: visibility.value,
             parameters,
-            generic_args: input.generic_args.iter().map(CSharpGenericArgument::from_ir).collect(),
-            return_type: input.return_type,
+            generic_args,
+            return_type,
             is_static: input.is_static,
             is_abstract: input.is_abstract,
             is_virtual: input.is_virtual,
@@ -166,17 +197,10 @@ impl BackendItem for CSharpMethod {
 }
 
 /// Conversion options for C# methods.
-#[derive(Debug, Clone)]
-pub struct CSharpMethodConversionOptions {}
-
-impl Default for CSharpMethodConversionOptions {
-    fn default() -> Self {
-        Self::DEFAULT.clone()
-    }
-}
-
-impl CSharpMethodConversionOptions {
-    pub const DEFAULT: Self = Self {};
+#[derive(Debug, Clone, Default)]
+pub struct CSharpMethodConversionOptions {
+    /// Cross-language conversion configuration (type mapping + renaming).
+    pub config: ConversionConfig,
 }
 
 /// Render options for C# methods.

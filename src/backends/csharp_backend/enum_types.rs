@@ -1,7 +1,9 @@
 use crate::{
     backends::BackendItem,
     conversion::{ConversionLog, ConversionResult, ConversionWarning},
+    convert::{ConversionConfig, IdentifierKind, map_type, rename_identifier},
     ir::{EnumVariant, EnumVariantValue, LanguageEnum},
+    type_map::TargetLanguage,
 };
 
 use super::CSharpVisibility;
@@ -82,39 +84,53 @@ impl BackendItem for CSharpEnum {
         ConversionResult::with_log(language_enum, log)
     }
 
-    fn from_ir(input: Self::IrType, _options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
+    fn from_ir(input: Self::IrType, options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
         let mut log = ConversionLog::new();
+        let config = options.map(|options| options.config.clone()).unwrap_or_default();
+
+        let name = rename_identifier(&config, &input.name, TargetLanguage::CSharp, IdentifierKind::Type);
+        log.add_warnings(name.log.warnings);
 
         let visibility = CSharpVisibility::from_ir(input.visibility, None);
         log.add_warnings(visibility.log.warnings);
 
-        let members = input
-            .variants
-            .into_iter()
-            .map(|variant| {
-                let value = match variant.value {
-                    EnumVariantValue::NoValue => None,
-                    EnumVariantValue::Value(value) => Some(value),
-                    EnumVariantValue::Tuple(_) | EnumVariantValue::Struct(_) => {
-                        log.add_warning(ConversionWarning::UnsupportedFeature {
-                            feature: format!("data-carrying variant `{}` on enum `{}`", variant.name, input.name),
-                            resolution: "C# enums cannot carry data; rendered as a plain member".to_string(),
-                        });
-                        None
-                    }
-                };
-                CSharpEnumMember {
-                    name: variant.name,
-                    value,
-                    docs: variant.docs,
+        let underlying_type = match input.underlying_type {
+            Some(underlying_type) => {
+                let mapped = map_type(&config, &underlying_type, TargetLanguage::CSharp);
+                log.add_warnings(mapped.log.warnings);
+                Some(mapped.value)
+            }
+            None => None,
+        };
+
+        let mut members = Vec::with_capacity(input.variants.len());
+        for variant in input.variants {
+            let value = match variant.value {
+                EnumVariantValue::NoValue => None,
+                EnumVariantValue::Value(value) => Some(value),
+                EnumVariantValue::Tuple(_) | EnumVariantValue::Struct(_) => {
+                    log.add_warning(ConversionWarning::UnsupportedFeature {
+                        feature: format!("data-carrying variant `{}` on enum `{}`", variant.name, input.name),
+                        resolution: "C# enums cannot carry data; rendered as a plain member".to_string(),
+                    });
+                    None
                 }
-            })
-            .collect();
+            };
+
+            let name = rename_identifier(&config, &variant.name, TargetLanguage::CSharp, IdentifierKind::EnumMember);
+            log.add_warnings(name.log.warnings);
+
+            members.push(CSharpEnumMember {
+                name: name.value,
+                value,
+                docs: variant.docs,
+            });
+        }
 
         let csharp_enum = CSharpEnum {
-            name: input.name,
+            name: name.value,
             visibility: visibility.value,
-            underlying_type: input.underlying_type,
+            underlying_type,
             members,
             is_flags: false,
             attributes: Vec::new(),
@@ -125,17 +141,10 @@ impl BackendItem for CSharpEnum {
 }
 
 /// Conversion options for C# enums.
-#[derive(Debug, Clone)]
-pub struct CSharpEnumConversionOptions {}
-
-impl Default for CSharpEnumConversionOptions {
-    fn default() -> Self {
-        Self::DEFAULT.clone()
-    }
-}
-
-impl CSharpEnumConversionOptions {
-    pub const DEFAULT: Self = Self {};
+#[derive(Debug, Clone, Default)]
+pub struct CSharpEnumConversionOptions {
+    /// Cross-language conversion configuration (type mapping + renaming).
+    pub config: ConversionConfig,
 }
 
 /// Variant-level render options for C# enums.
