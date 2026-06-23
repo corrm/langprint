@@ -366,7 +366,7 @@ fn rust_data_enum_to_cpp_warns_on_payload() {
     let out = cpp()
         .render_enum::<&str>(&ce.value, None, None, None, None, &mut 0)
         .unwrap();
-    assert_eq!(out, "enum class Shape\n{\nCircle\nRect\n};\n");
+    assert_eq!(out, "enum class Shape\n{\n    Circle,\n    Rect,\n};\n");
 }
 
 /// Rust struct → IR → C#. `RustStruct::to_ir` marks the type `is_final` (a Rust struct is not

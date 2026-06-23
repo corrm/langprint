@@ -118,6 +118,36 @@ fn renders_unscoped_enum() {
     assert_eq!(rendered, "enum Color: uint8_t\n{\n    Red = 0,\n    Green = 1,\n};\n");
 }
 
+/// A no-value enumerator must still be indented and comma-terminated — otherwise the emitted enum
+/// body is invalid C++ (`enum { North South };` won't compile). Regression guard.
+#[test]
+fn renders_enum_with_no_value_variants() {
+    let be = backend();
+    let mut indent = 0;
+    let cpp_enum = CppEnum {
+        name: "Direction".to_string(),
+        variants: vec![
+            CppEnumVariant {
+                name: "North".to_string(),
+                value: None,
+                docs: None,
+            },
+            CppEnumVariant {
+                name: "South".to_string(),
+                value: None,
+                docs: None,
+            },
+        ],
+        is_enum_class: true,
+        underlying_type: None,
+        docs: None,
+    };
+    let rendered = be
+        .render_enum::<&str>(&cpp_enum, None, None, None, None, &mut indent)
+        .unwrap();
+    assert_eq!(rendered, "enum class Direction\n{\n    North,\n    South,\n};\n");
+}
+
 #[test]
 fn renders_function_declaration() {
     let be = backend();

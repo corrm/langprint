@@ -259,7 +259,13 @@ impl EnumRenderer for CppBackend {
                     self.new_line.as_str()
                 )?;
             } else {
-                write!(out, "{}{}", variant_name, self.new_line.as_str())?;
+                write!(
+                    out,
+                    "{}{},{}",
+                    indent(*indent_level, self.indent_size, self.indent_style),
+                    variant_name,
+                    self.new_line.as_str()
+                )?;
             }
         }
 
