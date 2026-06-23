@@ -15,12 +15,14 @@ use thiserror::Error;
 
 pub mod cargo;
 pub mod cmake;
+pub mod csharp;
 pub mod makefile;
 pub mod vs_common;
 pub mod vsln;
 
 pub use cargo::CargoGenerator;
 pub use cmake::CmakeGenerator;
+pub use csharp::CSharpProjectGenerator;
 pub use makefile::MakefileGenerator;
 pub use vsln::{SlnxGenerator, VslnGenerator};
 
@@ -155,6 +157,18 @@ impl LanguageStandard {
             Self::Rust2018 => Some("2018"),
             Self::Rust2021 => Some("2021"),
             Self::Rust2024 => Some("2024"),
+            _ => None,
+        }
+    }
+
+    /// The MSBuild `<LangVersion>` value (e.g. `12`) for a C# standard, or
+    /// `None` for non-C# families.
+    #[must_use]
+    pub fn csharp_lang_version(self) -> Option<&'static str> {
+        match self {
+            Self::CSharp10 => Some("10"),
+            Self::CSharp11 => Some("11"),
+            Self::CSharp12 => Some("12"),
             _ => None,
         }
     }

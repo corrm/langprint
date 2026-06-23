@@ -1,0 +1,202 @@
+use crate::{
+    backends::BackendItem,
+    conversion::{ConversionLog, ConversionResult, ConversionWarning},
+    ir::{LanguageFunction, LanguageFunctionParameter},
+};
+
+use super::{CSharpGenericArgument, CSharpVisibility};
+
+/// Represents a C# method parameter.
+#[derive(Debug, Clone)]
+pub struct CSharpParameter {
+    /// The name of the parameter.
+    pub name: String,
+    /// The type of the parameter.
+    pub param_type: String,
+    /// Default value for the parameter, if any.
+    pub default_value: Option<String>,
+}
+
+impl BackendItem for CSharpParameter {
+    type IrType = LanguageFunctionParameter;
+    type ConversionOptions = CSharpParameterConversionOptions;
+
+    fn to_ir(self, _options: Option<&Self::ConversionOptions>) -> ConversionResult<Self::IrType> {
+        ConversionResult::new(LanguageFunctionParameter {
+            name: self.name,
+            param_type: self.param_type,
+            default_value: self.default_value,
+        })
+    }
+
+    fn from_ir(input: Self::IrType, _options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
+        ConversionResult::new(CSharpParameter {
+            name: input.name,
+            param_type: input.param_type,
+            default_value: input.default_value,
+        })
+    }
+}
+
+/// Conversion options for C# parameters.
+#[derive(Debug, Clone)]
+pub struct CSharpParameterConversionOptions {}
+
+impl Default for CSharpParameterConversionOptions {
+    fn default() -> Self {
+        Self::DEFAULT.clone()
+    }
+}
+
+impl CSharpParameterConversionOptions {
+    pub const DEFAULT: Self = Self {};
+}
+
+/// Represents a C# method.
+#[derive(Debug, Clone)]
+pub struct CSharpMethod {
+    /// The name of the method.
+    pub name: String,
+    /// The visibility of the method.
+    pub visibility: CSharpVisibility,
+    /// The parameters of the method.
+    pub parameters: Vec<CSharpParameter>,
+    /// Generic type parameters of the method.
+    pub generic_args: Vec<CSharpGenericArgument>,
+    /// The return type of the method (`None` renders as `void`).
+    pub return_type: Option<String>,
+    /// Whether the method is `static`.
+    pub is_static: bool,
+    /// Whether the method is `abstract`.
+    pub is_abstract: bool,
+    /// Whether the method is `virtual`.
+    pub is_virtual: bool,
+    /// Whether the method is `override`.
+    pub is_override: bool,
+    /// Whether the method is `sealed`.
+    pub is_sealed: bool,
+    /// Whether the method is `async`.
+    pub is_async: bool,
+    /// The method body, one entry per line; `None` renders an abstract/interface declaration.
+    pub body: Option<Vec<String>>,
+    /// Attributes applied to the method (without the leading `[`).
+    pub attributes: Vec<String>,
+    /// Documentation for the method.
+    pub docs: Option<Vec<String>>,
+}
+
+impl BackendItem for CSharpMethod {
+    type IrType = LanguageFunction;
+    type ConversionOptions = CSharpMethodConversionOptions;
+
+    fn to_ir(self, _options: Option<&Self::ConversionOptions>) -> ConversionResult<Self::IrType> {
+        let mut log = ConversionLog::new();
+
+        if self.is_async {
+            log.add_warning(ConversionWarning::UnsupportedFeature {
+                feature: format!("`async` on method `{}`", self.name),
+                resolution: "async modifier dropped from the language-agnostic IR".to_string(),
+            });
+        }
+        for attribute in &self.attributes {
+            log.add_warning(ConversionWarning::UnsupportedFeature {
+                feature: format!("attribute `[{}]` on method `{}`", attribute, self.name),
+                resolution: "C# attributes dropped from the language-agnostic IR".to_string(),
+            });
+        }
+
+        let visibility = self.visibility.to_ir(None);
+        log.add_warnings(visibility.log.warnings);
+
+        let mut parameters = Vec::with_capacity(self.parameters.len());
+        for param in self.parameters {
+            let result = param.to_ir(None);
+            log.add_warnings(result.log.warnings);
+            parameters.push(result.value);
+        }
+
+        let function = LanguageFunction {
+            name: self.name,
+            visibility: visibility.value,
+            parameters,
+            generic_args: self.generic_args.iter().map(CSharpGenericArgument::to_ir).collect(),
+            return_type: self.return_type,
+            is_static: self.is_static,
+            is_abstract: self.is_abstract,
+            is_virtual: self.is_virtual,
+            is_override: self.is_override,
+            is_final: self.is_sealed,
+            body: self.body,
+            docs: self.docs,
+        };
+        ConversionResult::with_log(function, log)
+    }
+
+    fn from_ir(input: Self::IrType, _options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
+        let mut log = ConversionLog::new();
+
+        let visibility = CSharpVisibility::from_ir(input.visibility, None);
+        log.add_warnings(visibility.log.warnings);
+
+        let mut parameters = Vec::with_capacity(input.parameters.len());
+        for param in input.parameters {
+            let result = CSharpParameter::from_ir(param, None);
+            log.add_warnings(result.log.warnings);
+            parameters.push(result.value);
+        }
+
+        let method = CSharpMethod {
+            name: input.name,
+            visibility: visibility.value,
+            parameters,
+            generic_args: input.generic_args.iter().map(CSharpGenericArgument::from_ir).collect(),
+            return_type: input.return_type,
+            is_static: input.is_static,
+            is_abstract: input.is_abstract,
+            is_virtual: input.is_virtual,
+            is_override: input.is_override,
+            is_sealed: input.is_final,
+            is_async: false,
+            body: input.body,
+            attributes: Vec::new(),
+            docs: input.docs,
+        };
+        ConversionResult::with_log(method, log)
+    }
+}
+
+/// Conversion options for C# methods.
+#[derive(Debug, Clone)]
+pub struct CSharpMethodConversionOptions {}
+
+impl Default for CSharpMethodConversionOptions {
+    fn default() -> Self {
+        Self::DEFAULT.clone()
+    }
+}
+
+impl CSharpMethodConversionOptions {
+    pub const DEFAULT: Self = Self {};
+}
+
+/// Render options for C# methods.
+#[derive(Debug, Clone)]
+pub struct CSharpMethodRenderOptions {
+    /// Whether to render documentation comments.
+    pub render_docs: bool,
+    /// Whether to render attributes.
+    pub render_attributes: bool,
+}
+
+impl Default for CSharpMethodRenderOptions {
+    fn default() -> Self {
+        Self::DEFAULT.clone()
+    }
+}
+
+impl CSharpMethodRenderOptions {
+    pub const DEFAULT: Self = Self {
+        render_docs: true,
+        render_attributes: true,
+    };
+}

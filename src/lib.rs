@@ -12,5 +12,5 @@ pub mod text;
 
 /// Get a list of available backend names
 pub fn available_backends() -> Vec<&'static str> {
-    vec!["C++", "Rust"]
+    vec!["C++", "Rust", "C#"]
 }
