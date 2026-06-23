@@ -1,24 +1,3 @@
-// /// Options to control conversion behavior.
-// #[derive(Debug, Clone)]
-// pub struct ConversionOptions {
-//     /// Whether to approximate features that don't have direct equivalents.
-//     pub approximate_features: bool,
-//     /// Whether to maintain original casing conventions.
-//     pub preserve_casing: bool,
-//     /// Whether to include documentation comments.
-//     pub include_docs: bool,
-// }
-
-// impl Default for ConversionOptions {
-//     fn default() -> Self {
-//         Self {
-//             approximate_features: true,
-//             preserve_casing: false,
-//             include_docs: true,
-//         }
-//     }
-// }
-
 /// Types of warnings that can occur during conversion.
 #[derive(Debug, Clone, PartialEq)]
 pub enum ConversionWarning {
