@@ -1,6 +1,6 @@
 [package]
 name = "langprint"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2024"
 description = "Multi-language source-declaration code generation for C++, Rust, and C#, with cross-language conversion through a scoped declaration IR."
 authors = ["corrm <islamnofl.official@gmail.com>"]
