@@ -44,7 +44,7 @@ impl BackendMetadata for CppBackend {
     fn supported_features(&self) -> &'static [BackendFeature] {
         &[
             BackendFeature::Define,
-            // BackendFeature::Namespace,
+            BackendFeature::Namespace,
             BackendFeature::Constant,
             BackendFeature::Function,
             BackendFeature::Enum,
@@ -589,12 +589,17 @@ impl StructRenderer for CppBackend {
                     write!(out, ", ")?;
                 }
 
-                // Map visibility to C++ inheritance access specifier
+                // Map visibility to C++ inheritance access specifier. `Default` mirrors C++'s own
+                // default, which depends on the aggregate kind: `private` for a class, `public` for
+                // a struct/union.
                 let access_specifier = match base.visibility {
                     CppVisibility::Public => "public",
                     CppVisibility::Protected => "protected",
                     CppVisibility::Private => "private",
-                    CppVisibility::Default => "public", // Default to public inheritance
+                    CppVisibility::Default => match input.struct_kind {
+                        CppStructKind::Class => "private",
+                        CppStructKind::Struct | CppStructKind::Union => "public",
+                    },
                 };
 
                 write!(out, "{} {}", access_specifier, base.name)?;

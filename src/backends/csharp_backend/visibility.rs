@@ -54,15 +54,29 @@ impl BackendItem for CSharpVisibility {
     type ConversionOptions = CSharpVisibilityConversionOptions;
 
     fn to_ir(self, _options: Option<&Self::ConversionOptions>) -> ConversionResult<Self::IrType> {
+        let mut log = ConversionLog::new();
         let ir = match self {
             CSharpVisibility::Default => Visibility::Default,
             CSharpVisibility::Public => Visibility::Public,
             CSharpVisibility::Private => Visibility::Private,
             CSharpVisibility::Protected => Visibility::Protected,
             CSharpVisibility::Internal => Visibility::Package,
-            CSharpVisibility::ProtectedInternal | CSharpVisibility::PrivateProtected => Visibility::Protected,
+            CSharpVisibility::ProtectedInternal => {
+                log.add_warning(ConversionWarning::VisibilityApproximated {
+                    original: "protected internal".to_string(),
+                    approximated: "Protected".to_string(),
+                });
+                Visibility::Protected
+            }
+            CSharpVisibility::PrivateProtected => {
+                log.add_warning(ConversionWarning::VisibilityApproximated {
+                    original: "private protected".to_string(),
+                    approximated: "Protected".to_string(),
+                });
+                Visibility::Protected
+            }
         };
-        ConversionResult::new(ir)
+        ConversionResult::with_log(ir, log)
     }
 
     fn from_ir(input: Self::IrType, _options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {

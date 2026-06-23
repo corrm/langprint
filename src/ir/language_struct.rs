@@ -1,7 +1,7 @@
 use super::{LanguageField, LanguageFunction, LanguageGenericArgument, Visibility};
 
 /// Represents a base/super class or struct with its visibility.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LanguageBase {
     /// The name of the base/super.
     pub name: String,
@@ -17,7 +17,7 @@ pub enum LanguageStructKind {
 }
 
 /// Represents a struct/class in a language-agnostic way.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct LanguageStruct {
     /// The visibility of the struct/class.
     pub visibility: Visibility,

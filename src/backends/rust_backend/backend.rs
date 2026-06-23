@@ -133,9 +133,9 @@ impl RustBackend {
             write!(out, " -> {}", return_type)?;
         }
 
-        write!(out, " {{{}", self.new_line.as_str())?;
         match &input.body {
             Some(lines) => {
+                write!(out, " {{{}", self.new_line.as_str())?;
                 for line in lines {
                     write!(
                         out,
@@ -145,15 +145,10 @@ impl RustBackend {
                         self.new_line.as_str()
                     )?;
                 }
+                write!(out, "{}}}{}", self.indent(indent_level), self.new_line.as_str())?;
             }
-            None => write!(
-                out,
-                "{}unimplemented!(){}",
-                self.indent(indent_level + 1),
-                self.new_line.as_str()
-            )?,
+            None => write!(out, ";{}", self.new_line.as_str())?,
         }
-        write!(out, "{}}}{}", self.indent(indent_level), self.new_line.as_str())?;
 
         Ok(())
     }

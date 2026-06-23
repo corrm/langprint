@@ -434,13 +434,22 @@ fn enum_round_trips_across_all_three_backends() {
     };
 
     let rust = RustEnum::from_ir(start.to_ir(None).value, None).value;
-    let csharp = CSharpEnum::from_ir(rust.to_ir(None).value, None).value;
+
+    // The C++ underlying type `uint8_t` is not a valid Rust `repr`, so the Rust→IR leg drops it
+    // (with a warning) rather than shipping an invalid enum base onward to C#.
+    let rust_to_ir = rust.to_ir(None);
+    assert_eq!(
+        rust_to_ir.log.warnings,
+        vec![ConversionWarning::UnsupportedFeature {
+            feature: "#[repr(uint8_t)] on enum `Color`".to_string(),
+            resolution: "only integral reprs map to an enum underlying type; dropped".to_string(),
+        }]
+    );
+
+    let csharp = CSharpEnum::from_ir(rust_to_ir.value, None).value;
 
     let out = CSharpBackend::default()
         .render_enum::<&str>(&csharp, None, None, None, None, &mut 0)
         .unwrap();
-    assert_eq!(
-        out,
-        "private enum Color : uint8_t\n{\n    Red = 0,\n    Green = 1,\n}\n"
-    );
+    assert_eq!(out, "private enum Color\n{\n    Red = 0,\n    Green = 1,\n}\n");
 }

@@ -36,6 +36,13 @@ impl CSharpTypeKind {
     pub fn can_be_sealed(&self) -> bool {
         matches!(self, CSharpTypeKind::Class | CSharpTypeKind::Record)
     }
+
+    /// Whether the `abstract` modifier is valid for this kind. Structs are sealed value
+    /// types and interfaces are implicitly abstract, so `abstract` only applies to
+    /// `class` and `record`.
+    pub fn can_be_abstract(&self) -> bool {
+        matches!(self, CSharpTypeKind::Class | CSharpTypeKind::Record)
+    }
 }
 
 /// Represents a C# type declaration (class / struct / interface / record).
@@ -183,7 +190,7 @@ impl BackendItem for CSharpType {
     fn from_ir(input: Self::IrType, _options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
         let mut log = ConversionLog::new();
 
-        let kind = match input.struct_kind {
+        let mut kind = match input.struct_kind {
             LanguageStructKind::Class => CSharpTypeKind::Class,
             LanguageStructKind::Struct => CSharpTypeKind::Struct,
             LanguageStructKind::Union => {
@@ -194,6 +201,15 @@ impl BackendItem for CSharpType {
                 CSharpTypeKind::Struct
             }
         };
+
+        // C# value types cannot be abstract, so an abstract IR struct/union is lowered to a class.
+        if input.is_abstract && !kind.can_be_abstract() {
+            log.add_warning(ConversionWarning::UnsupportedFeature {
+                feature: format!("abstract value type `{}`", input.name),
+                resolution: "C# structs cannot be abstract; lowered to a class".to_string(),
+            });
+            kind = CSharpTypeKind::Class;
+        }
 
         let visibility = CSharpVisibility::from_ir(input.visibility, None);
         log.add_warnings(visibility.log.warnings);

@@ -107,7 +107,7 @@ pub struct RustFunction {
     pub is_async: bool,
     /// Whether the function is `const`.
     pub is_const: bool,
-    /// The function body, one entry per line; `None` renders an `unimplemented!()` body.
+    /// The function body, one entry per line; `None` renders a bare signature (declaration only).
     pub body: Option<Vec<String>>,
     /// Attributes applied to the function (without the leading `#[`).
     pub attributes: Vec<String>,
@@ -144,6 +144,16 @@ impl BackendItem for RustFunction {
             log.add_warning(ConversionWarning::UnsupportedFeature {
                 feature: format!("attribute `#[{}]` on function `{}`", attribute, self.name),
                 resolution: "Rust attributes are dropped from the language-agnostic IR".to_string(),
+            });
+        }
+        if matches!(self.self_kind, RustSelfKind::RefMut | RustSelfKind::Owned) {
+            log.add_warning(ConversionWarning::UnsupportedFeature {
+                feature: format!(
+                    "`{}` receiver on method `{}`",
+                    self.self_kind.render().unwrap_or("self"),
+                    self.name
+                ),
+                resolution: "the IR carries only instance-vs-static; lowered to `&self`".to_string(),
             });
         }
 
@@ -202,7 +212,7 @@ impl BackendItem for RustFunction {
         if input.is_abstract {
             log.add_warning(ConversionWarning::UnsupportedFeature {
                 feature: format!("abstract method `{}`", input.name),
-                resolution: "lowered to an inherent method with an `unimplemented!()` body".to_string(),
+                resolution: "lowered to a bare method signature (declaration only)".to_string(),
             });
         }
 

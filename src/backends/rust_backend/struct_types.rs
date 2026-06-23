@@ -79,6 +79,7 @@ impl BackendItem for RustStruct {
                 visibility: visibility.value,
                 struct_kind: LanguageStructKind::Struct,
                 is_abstract: false,
+                // A Rust struct cannot be subclassed, so it is final in the IR's inheritance model.
                 is_final: true,
                 name: self.name,
                 generic_args,

@@ -215,14 +215,17 @@ impl CSharpBackend {
         if method.is_override {
             write!(out, "override ")?;
         }
-        if method.is_sealed {
+        if method.is_sealed && method.is_override {
             write!(out, "sealed ")?;
         }
         if method.is_async {
             write!(out, "async ")?;
         }
 
-        let return_type = method.return_type.as_deref().unwrap_or("void");
+        let return_type = method
+            .return_type
+            .as_deref()
+            .unwrap_or(if method.is_async { "Task" } else { "void" });
         write!(
             out,
             "{} {}{}(",
@@ -507,7 +510,7 @@ impl StructRenderer for CSharpBackend {
         if input.is_static {
             write!(out, "static ")?;
         }
-        if input.is_abstract {
+        if input.is_abstract && input.kind.can_be_abstract() {
             write!(out, "abstract ")?;
         }
         if input.is_sealed && input.kind.can_be_sealed() {

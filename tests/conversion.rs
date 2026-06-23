@@ -107,11 +107,35 @@ fn field_reports_every_dropped_cpp_feature() {
     field.inline_comment = Some("0x10".to_string());
 
     let ir = field.to_ir(None);
-    assert_eq!(ir.log.warnings.len(), 6);
-    assert!(ir.log.warnings.iter().any(|w| matches!(
-        w,
-        ConversionWarning::UnsupportedFeature { feature, .. } if feature == "C bit-field on field `flags`"
-    )));
+    assert_eq!(
+        ir.log.warnings,
+        vec![
+            ConversionWarning::UnsupportedFeature {
+                feature: "C array dimension on field `flags`".to_string(),
+                resolution: "array size dropped; encode it in the field type if needed".to_string(),
+            },
+            ConversionWarning::UnsupportedFeature {
+                feature: "C bit-field on field `flags`".to_string(),
+                resolution: "bit-field width dropped from the language-agnostic IR".to_string(),
+            },
+            ConversionWarning::UnsupportedFeature {
+                feature: "`alignas` on field `flags`".to_string(),
+                resolution: "explicit alignment dropped from the language-agnostic IR".to_string(),
+            },
+            ConversionWarning::UnsupportedFeature {
+                feature: "`inline` specifier on field `flags`".to_string(),
+                resolution: "inline specifier dropped from the language-agnostic IR".to_string(),
+            },
+            ConversionWarning::UnsupportedFeature {
+                feature: "initializer on field `flags`".to_string(),
+                resolution: "field initializer dropped from the language-agnostic IR".to_string(),
+            },
+            ConversionWarning::UnsupportedFeature {
+                feature: "inline comment on field `flags`".to_string(),
+                resolution: "inline comment dropped from the language-agnostic IR".to_string(),
+            },
+        ]
+    );
 }
 
 #[test]
@@ -148,11 +172,36 @@ fn function_reports_every_dropped_cpp_modifier() {
     function.is_default = true;
 
     let ir = function.to_ir(None);
-    assert_eq!(ir.log.warnings.len(), 6);
-    assert!(ir.log.warnings.iter().any(|w| matches!(
-        w,
-        ConversionWarning::UnsupportedFeature { feature, .. } if feature == "C++ `friend` function on `op`"
-    )));
+    let dropped = "modifier dropped from the language-agnostic IR".to_string();
+    assert_eq!(
+        ir.log.warnings,
+        vec![
+            ConversionWarning::UnsupportedFeature {
+                feature: "C++ `const` member function on `op`".to_string(),
+                resolution: dropped.clone(),
+            },
+            ConversionWarning::UnsupportedFeature {
+                feature: "C++ `inline` specifier on `op`".to_string(),
+                resolution: dropped.clone(),
+            },
+            ConversionWarning::UnsupportedFeature {
+                feature: "C++ `noexcept` specifier on `op`".to_string(),
+                resolution: dropped.clone(),
+            },
+            ConversionWarning::UnsupportedFeature {
+                feature: "C++ `friend` function on `op`".to_string(),
+                resolution: dropped.clone(),
+            },
+            ConversionWarning::UnsupportedFeature {
+                feature: "C++ `= delete` on `op`".to_string(),
+                resolution: dropped.clone(),
+            },
+            ConversionWarning::UnsupportedFeature {
+                feature: "C++ `= default` on `op`".to_string(),
+                resolution: dropped,
+            },
+        ]
+    );
 }
 
 #[test]

@@ -6,6 +6,14 @@ use crate::{
 
 use super::RustVisibility;
 
+/// Whether a `#[repr(...)]` token is an integral representation that maps to an enum underlying type.
+fn is_integral_repr(repr: &str) -> bool {
+    matches!(
+        repr,
+        "i8" | "u8" | "i16" | "u16" | "i32" | "u32" | "i64" | "u64" | "i128" | "u128" | "isize" | "usize"
+    )
+}
+
 /// The payload of a Rust enum variant.
 #[derive(Debug, Clone, PartialEq)]
 pub enum RustEnumVariantValue {
@@ -61,6 +69,18 @@ impl BackendItem for RustEnum {
             });
         }
 
+        let underlying_type = match self.repr {
+            Some(repr) if is_integral_repr(&repr) => Some(repr),
+            Some(repr) => {
+                log.add_warning(ConversionWarning::UnsupportedFeature {
+                    feature: format!("#[repr({repr})] on enum `{}`", self.name),
+                    resolution: "only integral reprs map to an enum underlying type; dropped".to_string(),
+                });
+                None
+            }
+            None => None,
+        };
+
         let visibility = self.visibility.to_ir(None);
         log.add_warnings(visibility.log.warnings);
 
@@ -84,7 +104,7 @@ impl BackendItem for RustEnum {
                 name: self.name,
                 visibility: visibility.value,
                 variants,
-                underlying_type: self.repr,
+                underlying_type,
                 docs: self.docs,
             },
             log,
