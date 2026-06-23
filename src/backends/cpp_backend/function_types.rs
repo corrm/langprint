@@ -1,6 +1,6 @@
 use crate::{
     backends::BackendItem,
-    conversion::{ConversionLog, ConversionResult},
+    conversion::{ConversionLog, ConversionResult, ConversionWarning},
     ir::{LanguageFunction, LanguageFunctionParameter, LanguageGenericArgument},
 };
 
@@ -22,11 +22,19 @@ impl BackendItem for CppParameter {
     type ConversionOptions = CppParameterConversionOptions;
 
     fn to_ir(self, _options: Option<&Self::ConversionOptions>) -> ConversionResult<Self::IrType> {
-        todo!()
+        ConversionResult::new(LanguageFunctionParameter {
+            name: self.name,
+            param_type: self.param_type,
+            default_value: self.default_value,
+        })
     }
 
-    fn from_ir(_input: Self::IrType, _options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
-        todo!()
+    fn from_ir(input: Self::IrType, _options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
+        ConversionResult::new(CppParameter {
+            name: input.name,
+            param_type: input.param_type,
+            default_value: input.default_value,
+        })
     }
 }
 
@@ -126,6 +134,23 @@ impl BackendItem for CppFunction {
             result_log.add_warnings(visibility_result.log.warnings);
         }
 
+        // Report C++-only modifiers that the language-agnostic IR cannot represent.
+        for (active, feature) in [
+            (self.is_const, "`const` member function"),
+            (self.is_inline, "`inline` specifier"),
+            (self.is_noexcept, "`noexcept` specifier"),
+            (self.is_friend, "`friend` function"),
+            (self.is_deleted, "`= delete`"),
+            (self.is_default, "`= default`"),
+        ] {
+            if active {
+                result_log.add_warning(ConversionWarning::UnsupportedFeature {
+                    feature: format!("C++ {feature} on `{}`", self.name),
+                    resolution: "modifier dropped from the language-agnostic IR".to_string(),
+                });
+            }
+        }
+
         let lang_function = LanguageFunction {
             name: self.name,
             visibility: visibility_result.value,
@@ -133,18 +158,11 @@ impl BackendItem for CppFunction {
             generic_args,
             return_type: self.return_type,
             is_static: self.is_static,
-            is_const: self.is_const,
-            // In C++, a function is abstract if it's pure virtual
+            // In C++, a function with no body that is pure virtual is abstract.
             is_abstract: self.is_pure_virtual,
             is_virtual: self.is_virtual,
-            is_pure_virtual: self.is_pure_virtual,
-            is_inline: self.is_inline,
-            is_noexcept: self.is_noexcept,
             is_override: self.is_override,
             is_final: self.is_final,
-            is_friend: self.is_friend,
-            is_deleted: self.is_deleted,
-            is_default: self.is_default,
             body: self.body.clone(),
             docs: self.docs,
         };
@@ -188,24 +206,24 @@ impl BackendItem for CppFunction {
 
         let cpp_function = CppFunction {
             name: input.name,
-            parent_name: None, // Default to None, should be set by the caller if needed
+            parent_name: None, // Scope is managed by the caller.
             visibility: visibility_result.value,
             parameters,
             template_params,
             return_type: input.return_type,
             is_static: input.is_static,
-            is_const: input.is_const,
+            is_const: false,
             // In C++, virtual is determined by is_abstract or is_virtual
             is_virtual: input.is_virtual || input.is_abstract,
-            // In C++, pure virtual is determined by is_abstract
-            is_pure_virtual: input.is_pure_virtual || input.is_abstract,
-            is_inline: input.is_inline,
-            is_noexcept: input.is_noexcept,
+            // In C++, an abstract method lowers to a pure virtual function.
+            is_pure_virtual: input.is_abstract,
+            is_inline: false,
+            is_noexcept: false,
             is_override: input.is_override,
             is_final: input.is_final,
-            is_friend: input.is_friend,
-            is_deleted: input.is_deleted,
-            is_default: input.is_default,
+            is_friend: false,
+            is_deleted: false,
+            is_default: false,
             body: input.body.clone(),
             docs: input.docs,
         };

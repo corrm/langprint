@@ -4,7 +4,7 @@ use super::{
 use crate::ir::LanguageStructKind;
 use crate::{
     backends::BackendItem,
-    conversion::{ConversionLog, ConversionResult},
+    conversion::{ConversionLog, ConversionResult, ConversionWarning},
     ir::{LanguageBase, LanguageGenericArgument, LanguageStruct, Visibility},
 };
 
@@ -107,6 +107,13 @@ impl BackendItem for CppStruct {
             });
         }
 
+        if self.alignment.is_some() {
+            result_log.add_warning(ConversionWarning::UnsupportedFeature {
+                feature: format!("`alignas` on struct `{}`", self.name),
+                resolution: "explicit alignment dropped from the language-agnostic IR".to_string(),
+            });
+        }
+
         let lang_struct = LanguageStruct {
             visibility: Visibility::Default,
             struct_kind: match self.struct_kind {
@@ -116,7 +123,6 @@ impl BackendItem for CppStruct {
             },
             is_abstract: options.final_to_abstract && !self.is_final,
             is_final: self.is_final,
-            alignment: self.alignment,
             name: self.name.clone(),
             generic_args,
             bases,
@@ -201,7 +207,7 @@ impl BackendItem for CppStruct {
                 LanguageStructKind::Union => CppStructKind::Union,
             },
             is_final: input.is_final,
-            alignment: input.alignment,
+            alignment: None,
             name: input.name.clone(),
             template_params,
             bases,

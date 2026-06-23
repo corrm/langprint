@@ -24,30 +24,16 @@ pub struct LanguageFunction {
     pub generic_args: Vec<LanguageGenericArgument>,
     /// The return type of the function.
     pub return_type: Option<String>,
-    /// Whether the function is static/class method.
+    /// Whether the function is associated with the type rather than an instance.
     pub is_static: bool,
-    /// Whether the function is const (doesn't modify state).
-    pub is_const: bool,
-    /// Whether the function is abstract/virtual.
+    /// Whether the function has no implementation and must be provided by an implementor.
     pub is_abstract: bool,
-    /// Whether the function is virtual (C++ specific, but useful for other OOP languages).
+    /// Whether the function can be overridden by a derived type.
     pub is_virtual: bool,
-    /// Whether the function is pure virtual (C++ specific, but useful for other OOP languages).
-    pub is_pure_virtual: bool,
-    /// Whether the function is inline.
-    pub is_inline: bool,
-    /// Whether the function is noexcept (C++ specific).
-    pub is_noexcept: bool,
-    /// Whether the function overrides a base class method.
+    /// Whether the function overrides a base type method.
     pub is_override: bool,
-    /// Whether the function is marked as final.
+    /// Whether the function cannot be further overridden.
     pub is_final: bool,
-    /// Whether the function is marked as friend.
-    pub is_friend: bool,
-    /// Whether the function is deleted (C++11 = delete).
-    pub is_deleted: bool,
-    /// Whether the function is defaulted (C++11 = default).
-    pub is_default: bool,
     /// The function body code, if available. Each string represents a line of code.
     pub body: Option<Vec<String>>,
     /// Documentation for the function.

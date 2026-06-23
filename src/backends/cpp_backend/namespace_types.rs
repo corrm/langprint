@@ -1,9 +1,45 @@
-use crate::{backends::BackendItem, conversion::ConversionResult, ir::LanguageNamespace};
+use crate::{
+    backends::BackendItem,
+    conversion::{ConversionLog, ConversionResult, ConversionWarning},
+    ir::{LanguageNamespace, Visibility},
+};
 
 use super::{
     CppConstant, CppConstantRenderOptions, CppDefinition, CppDefinitionRenderOptions, CppEnum, CppEnumRenderOptions,
     CppEnumVariantRenderOptions, CppStruct, CppStructRenderOptions,
 };
+
+/// Convert an optional list of native items to their IR form, collecting any warnings.
+fn namespace_items_to_ir<T: BackendItem>(items: Option<Vec<T>>, log: &mut ConversionLog) -> Option<Vec<T::IrType>> {
+    items.map(|items| {
+        items
+            .into_iter()
+            .map(|item| {
+                let result = item.to_ir(None);
+                if result.log.has_warnings() {
+                    log.add_warnings(result.log.warnings);
+                }
+                result.value
+            })
+            .collect()
+    })
+}
+
+/// Convert an optional list of IR items to their native form, collecting any warnings.
+fn namespace_items_from_ir<T: BackendItem>(items: Option<Vec<T::IrType>>, log: &mut ConversionLog) -> Option<Vec<T>> {
+    items.map(|items| {
+        items
+            .into_iter()
+            .map(|item| {
+                let result = T::from_ir(item, None);
+                if result.log.has_warnings() {
+                    log.add_warnings(result.log.warnings);
+                }
+                result.value
+            })
+            .collect()
+    })
+}
 
 /// Represents a C++ namespace definition.
 #[derive(Debug, Clone)]
@@ -27,11 +63,48 @@ impl BackendItem for CppNamespace {
     type ConversionOptions = CppNamespaceConversionOptions;
 
     fn to_ir(self, _options: Option<&Self::ConversionOptions>) -> ConversionResult<Self::IrType> {
-        todo!()
+        let mut result_log = ConversionLog::new();
+
+        let language_namespace = LanguageNamespace {
+            name: self.name,
+            visibility: Visibility::Default,
+            defines: namespace_items_to_ir(self.defines, &mut result_log),
+            constants: namespace_items_to_ir(self.constants, &mut result_log),
+            enums: namespace_items_to_ir(self.enums, &mut result_log),
+            structs: namespace_items_to_ir(self.structs, &mut result_log),
+            namespaces: namespace_items_to_ir(self.namespaces, &mut result_log),
+            docs: None,
+        };
+
+        ConversionResult::with_log(language_namespace, result_log)
     }
 
-    fn from_ir(_input: Self::IrType, _options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
-        todo!()
+    fn from_ir(input: Self::IrType, _options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
+        let mut result_log = ConversionLog::new();
+
+        if input.visibility != Visibility::Default {
+            result_log.add_warning(ConversionWarning::UnsupportedFeature {
+                feature: format!("visibility on namespace `{}`", input.name),
+                resolution: "C++ namespaces have no visibility specifier; dropped".to_string(),
+            });
+        }
+        if input.docs.is_some() {
+            result_log.add_warning(ConversionWarning::UnsupportedFeature {
+                feature: format!("documentation on namespace `{}`", input.name),
+                resolution: "C++ namespaces carry no documentation; dropped".to_string(),
+            });
+        }
+
+        let cpp_namespace = CppNamespace {
+            name: input.name,
+            defines: namespace_items_from_ir::<CppDefinition>(input.defines, &mut result_log),
+            constants: namespace_items_from_ir::<CppConstant>(input.constants, &mut result_log),
+            enums: namespace_items_from_ir::<CppEnum>(input.enums, &mut result_log),
+            structs: namespace_items_from_ir::<CppStruct>(input.structs, &mut result_log),
+            namespaces: namespace_items_from_ir::<CppNamespace>(input.namespaces, &mut result_log),
+        };
+
+        ConversionResult::with_log(cpp_namespace, result_log)
     }
 }
 

@@ -1,12 +1,10 @@
 use crate::{
     backends::BackendItem,
-    conversion::{ConversionLog, ConversionResult},
+    conversion::{ConversionLog, ConversionResult, ConversionWarning},
     ir::LanguageField,
 };
 
 use super::CppVisibility;
-
-// TODO: Instead of `is_static` and `is_const` modifiers to CppField in langprint
 
 /// Represents a field in a C++ struct.
 #[derive(Debug, Clone)]
@@ -42,17 +40,56 @@ impl BackendItem for CppField {
     type ConversionOptions = CppFieldConversionOptions;
 
     fn to_ir(self, _options: Option<&Self::ConversionOptions>) -> ConversionResult<Self::IrType> {
-        let result_log = ConversionLog::new();
+        let mut result_log = ConversionLog::new();
+
+        let visibility = self.visibility.to_ir(None);
+        if visibility.log.has_warnings() {
+            result_log.add_warnings(visibility.log.warnings);
+        }
+
+        if self.array_size.is_some() {
+            result_log.add_warning(ConversionWarning::UnsupportedFeature {
+                feature: format!("C array dimension on field `{}`", self.name),
+                resolution: "array size dropped; encode it in the field type if needed".to_string(),
+            });
+        }
+        if self.bit_field_size.is_some() {
+            result_log.add_warning(ConversionWarning::UnsupportedFeature {
+                feature: format!("C bit-field on field `{}`", self.name),
+                resolution: "bit-field width dropped from the language-agnostic IR".to_string(),
+            });
+        }
+        if self.alignment.is_some() {
+            result_log.add_warning(ConversionWarning::UnsupportedFeature {
+                feature: format!("`alignas` on field `{}`", self.name),
+                resolution: "explicit alignment dropped from the language-agnostic IR".to_string(),
+            });
+        }
+        if self.is_inline {
+            result_log.add_warning(ConversionWarning::UnsupportedFeature {
+                feature: format!("`inline` specifier on field `{}`", self.name),
+                resolution: "inline specifier dropped from the language-agnostic IR".to_string(),
+            });
+        }
+        if self.initialization_value.is_some() {
+            result_log.add_warning(ConversionWarning::UnsupportedFeature {
+                feature: format!("initializer on field `{}`", self.name),
+                resolution: "field initializer dropped from the language-agnostic IR".to_string(),
+            });
+        }
+        if self.inline_comment.is_some() {
+            result_log.add_warning(ConversionWarning::UnsupportedFeature {
+                feature: format!("inline comment on field `{}`", self.name),
+                resolution: "inline comment dropped from the language-agnostic IR".to_string(),
+            });
+        }
 
         let language_field = LanguageField {
             name: self.name,
             field_type: self.field_type,
-            visibility: self.visibility.to_ir(None).value,
-            array_size: self.array_size,
-            bit_field_size: self.bit_field_size,
-            alignment: self.alignment,
-            initialization_value: self.initialization_value,
-            inline_comment: self.inline_comment,
+            visibility: visibility.value,
+            is_static: self.is_static,
+            is_const: self.is_const,
             docs: self.docs,
         };
 
@@ -72,14 +109,14 @@ impl BackendItem for CppField {
             name: input.name,
             field_type: input.field_type,
             visibility: visibility.value,
-            array_size: input.array_size,
-            bit_field_size: input.bit_field_size,
-            alignment: input.alignment,
-            is_static: false, // Default value as IR doesn't have this concept
-            is_const: false,  // Default value as IR doesn't have this concept
-            is_inline: false, // Default value as IR doesn't have this concept
-            initialization_value: input.initialization_value,
-            inline_comment: input.inline_comment,
+            array_size: None,
+            bit_field_size: None,
+            alignment: None,
+            is_static: input.is_static,
+            is_const: input.is_const,
+            is_inline: false,
+            initialization_value: None,
+            inline_comment: None,
             docs: input.docs,
         };
 

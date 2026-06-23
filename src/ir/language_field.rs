@@ -11,16 +11,10 @@ pub struct LanguageField {
     pub field_type: String,
     /// The visibility of the field.
     pub visibility: Visibility,
-    /// The size of the array if the field is an array.
-    pub array_size: Option<String>,
-    /// Bit field size (can be a number or a macro/define name).
-    pub bit_field_size: Option<String>,
-    /// Over-alignment for this field (`alignas(N)`); `None` = natural alignment.
-    pub alignment: Option<u32>,
-    /// Optional initialization value for the field.
-    pub initialization_value: Option<String>,
-    /// Inline comment for the field.
-    pub inline_comment: Option<String>,
+    /// Whether the field is associated with the type rather than an instance.
+    pub is_static: bool,
+    /// Whether the field is immutable.
+    pub is_const: bool,
     /// Documentation for the field.
     pub docs: Option<Vec<String>>,
 }

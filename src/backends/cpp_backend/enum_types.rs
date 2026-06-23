@@ -1,6 +1,6 @@
 use crate::{
     backends::BackendItem,
-    conversion::{ConversionLog, ConversionResult},
+    conversion::{ConversionLog, ConversionResult, ConversionWarning},
     ir::{EnumVariant, EnumVariantValue, LanguageEnum, Visibility},
 };
 
@@ -106,7 +106,16 @@ impl BackendItem for CppEnum {
     type ConversionOptions = CppEnumConversionOptions;
 
     fn to_ir(self, _options: Option<&Self::ConversionOptions>) -> ConversionResult<Self::IrType> {
-        ConversionResult::new(LanguageEnum {
+        let mut result_log = ConversionLog::new();
+
+        if !self.is_enum_class {
+            result_log.add_warning(ConversionWarning::UnsupportedFeature {
+                feature: format!("unscoped C++ enum `{}`", self.name),
+                resolution: "represented as a scoped enum in the language-agnostic IR".to_string(),
+            });
+        }
+
+        let language_enum = LanguageEnum {
             name: self.name,
             visibility: Visibility::Default,
             variants: self
@@ -116,7 +125,9 @@ impl BackendItem for CppEnum {
                 .collect(),
             underlying_type: self.underlying_type,
             docs: self.docs,
-        })
+        };
+
+        ConversionResult::with_log(language_enum, result_log)
     }
 
     fn from_ir(input: Self::IrType, options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
@@ -159,7 +170,7 @@ impl Default for CppEnumConversionOptions {
 }
 
 impl CppEnumConversionOptions {
-    pub const DEFAULT: Self = Self { is_enum_class: false };
+    pub const DEFAULT: Self = Self { is_enum_class: true };
 }
 
 /// Render options for C++ enums.
