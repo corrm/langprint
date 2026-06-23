@@ -2,7 +2,14 @@
 name = "langprint"
 version = "0.1.0"
 edition = "2024"
-publish = false
+description = "Multi-language source-declaration code generation for C++, Rust, and C#, with cross-language conversion through a scoped declaration IR."
+authors = ["corrm <islamnofl.official@gmail.com>"]
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/corrm/langprint"
+readme = "README.md"
+keywords = ["codegen", "sdk-generation", "cpp", "csharp", "transpile"]
+categories = ["development-tools", "template-engine"]
+publish = true
 
 [dependencies]
 thiserror = { workspace = true }
