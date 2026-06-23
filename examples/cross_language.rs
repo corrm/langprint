@@ -1,4 +1,4 @@
-//! Demonstrates LangPrint's two layers: rich per-language native models that build and render
+//! Demonstrates langprint's two layers: rich per-language native models that build and render
 //! directly, and the neutral declaration IR used as a lossy bridge for cross-language conversion.
 //!
 //! Run with: `cargo run -p langprint --example cross_language`

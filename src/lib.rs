@@ -1,4 +1,4 @@
-//! LangPrint: a multi-language source-declaration code-generation library.
+//! langprint: a multi-language source-declaration code-generation library.
 //!
 //! Each backend (C++, Rust, C#) owns a rich, full-power native model that it builds and renders
 //! directly. A neutral declaration intermediate representation (IR) — covering types, fields,

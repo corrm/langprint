@@ -1,15 +1,28 @@
-# LangPrint
+# langprint
 
 A multi-language source-declaration code-generation library for Rust.
 
-LangPrint builds and renders **declarations** — types, fields, enums, function signatures,
+langprint builds and renders **declarations** — types, fields, enums, function signatures,
 visibility, namespaces, and docs — for **C++, Rust, and C#**, and can convert a declaration from
 one language into another. It is the engine behind generated SDKs: it does not parse or execute
 code, it emits the *shape* of an API.
 
+## Installation
+
+```sh
+cargo add langprint
+```
+
+or add it to `Cargo.toml` directly:
+
+```toml
+[dependencies]
+langprint = "0.1"
+```
+
 ## Two layers
 
-LangPrint deliberately has two layers, and you choose how deep you go:
+langprint deliberately has two layers, and you choose how deep you go:
 
 1. **Native models (primary).** Each backend owns a rich, full-power model — `Cpp*`, `Rust*`,
    `CSharp*` — that expresses everything that language can say about a declaration (C++ bit-fields
@@ -25,7 +38,7 @@ LangPrint deliberately has two layers, and you choose how deep you go:
 
 ### Honest, lossy conversion
 
-There is no universal lossless IR — that is a known impossibility, not a missing feature. LangPrint
+There is no universal lossless IR — that is a known impossibility, not a missing feature. langprint
 does not pretend otherwise. Instead the IR is **scoped** to what genuinely crosses all three
 languages, and every feature that cannot cross is **reported, never silently dropped**:
 
@@ -99,7 +112,7 @@ A complete, runnable version of this flow lives in
 [`examples/cross_language.rs`](examples/cross_language.rs):
 
 ```sh
-cargo run -p langprint --example cross_language
+cargo run --example cross_language
 ```
 
 ## Customizing conversion
@@ -149,17 +162,17 @@ has no namespace-level free functions — it is dropped with a `ConversionWarnin
 
 ## Project generators
 
-Beyond single declarations, LangPrint can emit the surrounding build project for a generated SDK
+Beyond single declarations, langprint can emit the surrounding build project for a generated SDK
 via `langprint::project_gen`:
 
-- `CMakeGenerator`, `MakefileGenerator` (C/C++)
+- `CmakeGenerator`, `MakefileGenerator` (C/C++)
 - `VslnGenerator` / `SlnxGenerator` (Visual Studio solutions)
 - `CargoGenerator` (Rust)
 - `CSharpProjectGenerator` (.NET SDK-style `.csproj`)
 
 ## Scope
 
-LangPrint models declarations and their layout, not arbitrary source code or runtime behavior. If
+langprint models declarations and their layout, not arbitrary source code or runtime behavior. If
 you need a feature only one language has, use that language's native model — it is the primary API
 and never the lossy one. The neutral IR is only for crossing languages, and it tells you what it
 could not carry.
