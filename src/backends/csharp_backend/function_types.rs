@@ -78,6 +78,8 @@ pub struct CSharpMethod {
     pub is_sealed: bool,
     /// Whether the method is `async`.
     pub is_async: bool,
+    /// Whether the method is `unsafe`.
+    pub is_unsafe: bool,
     /// The method body, one entry per line; `None` renders an abstract/interface declaration.
     pub body: Option<Vec<String>>,
     /// Attributes applied to the method (without the leading `[`).
@@ -97,6 +99,12 @@ impl BackendItem for CSharpMethod {
             log.add_warning(ConversionWarning::UnsupportedFeature {
                 feature: format!("`async` on method `{}`", self.name),
                 resolution: "async modifier dropped from the language-agnostic IR".to_string(),
+            });
+        }
+        if self.is_unsafe {
+            log.add_warning(ConversionWarning::UnsupportedFeature {
+                feature: format!("`unsafe` on method `{}`", self.name),
+                resolution: "unsafe modifier dropped from the language-agnostic IR".to_string(),
             });
         }
         for attribute in &self.attributes {
@@ -188,6 +196,7 @@ impl BackendItem for CSharpMethod {
             is_override: input.is_override,
             is_sealed: input.is_final,
             is_async: false,
+            is_unsafe: false,
             body: input.body,
             attributes: Vec::new(),
             docs: input.docs,

@@ -32,6 +32,7 @@ fn plain_function(name: &str) -> CppFunction {
         is_pure_virtual: false,
         is_inline: false,
         is_noexcept: false,
+        is_extern_c: false,
         is_override: false,
         is_final: false,
         is_friend: false,

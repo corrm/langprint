@@ -39,6 +39,7 @@ fn method(name: &str) -> CSharpMethod {
         is_override: false,
         is_sealed: false,
         is_async: false,
+        is_unsafe: false,
         body: None,
         attributes: Vec::new(),
         docs: None,
@@ -53,6 +54,7 @@ fn empty_type(kind: CSharpTypeKind, name: &str) -> CSharpType {
         is_abstract: false,
         is_sealed: false,
         is_static: false,
+        is_unsafe: false,
         is_partial: false,
         generic_args: Vec::new(),
         base_class: None,
@@ -308,4 +310,39 @@ fn from_ir_warns_on_data_carrying_enum_variant() {
     assert_eq!(result.value.members.len(), 2);
     assert_eq!(result.value.members[1].name, "Circle");
     assert_eq!(result.value.members[1].value, None);
+}
+
+#[test]
+fn renders_unsafe_method() {
+    let mut foo = method("Foo");
+    foo.visibility = CSharpVisibility::Private;
+    foo.is_static = true;
+    foo.is_unsafe = true;
+    foo.body = Some(Vec::new());
+    let mut ty = empty_type(CSharpTypeKind::Class, "Ops");
+    ty.methods.push(foo);
+
+    let rendered = backend().render_struct::<&str>(&ty, None, None, None, &mut 0).unwrap();
+    assert!(rendered.contains("private static unsafe void Foo("));
+}
+
+#[test]
+fn renders_unsafe_class() {
+    let mut ty = empty_type(CSharpTypeKind::Class, "CallArenaOps");
+    ty.visibility = CSharpVisibility::Internal;
+    ty.is_static = true;
+    ty.is_unsafe = true;
+
+    let rendered = backend().render_struct::<&str>(&ty, None, None, None, &mut 0).unwrap();
+    assert!(rendered.contains("internal static unsafe class CallArenaOps"));
+}
+
+#[test]
+fn unsafe_struct_stays_safe() {
+    let mut ty = empty_type(CSharpTypeKind::Struct, "Handle");
+    ty.is_unsafe = true;
+
+    let rendered = backend().render_struct::<&str>(&ty, None, None, None, &mut 0).unwrap();
+    assert!(!rendered.contains("unsafe"));
+    assert!(rendered.contains("struct Handle"));
 }

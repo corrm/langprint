@@ -469,6 +469,10 @@ impl FunctionRenderer for CppBackend {
             write!(out, ">{}{}", self.new_line.as_str(), indent_str)?;
         }
 
+        if input.is_extern_c {
+            write!(out, "extern \"C\" ")?;
+        }
+
         // Write function modifiers. `friend`/`static`/`virtual`/`inline` are written
         // only for declarations (an out-of-line definition may not repeat them).
         if !options.render_definition {
@@ -1170,5 +1174,56 @@ mod tests {
             .expect("render struct");
 
         assert!(output.contains("struct alignas(16) Foo"), "output was: {output}");
+    }
+
+    fn free_function(name: &str, is_extern_c: bool) -> CppFunction {
+        CppFunction {
+            name: name.to_string(),
+            parent_name: None,
+            visibility: CppVisibility::Public,
+            parameters: Vec::new(),
+            template_params: Vec::new(),
+            return_type: Some("void".to_string()),
+            is_static: false,
+            is_const: false,
+            is_virtual: false,
+            is_pure_virtual: false,
+            is_inline: false,
+            is_noexcept: false,
+            is_extern_c,
+            is_override: false,
+            is_final: false,
+            is_friend: false,
+            is_deleted: false,
+            is_default: false,
+            body: None,
+            docs: None,
+        }
+    }
+
+    #[test]
+    fn renders_extern_c_specifier() {
+        let backend: CppBackend = test_backend();
+        let input = free_function("polyplug_init", true);
+
+        let mut indent_level: i32 = 0;
+        let output: String = backend
+            .render_function::<&str>(&input, None, None, None, &mut indent_level)
+            .expect("render function");
+
+        assert!(output.contains("extern \"C\" void polyplug_init("), "output was: {output}");
+    }
+
+    #[test]
+    fn normal_function_omits_extern_c() {
+        let backend: CppBackend = test_backend();
+        let input = free_function("plain", false);
+
+        let mut indent_level: i32 = 0;
+        let output: String = backend
+            .render_function::<&str>(&input, None, None, None, &mut indent_level)
+            .expect("render function");
+
+        assert!(!output.contains("extern"), "output was: {output}");
     }
 }

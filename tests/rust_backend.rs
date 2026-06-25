@@ -138,6 +138,7 @@ fn renders_free_function() {
         is_unsafe: false,
         is_async: false,
         is_const: false,
+        abi: None,
         body: Some(vec!["a + b".to_string()]),
         attributes: vec![],
         docs: None,
@@ -149,6 +150,61 @@ fn renders_free_function() {
         .unwrap();
 
     assert_eq!(rendered, "pub fn add(a: i32, b: i32) -> i32 {\n    a + b\n}\n");
+}
+
+#[test]
+fn renders_unsafe_extern_c_function() {
+    let backend = RustBackend::default();
+    let function = RustFunction {
+        name: "polyplug_init".to_string(),
+        visibility: RustVisibility::Pub,
+        self_kind: RustSelfKind::None,
+        parameters: vec![],
+        generic_args: vec![],
+        return_type: None,
+        is_unsafe: true,
+        is_async: false,
+        is_const: false,
+        abi: Some("C".to_string()),
+        body: Some(vec![]),
+        attributes: vec![],
+        docs: None,
+    };
+
+    let mut level = 0;
+    let rendered = backend
+        .render_function(&function, None::<&str>, None::<&str>, None, &mut level)
+        .unwrap();
+
+    assert!(rendered.starts_with("pub unsafe extern \"C\" fn polyplug_init("));
+}
+
+#[test]
+fn non_extern_function_omits_extern_specifier() {
+    let backend = RustBackend::default();
+    let function = RustFunction {
+        name: "plain".to_string(),
+        visibility: RustVisibility::Pub,
+        self_kind: RustSelfKind::None,
+        parameters: vec![],
+        generic_args: vec![],
+        return_type: None,
+        is_unsafe: false,
+        is_async: false,
+        is_const: false,
+        abi: None,
+        body: Some(vec![]),
+        attributes: vec![],
+        docs: None,
+    };
+
+    let mut level = 0;
+    let rendered = backend
+        .render_function(&function, None::<&str>, None::<&str>, None, &mut level)
+        .unwrap();
+
+    assert!(!rendered.contains("extern"));
+    assert!(rendered.starts_with("pub fn plain("));
 }
 
 #[test]
@@ -187,6 +243,7 @@ fn renders_struct_with_impl_block() {
             is_unsafe: false,
             is_async: false,
             is_const: false,
+            abi: None,
             body: Some(vec!["self.health += amount;".to_string()]),
             attributes: vec![],
             docs: None,

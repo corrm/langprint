@@ -111,6 +111,9 @@ impl RustBackend {
         if input.is_unsafe {
             write!(out, "unsafe ")?;
         }
+        if let Some(abi) = &input.abi {
+            write!(out, "extern \"{}\" ", abi)?;
+        }
         write!(out, "fn {}{}(", input.name, render_generic_decls(&input.generic_args))?;
 
         let mut first = true;

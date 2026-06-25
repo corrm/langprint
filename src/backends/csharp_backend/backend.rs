@@ -207,6 +207,9 @@ impl CSharpBackend {
         if method.is_static {
             write!(out, "static ")?;
         }
+        if method.is_unsafe {
+            write!(out, "unsafe ")?;
+        }
         if method.is_abstract {
             write!(out, "abstract ")?;
         }
@@ -620,6 +623,9 @@ impl StructRenderer for CSharpBackend {
         write!(out, "{}{}", self.indent(*indent_level), input.visibility.prefix())?;
         if input.is_static {
             write!(out, "static ")?;
+        }
+        if input.is_unsafe && input.kind.can_be_unsafe() {
+            write!(out, "unsafe ")?;
         }
         if input.is_abstract && input.kind.can_be_abstract() {
             write!(out, "abstract ")?;

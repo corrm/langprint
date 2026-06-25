@@ -48,6 +48,12 @@ impl CSharpTypeKind {
     pub fn can_be_abstract(&self) -> bool {
         matches!(self, CSharpTypeKind::Class | CSharpTypeKind::Record)
     }
+
+    /// Whether the `unsafe` modifier is valid for this kind. polyplugc keeps structs safe
+    /// by design, so `unsafe` applies to every kind except `struct`.
+    pub fn can_be_unsafe(&self) -> bool {
+        !matches!(self, CSharpTypeKind::Struct)
+    }
 }
 
 /// Represents a C# type declaration (class / struct / interface / record).
@@ -65,6 +71,8 @@ pub struct CSharpType {
     pub is_sealed: bool,
     /// Whether the type is `static`.
     pub is_static: bool,
+    /// Whether the type is `unsafe`. Never valid on a `struct`; see [`CSharpTypeKind::can_be_unsafe`].
+    pub is_unsafe: bool,
     /// Whether the type is `partial`.
     pub is_partial: bool,
     /// Generic type parameters.
@@ -121,6 +129,12 @@ impl BackendItem for CSharpType {
             log.add_warning(ConversionWarning::UnsupportedFeature {
                 feature: format!("`partial` on type `{}`", self.name),
                 resolution: "partial modifier dropped from the language-agnostic IR".to_string(),
+            });
+        }
+        if self.is_unsafe {
+            log.add_warning(ConversionWarning::UnsupportedFeature {
+                feature: format!("`unsafe` on type `{}`", self.name),
+                resolution: "unsafe modifier dropped from the language-agnostic IR".to_string(),
             });
         }
         for attribute in &self.attributes {
@@ -264,6 +278,7 @@ impl BackendItem for CSharpType {
             is_abstract: input.is_abstract,
             is_sealed: input.is_final,
             is_static: false,
+            is_unsafe: false,
             is_partial: false,
             generic_args,
             base_class,

@@ -106,6 +106,8 @@ pub struct RustFunction {
     pub is_async: bool,
     /// Whether the function is `const`.
     pub is_const: bool,
+    /// The `extern "<abi>"` ABI of the function, e.g. `Some("C")`; `None` for the default Rust ABI.
+    pub abi: Option<String>,
     /// The function body, one entry per line; `None` renders a bare signature (declaration only).
     pub body: Option<Vec<String>>,
     /// Attributes applied to the function (without the leading `#[`).
@@ -137,6 +139,12 @@ impl BackendItem for RustFunction {
             log.add_warning(ConversionWarning::UnsupportedFeature {
                 feature: format!("`const` on function `{}`", self.name),
                 resolution: "the `const fn` qualifier is dropped from the language-agnostic IR".to_string(),
+            });
+        }
+        if self.abi.is_some() {
+            log.add_warning(ConversionWarning::UnsupportedFeature {
+                feature: format!("extern \"C\" ABI on function `{}`", self.name),
+                resolution: "dropped from the language-agnostic IR".to_string(),
             });
         }
         for attribute in &self.attributes {
@@ -270,6 +278,7 @@ impl BackendItem for RustFunction {
                 is_unsafe: false,
                 is_async: false,
                 is_const: false,
+                abi: None,
                 body: input.body,
                 attributes: Vec::new(),
                 docs: input.docs,

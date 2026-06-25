@@ -84,6 +84,8 @@ pub struct CppFunction {
     pub is_override: bool,
     /// Whether the function is final.
     pub is_final: bool,
+    /// Whether the function has C linkage (`extern "C"`).
+    pub is_extern_c: bool,
     /// Whether the function is friend.
     pub is_friend: bool,
     /// Whether the function is deleted (C++11 = delete).
@@ -137,6 +139,7 @@ impl BackendItem for CppFunction {
         // Report C++-only modifiers that the language-agnostic IR cannot represent.
         for (active, feature) in [
             (self.is_const, "`const` member function"),
+            (self.is_extern_c, "`extern \"C\"` linkage"),
             (self.is_inline, "`inline` specifier"),
             (self.is_noexcept, "`noexcept` specifier"),
             (self.is_friend, "`friend` function"),
@@ -231,6 +234,7 @@ impl BackendItem for CppFunction {
             is_pure_virtual: input.is_abstract,
             is_inline: false,
             is_noexcept: false,
+            is_extern_c: false,
             is_override: input.is_override,
             is_final: input.is_final,
             is_friend: false,

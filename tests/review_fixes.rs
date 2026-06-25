@@ -32,6 +32,7 @@ fn rust_function(name: &str, self_kind: RustSelfKind, body: Option<Vec<String>>)
         is_unsafe: false,
         is_async: false,
         is_const: false,
+        abi: None,
         body,
         attributes: vec![],
         docs: None,

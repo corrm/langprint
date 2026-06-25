@@ -76,6 +76,7 @@ fn main() {
         is_abstract: false,
         is_sealed: false,
         is_static: false,
+        is_unsafe: false,
         is_partial: false,
         generic_args: vec![],
         base_class: Some("Entity".to_string()),
