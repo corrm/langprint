@@ -8,7 +8,7 @@ use crate::{
     backends::BackendItem,
     conversion::{ConversionLog, ConversionResult, ConversionWarning},
     convert::ConversionConfig,
-    ir::{Annotation, LanguageBase, LanguageGenericArgument, LanguageStruct, Visibility},
+    ir::{Annotation, LanguageBase, LanguageStruct, Visibility},
 };
 
 /// Represents a base/super with its visibility in C++.

@@ -2,7 +2,7 @@ use crate::{
     backends::BackendItem,
     conversion::{ConversionLog, ConversionResult, ConversionWarning},
     convert::{ConversionConfig, map_type},
-    ir::{LanguageFunction, LanguageFunctionParameter, LanguageGenericArgument},
+    ir::{LanguageFunction, LanguageFunctionParameter},
     type_map::TargetLanguage,
 };
 

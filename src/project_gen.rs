@@ -404,12 +404,11 @@ impl ProjectBuilder {
                     self.sources.push(path.clone());
                 }
             }
-            if let Some(parent) = path.parent() {
-                if !parent.as_os_str().is_empty()
-                    && !include_dirs_set.iter().any(|p| p.as_path() == parent)
-                {
-                    include_dirs_set.push(parent.to_path_buf());
-                }
+            if let Some(parent) = path.parent()
+                && !parent.as_os_str().is_empty()
+                && !include_dirs_set.iter().any(|p| p.as_path() == parent)
+            {
+                include_dirs_set.push(parent.to_path_buf());
             }
         }
         self.include_dirs = include_dirs_set;
@@ -521,10 +520,11 @@ impl ProjectSpec {
                     self.sources.push(path.clone());
                 }
             }
-            if let Some(parent) = path.parent() {
-                if !parent.as_os_str().is_empty() && !include_dirs_set.iter().any(|p| p.as_path() == parent) {
-                    include_dirs_set.push(parent.to_path_buf());
-                }
+            if let Some(parent) = path.parent()
+                && !parent.as_os_str().is_empty()
+                && !include_dirs_set.iter().any(|p| p.as_path() == parent)
+            {
+                include_dirs_set.push(parent.to_path_buf());
             }
         }
         self.include_dirs = include_dirs_set;
