@@ -224,7 +224,7 @@ fn csharp_namespace_drops_free_functions_with_warning() {
 fn namespace_rename_can_be_disabled() {
     let ir = cpp_namespace().to_ir(None).value;
     let options = CSharpNamespaceConversionOptions {
-        config: ConversionConfig::new(TypeMap::builtin(), false),
+        config: ConversionConfig::new(TypeMap::default(), false),
     };
     let cs = CSharpNamespace::from_ir(ir, Some(&options));
     // With renaming off, the namespace name is verbatim and only the free-function drop is reported.

@@ -74,32 +74,16 @@ pub enum TargetLanguage {
 ///
 /// `recognize` maps any known spelling (from any language) to its neutral [`PrimitiveType`];
 /// `output` maps a `(PrimitiveType, TargetLanguage)` pair to that language's canonical spelling.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct TypeMap {
     recognize: HashMap<String, PrimitiveType>,
     output: HashMap<(PrimitiveType, TargetLanguage), String>,
 }
 
-impl TypeMap {
-    /// Create an empty map that recognizes and renders nothing.
-    pub fn empty() -> Self {
-        Self::default()
-    }
-
-    /// Create the built-in map covering the common C++/Rust/C#/Python/JS primitives.
-    ///
-    /// Python columns are PEP-484 type-hint spellings and JS columns are JSDoc type spellings.
-    /// Lua is untyped and carries no output spelling: [`render`](TypeMap::render) returns `None`
-    /// for [`TargetLanguage::Lua`], and the Lua backend never asks for one.
-    ///
-    /// # Returns
-    ///
-    /// A [`TypeMap`] recognizing every language's spelling of each primitive and rendering the
-    /// canonical spelling per language.
-    pub fn builtin() -> Self {
+impl Default for TypeMap {
+    fn default() -> Self {
         let mut map = Self::empty();
 
-        // (primitive, [recognized spellings], cpp, rust, csharp, python, js)
         let table: &[BuiltinRow] = &[
             (PrimitiveType::Bool, &["bool"], "bool", "bool", "bool", "bool", "boolean"),
             (PrimitiveType::I8, &["int8_t", "i8", "sbyte", "signed char"], "int8_t", "i8", "sbyte", "int", "number"),
@@ -134,7 +118,16 @@ impl TypeMap {
 
         map
     }
+}
 
+impl TypeMap {
+    /// Create an empty map that recognizes and renders nothing.
+    pub fn empty() -> Self {
+        Self {
+            recognize: HashMap::new(),
+            output: HashMap::new(),
+        }
+    }
     /// Recognize a type spelling as a neutral primitive.
     ///
     /// # Arguments

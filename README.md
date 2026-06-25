@@ -142,25 +142,20 @@ type_map.set_output(PrimitiveType::Str, TargetLanguage::CSharp, "string"); // ov
 let config = ConversionConfig::new(type_map, /* rename = */ false);
 ```
 
-**CtypeMap** (Python-only) re-spells neutral primitives into ctypes (`f64`→`ctypes.c_double`, …)
-when lowering a struct to a `ctypes.Structure`. The built-in table covers what ctypes has native
-types for; `i128`/`u128` are absent and emitted verbatim with a `ConversionWarning`. It is carried on
-`PythonStructConversionOptions` (defaulting to `CtypeMap::builtin()`) and follows the same clone-and-
-override pattern as `TypeMap` — a primitive you map yourself is rendered with no warning:
+**Python ctypes** uses the same [`TypeMap`](#typemap) as every other backend. The
+`ctypes_type_map()` function under `python_backend` returns a ready-to-use `TypeMap` with ctypes
+spellings for Python output:
 
 ```rust
-use langprint::PrimitiveType;
-use langprint::backends::python_backend::CtypeMap;
+use langprint::{ConversionConfig, PrimitiveType, TargetLanguage, TypeMap};
+use langprint::backends::python_backend::ctypes_type_map;
 
-let mut ctypes = CtypeMap::builtin();
-ctypes.insert(PrimitiveType::I128, "ctypes.c_int128");   // add a primitive
-ctypes.insert(PrimitiveType::F64, "MyDouble");            // override a primitive
-ctypes.insert_type("MyHandle", "ctypes.c_void_p");        // map a custom (non-primitive) type
+let config = ConversionConfig::new(ctypes_type_map(), false);
 ```
 
-The built-in primitive table is the compile-time `BUILTIN_CTYPES` constant, so `CtypeMap::builtin()`
-allocates nothing until you add an override. `CtypeMap` lives under `langprint::backends::python_backend`
-because ctypes is Python-specific (unlike the cross-language `TypeMap`).
+Custom types (e.g. `MyHandle`→`ctypes.c_void_p`) go through `type_override` on `ConversionConfig`.
+Types not covered by your `TypeMap` pass through verbatim with an `UnsupportedFeature` warning —
+provide a mapping to suppress it.
 
 **Renaming.** With `rename` on (the default), `from_ir` rewrites identifiers to the target
 language's convention (Rust `snake_case` fns/fields; C# `PascalCase` types/methods/fields/enum
@@ -293,12 +288,14 @@ Import rendering is additive: a backend that registers nothing renders exactly a
 ## Extension hooks
 
 Single-language native generation is lossless and needs no hooks. For the cross-language IR path,
-`ConversionConfig` carries three **opt-in, no-op-by-default** extension points (`langprint::convert`):
+`ConversionConfig` carries two **opt-in, no-op-by-default** extension points (`langprint::convert`):
 
 - `type_override` — a closure consulted before the `TypeMap` for custom type resolution.
 - `hooks: Option<Arc<dyn ConversionHooks>>` — `after_to_ir_*` / `before_from_ir_*` callbacks (struct,
   function, enum) to re-apply or remap what the IR cannot carry.
-- `renderers::post_process` — wrap or prepend rendered output (e.g. a `#pragma once` preamble).
+
+Separately, `renderers::post_process` is a post-render utility **function** (not a `ConversionConfig`
+field): pass it rendered output to wrap or prepend a preamble (e.g. a `#pragma once`).
 
 ## Project generators
 
@@ -365,6 +362,12 @@ langprint models declarations and their layout, not arbitrary source code or run
 you need a feature only one language has, use that language's native model — it is the primary API
 and never the lossy one. The neutral IR is only for crossing languages, and it tells you what it
 could not carry.
+
+### Known scope boundaries
+
+The IR carries no per-field/per-parameter annotations and no field initializers today — conversion
+hooks operate at type/function granularity. These are deliberate scope boundaries and future
+schema-extension points, not oversights.
 
 ## License
 

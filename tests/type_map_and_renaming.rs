@@ -24,7 +24,7 @@ fn ir_field(name: &str, field_type: &str) -> LanguageField {
 
 #[test]
 fn builtin_maps_primitives_across_languages() {
-    let map = TypeMap::builtin();
+    let map = TypeMap::default();
     assert_eq!(map.map("f32", TargetLanguage::CSharp), Some("float".to_string()));
     assert_eq!(map.map("uint8_t", TargetLanguage::Rust), Some("u8".to_string()));
     assert_eq!(map.map("byte", TargetLanguage::Rust), Some("u8".to_string()));
@@ -37,7 +37,7 @@ fn builtin_maps_primitives_across_languages() {
 
 #[test]
 fn type_map_override_extend_and_clear() {
-    let mut map = TypeMap::builtin();
+    let mut map = TypeMap::default();
     map.set_output(PrimitiveType::F32, TargetLanguage::CSharp, "Single");
     assert_eq!(map.map("f32", TargetLanguage::CSharp), Some("Single".to_string()));
 
@@ -85,7 +85,7 @@ fn csharp_field_is_pascal_cased_with_warning() {
 #[test]
 fn rename_disabled_keeps_identifier_but_still_maps_type() {
     let options = CSharpFieldConversionOptions {
-        config: ConversionConfig::new(TypeMap::builtin(), false),
+        config: ConversionConfig::new(TypeMap::default(), false),
     };
     let result = CSharpField::from_ir(ir_field("health_points", "f32"), Some(&options));
     // Identifier is left verbatim...

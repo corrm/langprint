@@ -11,7 +11,7 @@ use langprint::{AnnotationMap, ConversionConfig};
 
 #[test]
 fn annotation_map_builtin_rust() {
-    let map = AnnotationMap::builtin();
+    let map = AnnotationMap::default();
     assert_eq!(map.resolve(TargetLanguage::Rust, &Annotation::ReprC).as_deref(), Some("repr(C)"));
     assert_eq!(map.resolve(TargetLanguage::Rust, &Annotation::Packed).as_deref(), Some("repr(packed)"));
     assert_eq!(map.resolve(TargetLanguage::Rust, &Annotation::Aligned(8)).as_deref(), Some("repr(align(8))"));
@@ -19,7 +19,7 @@ fn annotation_map_builtin_rust() {
 
 #[test]
 fn annotation_map_builtin_csharp() {
-    let map = AnnotationMap::builtin();
+    let map = AnnotationMap::default();
     assert_eq!(
         map.resolve(TargetLanguage::CSharp, &Annotation::ReprC).as_deref(),
         Some("StructLayout(LayoutKind.Sequential)")
@@ -39,7 +39,7 @@ fn annotation_map_empty_resolves_none() {
 
 #[test]
 fn annotation_map_override_in_from_ir() {
-    let mut annotation_map = AnnotationMap::builtin();
+    let mut annotation_map = AnnotationMap::default();
     annotation_map.insert(TargetLanguage::Rust, AnnotationKind::ReprC, "repr(C, packed)");
 
     let config = ConversionConfig {

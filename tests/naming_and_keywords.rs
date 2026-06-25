@@ -6,7 +6,7 @@ use langprint::{CaseStyle, KeywordMap, NamingMap, TargetLanguage};
 
 #[test]
 fn naming_map_builtin_matches_legacy_conventions() {
-    let map = NamingMap::builtin();
+    let map = NamingMap::default();
 
     assert_eq!(map.resolve(TargetLanguage::Rust, IdentifierKind::Function), Some(CaseStyle::Snake));
     assert_eq!(map.resolve(TargetLanguage::CSharp, IdentifierKind::Type), Some(CaseStyle::Pascal));
@@ -17,7 +17,7 @@ fn naming_map_builtin_matches_legacy_conventions() {
 
 #[test]
 fn naming_map_override_changes_rename() {
-    let mut naming_map = NamingMap::builtin();
+    let mut naming_map = NamingMap::default();
     naming_map.insert(TargetLanguage::Python, IdentifierKind::Function, CaseStyle::Pascal);
 
     let overridden = ConversionConfig {

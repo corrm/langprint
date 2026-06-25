@@ -1,6 +1,6 @@
 use crate::{
     backends::BackendItem,
-    conversion::{dropped_annotations_warning, ConversionLog, ConversionResult, ConversionWarning},
+    conversion::{dropped_annotations_warning, dropped_feature_warning, ConversionLog, ConversionResult},
     convert::{rename_identifier, ConversionConfig, IdentifierKind},
     ir::{LanguageFunction, LanguageFunctionParameter, Visibility},
     type_map::TargetLanguage,
@@ -35,7 +35,7 @@ impl BackendItem for LuaFunction {
     type IrType = LanguageFunction;
     type ConversionOptions = LuaFunctionConversionOptions;
 
-    fn to_ir(self, _options: Option<&Self::ConversionOptions>) -> ConversionResult<Self::IrType> {
+    fn to_ir(self, options: Option<&Self::ConversionOptions>) -> ConversionResult<Self::IrType> {
         let parameters = self
             .parameters
             .into_iter()
@@ -46,7 +46,7 @@ impl BackendItem for LuaFunction {
             })
             .collect();
 
-        ConversionResult::new(LanguageFunction {
+        let mut ir = LanguageFunction {
             name: self.name,
             visibility: Visibility::Public,
             parameters,
@@ -61,22 +61,26 @@ impl BackendItem for LuaFunction {
             docs: self.doc.map(|doc| vec![doc]),
             annotations: Vec::new(),
             raw_attributes: Vec::new(),
-        })
+        };
+        if let Some(hooks) = options.and_then(|options| options.config.hooks.as_ref()) {
+            hooks.after_to_ir_function(&mut ir);
+        }
+
+        ConversionResult::new(ir)
     }
 
-    fn from_ir(input: Self::IrType, options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
+    fn from_ir(mut input: Self::IrType, options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
         let mut log = ConversionLog::new();
         let config = options.map(|options| options.config.clone()).unwrap_or_default();
+        if let Some(hooks) = &config.hooks {
+            hooks.before_from_ir_function(&mut input);
+        }
 
         if !input.generic_args.is_empty() {
-            log.add_warning(ConversionWarning::Other(
-                "Lua has no generics; dropping generic arguments".to_string(),
-            ));
+            log.add_warning(dropped_feature_warning("generic arguments", &input.name, "Lua"));
         }
         if input.return_type.is_some() {
-            log.add_warning(ConversionWarning::Other(
-                "Lua functions are untyped; dropping return type".to_string(),
-            ));
+            log.add_warning(dropped_feature_warning("return type", &input.name, "Lua"));
         }
         if !input.annotations.is_empty() || !input.raw_attributes.is_empty() {
             log.add_warning(dropped_annotations_warning(

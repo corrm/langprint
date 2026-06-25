@@ -84,12 +84,12 @@ impl fmt::Debug for ConversionConfig {
 impl Default for ConversionConfig {
     fn default() -> Self {
         Self {
-            type_map: Arc::new(TypeMap::builtin()),
+            type_map: Arc::new(TypeMap::default()),
             rename: true,
             type_override: None,
-            naming_map: NamingMap::builtin(),
-            keyword_map: KeywordMap::builtin(),
-            annotation_map: AnnotationMap::builtin(),
+            naming_map: NamingMap::default(),
+            keyword_map: KeywordMap::default(),
+            annotation_map: AnnotationMap::default(),
             hooks: None,
         }
     }
@@ -102,9 +102,9 @@ impl ConversionConfig {
             type_map: Arc::new(type_map),
             rename,
             type_override: None,
-            naming_map: NamingMap::builtin(),
-            keyword_map: KeywordMap::builtin(),
-            annotation_map: AnnotationMap::builtin(),
+            naming_map: NamingMap::default(),
+            keyword_map: KeywordMap::default(),
+            annotation_map: AnnotationMap::default(),
             hooks: None,
         }
     }
@@ -141,24 +141,18 @@ pub enum CaseStyle {
 /// A cross-language mapping table mirroring [`TypeMap`]: a [`builtin`](NamingMap::builtin) table
 /// encodes each language's idiomatic case per [`IdentifierKind`], and callers can override, extend,
 /// or clear it. A pair with no entry leaves the identifier verbatim.
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug)]
 pub struct NamingMap {
     styles: HashMap<(TargetLanguage, IdentifierKind), CaseStyle>,
 }
 
-impl NamingMap {
-    /// Create an empty map; every identifier is left verbatim.
-    pub fn empty() -> Self {
-        Self::default()
-    }
-
-    /// Create the built-in table of idiomatic case conventions per language and identifier kind.
-    pub fn builtin() -> Self {
+impl Default for NamingMap {
+    fn default() -> Self {
         use CaseStyle::{Camel, Pascal, Snake};
         use IdentifierKind::{Field, Function, Namespace, Type};
         use TargetLanguage::{CSharp, Js, Lua, Python, Rust};
 
-        let mut map = Self::empty();
+        let mut map = Self { styles: HashMap::new() };
 
         for kind in [Function, Field, Namespace] {
             map.insert(Rust, kind, Snake);
@@ -177,7 +171,9 @@ impl NamingMap {
 
         map
     }
+}
 
+impl NamingMap {
     /// Set the case style for a `(language, kind)` pair (extends or overrides).
     pub fn insert(&mut self, language: TargetLanguage, kind: IdentifierKind, style: CaseStyle) {
         self.styles.insert((language, kind), style);
@@ -204,20 +200,17 @@ impl NamingMap {
 /// A cross-language mapping table mirroring [`TypeMap`]: a [`builtin`](KeywordMap::builtin) set of
 /// reserved words per language drives [`escape`](KeywordMap::escape), and callers can extend or clear
 /// it. Escaping is per-language idiom (Rust `r#ident`, C# `@ident`, others `ident_`).
-#[derive(Clone, Debug, Default)]
+///
+/// Unlike the other maps, this one resolves via [`escape`](KeywordMap::escape): it *transforms* an
+/// identifier rather than performing a `resolve()` lookup.
+#[derive(Clone, Debug)]
 pub struct KeywordMap {
     reserved: HashMap<TargetLanguage, HashSet<String>>,
 }
 
-impl KeywordMap {
-    /// Create an empty map that reserves nothing.
-    pub fn empty() -> Self {
-        Self::default()
-    }
-
-    /// Create the built-in reserved-word set per language.
-    pub fn builtin() -> Self {
-        let mut map = Self::empty();
+impl Default for KeywordMap {
+    fn default() -> Self {
+        let mut map = Self { reserved: HashMap::new() };
 
         let python = [
             "False", "None", "True", "and", "as", "assert", "async", "await", "break", "class",
@@ -287,6 +280,13 @@ impl KeywordMap {
 
         map
     }
+}
+
+impl KeywordMap {
+    /// Create an empty map that reserves nothing.
+    pub fn empty() -> Self {
+        Self { reserved: HashMap::new() }
+    }
 
     /// Reserve a word in a language (extends or overrides).
     pub fn insert(&mut self, language: TargetLanguage, word: impl Into<String>) {
@@ -338,25 +338,22 @@ impl KeywordMap {
 /// it. The stored string is a template — for [`Annotation::Aligned`] the literal `{n}` is replaced
 /// with the alignment value. A pair with no entry emits nothing for that annotation.
 ///
+/// Template contract: an [`Annotation::Aligned`] template **must** contain the `{n}` placeholder —
+/// it is substituted with the alignment value, so an override that omits `{n}` silently drops the
+/// alignment. [`ReprC`](AnnotationKind::ReprC) and [`Packed`](AnnotationKind::Packed) templates are
+/// emitted verbatim, and any `{n}` in them is left literal.
+///
 /// This governs only the languages that render annotations as text (Rust, C#). C++ lowers alignment
-/// to a numeric field rendered as `alignas(n)` by the C++ renderer and is not part of this map.
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug)]
 pub struct AnnotationMap {
     spellings: HashMap<(TargetLanguage, AnnotationKind), String>,
 }
-
-impl AnnotationMap {
-    /// Create an empty map; every annotation emits nothing.
-    pub fn empty() -> Self {
-        Self::default()
-    }
-
-    /// Create the built-in table of native attribute spellings per language and annotation kind.
-    pub fn builtin() -> Self {
+impl Default for AnnotationMap {
+    fn default() -> Self {
         use AnnotationKind::{Aligned, Packed, ReprC};
         use TargetLanguage::{CSharp, Rust};
 
-        let mut map = Self::empty();
+        let mut map = Self { spellings: HashMap::new() };
 
         map.insert(Rust, ReprC, "repr(C)");
         map.insert(Rust, Packed, "repr(packed)");
@@ -367,8 +364,19 @@ impl AnnotationMap {
 
         map
     }
+}
+
+impl AnnotationMap {
+    /// Create an empty map; every annotation emits nothing.
+    pub fn empty() -> Self {
+        Self { spellings: HashMap::new() }
+    }
 
     /// Set the native spelling template for a `(language, kind)` pair (extends or overrides).
+    ///
+    /// An [`Aligned`](AnnotationKind::Aligned) template must include the `{n}` placeholder, which
+    /// [`resolve`](AnnotationMap::resolve) substitutes with the alignment value; omitting it drops
+    /// the alignment. Other kinds are emitted verbatim.
     pub fn insert(&mut self, language: TargetLanguage, kind: AnnotationKind, template: impl Into<String>) {
         self.spellings.insert((language, kind), template.into());
     }

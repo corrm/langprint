@@ -6,17 +6,39 @@
 use langprint::backends::js_backend::{JsClass, JsFunction};
 use langprint::backends::lua_backend::{LuaBackend, LuaFunction};
 use langprint::backends::python_backend::{
-    CtypeMap, PythonBackend, PythonClass, PythonFunction, PythonStruct, PythonStructConversionOptions,
+    ctypes_type_map, PythonBackend, PythonClass, PythonFunction, PythonStruct, PythonStructConversionOptions,
 };
 use langprint::backends::BackendItem;
 use langprint::conversion::ConversionWarning;
-use langprint::type_map::PrimitiveType;
+use langprint::convert::ConversionConfig;
 use langprint::ir::{
     Annotation, LanguageBase, LanguageField, LanguageFunction, LanguageFunctionParameter, LanguageStruct,
     LanguageStructKind, RawAttribute, Visibility,
 };
 use langprint::renderers::{FunctionRenderer, StructRenderer};
-use langprint::type_map::TargetLanguage;
+use langprint::type_map::{PrimitiveType, TargetLanguage, TypeMap};
+
+/// Build a ConversionConfig with ctypes spellings for Python output.
+fn ctypes_config() -> ConversionConfig {
+    ConversionConfig::new(ctypes_type_map(), false)
+}
+
+/// Build a ConversionConfig with ctypes spellings plus custom overrides.
+fn ctypes_config_with_override(overrides: &[(PrimitiveType, &str)], custom_types: Vec<(&str, &str)>) -> ConversionConfig {
+    let mut type_map = ctypes_type_map();
+    for (primitive, spelling) in overrides {
+        type_map.set_output(*primitive, TargetLanguage::Python, *spelling);
+    }
+    let mut config = ConversionConfig::new(type_map, false);
+    let custom: Vec<(String, String)> = custom_types.into_iter().map(|(k, v)| (k.to_string(), v.to_string())).collect();
+    config.type_override = Some(std::sync::Arc::new(move |spelling: &str, lang: TargetLanguage| -> Option<String> {
+        if lang != TargetLanguage::Python {
+            return None;
+        }
+        custom.iter().find(|(s, _)| s.as_str() == spelling).map(|(_, v)| v.clone())
+    }));
+    config
+}
 
 /// A neutral function as if projected from a typed backend: PascalCase name, `i32`/`f64` params,
 /// an `f64` return. Lowering must rename to the target convention and re-spell the types.
@@ -184,7 +206,8 @@ fn python_struct_from_ir_maps_primitives_to_ctypes() {
         primitive_field("X", "f64"),
         primitive_field("Count", "i32"),
     ]);
-    let result = PythonStruct::from_ir(input, None);
+    let options = PythonStructConversionOptions { config: ctypes_config() };
+    let result = PythonStruct::from_ir(input, Some(&options));
     let rendered = render_python_struct(&result.value);
 
     assert!(rendered.contains("ctypes.c_double"), "rendered: {rendered}");
@@ -194,30 +217,21 @@ fn python_struct_from_ir_maps_primitives_to_ctypes() {
 }
 
 #[test]
-fn ctype_map_builtin_maps_primitives() {
-    let map = CtypeMap::builtin();
-    assert_eq!(map.resolve(PrimitiveType::F64), Some("ctypes.c_double"));
-    assert_eq!(map.resolve(PrimitiveType::I32), Some("ctypes.c_int32"));
-    assert_eq!(map.resolve(PrimitiveType::I128), None);
+fn ctypes_type_map_has_expected_entries() {
+    let map = ctypes_type_map();
+    assert_eq!(map.map("f64", TargetLanguage::Python), Some("ctypes.c_double".to_string()));
+    assert_eq!(map.map("i32", TargetLanguage::Python), Some("ctypes.c_int32".to_string()));
+    // i128 has no ctypes entry — falls back to builtin TypeMap Python output
+    assert_eq!(map.map("i128", TargetLanguage::Python), Some("int".to_string()));
 }
 
 #[test]
-fn ctype_map_clone_and_override() {
-    let mut map = CtypeMap::builtin();
-    map.insert(PrimitiveType::F64, "MyDouble");
-    assert_eq!(map.resolve(PrimitiveType::F64), Some("MyDouble"));
-    assert_eq!(map.resolve(PrimitiveType::I32), Some("ctypes.c_int32"));
-}
-
-#[test]
-fn python_struct_from_ir_uses_supplied_ctype_map() {
-    let mut ctype_map = CtypeMap::builtin();
-    ctype_map.insert(PrimitiveType::F64, "MyDouble");
-    ctype_map.insert(PrimitiveType::I128, "ctypes.c_int128");
-    let options = PythonStructConversionOptions {
-        ctype_map,
-        ..Default::default()
-    };
+fn python_struct_from_ir_uses_custom_type_map() {
+    let config = ctypes_config_with_override(
+        &[(PrimitiveType::F64, "MyDouble"), (PrimitiveType::I128, "ctypes.c_int128")],
+        vec![],
+    );
+    let options = PythonStructConversionOptions { config };
 
     let input = neutral_ctypes_struct(vec![
         primitive_field("X", "f64"),
@@ -240,33 +254,26 @@ fn python_struct_from_ir_uses_supplied_ctype_map() {
 }
 
 #[test]
-fn python_struct_from_ir_default_options_unchanged() {
+fn python_struct_from_ir_default_options_uses_builtin_typemap() {
     let input = neutral_ctypes_struct(vec![
         primitive_field("X", "f64"),
         primitive_field("Count", "i32"),
     ]);
-    let result = PythonStruct::from_ir(input, Some(&PythonStructConversionOptions::default()));
+    let result = PythonStruct::from_ir(input, None);
     let rendered = render_python_struct(&result.value);
 
-    assert!(rendered.contains("ctypes.c_double"), "rendered: {rendered}");
-    assert!(rendered.contains("ctypes.c_int32"), "rendered: {rendered}");
+    // Default TypeMap maps f64→float, i32→int for Python (PEP-484 hints).
+    assert!(rendered.contains("float"), "rendered: {rendered}");
+    assert!(rendered.contains("int"), "rendered: {rendered}");
 }
 
 #[test]
-fn ctype_map_empty_resolves_nothing() {
-    let map = CtypeMap::empty();
-    assert_eq!(map.resolve(PrimitiveType::F64), None);
-    assert_eq!(map.resolve(PrimitiveType::I32), None);
-}
-
-#[test]
-fn ctype_map_custom_type_maps_non_primitive() {
-    let mut ctype_map = CtypeMap::builtin();
-    ctype_map.insert_type("MyHandle", "ctypes.c_void_p");
-    let options = PythonStructConversionOptions {
-        ctype_map,
-        ..Default::default()
-    };
+fn python_struct_from_ir_custom_type_override() {
+    let config = ctypes_config_with_override(
+        &[],
+        vec![("MyHandle", "ctypes.c_void_p")],
+    );
+    let options = PythonStructConversionOptions { config };
 
     let input = neutral_ctypes_struct(vec![primitive_field("Handle", "MyHandle")]);
     let result = PythonStruct::from_ir(input, Some(&options));
@@ -290,27 +297,34 @@ fn ctype_map_custom_type_maps_non_primitive() {
 
 #[test]
 fn python_struct_from_ir_passes_unknown_ctype_verbatim() {
+    // Unknown types pass through verbatim with a warning. The user provides a
+    // type_override to map custom types and suppress the warning.
+    let config = ctypes_config_with_override(
+        &[],
+        vec![("ctypes.c_void_p", "ctypes.c_void_p"), ("SomeStructure", "SomeStructure")],
+    );
+    let options = PythonStructConversionOptions { config };
+
     let input = neutral_ctypes_struct(vec![
         primitive_field("Handle", "ctypes.c_void_p"),
         primitive_field("Nested", "SomeStructure"),
     ]);
-    let result = PythonStruct::from_ir(input, None);
+    let result = PythonStruct::from_ir(input, Some(&options));
     let rendered = render_python_struct(&result.value);
 
     assert!(rendered.contains("ctypes.c_void_p"), "rendered: {rendered}");
     assert!(rendered.contains("SomeStructure"), "rendered: {rendered}");
-    // Verbatim pass-through of a non-primitive ctype is legitimate — it must not
-    // raise an UnsupportedFeature warning (rename warnings are unrelated).
     assert!(
         !result
             .log
             .warnings
             .iter()
             .any(|warning| matches!(warning, ConversionWarning::UnsupportedFeature { .. })),
-        "verbatim pass-through must not warn: {:?}",
+        "mapped types must not warn: {:?}",
         result.log.warnings
     );
 }
+
 
 fn mentions_drop(warnings: &[ConversionWarning]) -> bool {
     warnings.iter().any(|warning| {

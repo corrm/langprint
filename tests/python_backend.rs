@@ -185,3 +185,22 @@ fn renders_class_with_base_and_docstring() {
 
     assert_eq!(rendered, "class Animal(Base):\n    \"\"\"An animal.\"\"\"\n");
 }
+
+#[test]
+fn renders_multiline_docstring_with_indented_continuation() {
+    let backend = PythonBackend::default();
+    let class = PythonClass {
+        name: "Animal".to_string(),
+        bases: vec![],
+        fields: vec![],
+        methods: vec![],
+        docstring: Some("Line1\nLine2".to_string()),
+    };
+
+    let mut level = 0;
+    let rendered = backend
+        .render_class(&class, None::<&str>, None::<&str>, None, &mut level)
+        .unwrap();
+
+    assert_eq!(rendered, "class Animal:\n    \"\"\"Line1\n    Line2\"\"\"\n");
+}

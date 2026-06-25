@@ -1,6 +1,6 @@
 use crate::{
     backends::BackendItem,
-    conversion::{dropped_annotations_warning, ConversionLog, ConversionResult, ConversionWarning},
+    conversion::{dropped_annotations_warning, dropped_feature_warning, ConversionLog, ConversionResult, ConversionWarning},
     convert::{rename_identifier, ConversionConfig, IdentifierKind},
     ir::{LanguageBase, LanguageField, LanguageStruct, LanguageStructKind, Visibility},
     type_map::TargetLanguage,
@@ -41,7 +41,7 @@ impl BackendItem for JsClass {
     type IrType = LanguageStruct;
     type ConversionOptions = JsClassConversionOptions;
 
-    fn to_ir(self, _options: Option<&Self::ConversionOptions>) -> ConversionResult<Self::IrType> {
+    fn to_ir(self, options: Option<&Self::ConversionOptions>) -> ConversionResult<Self::IrType> {
         let mut log = ConversionLog::new();
 
         let fields = self
@@ -59,9 +59,12 @@ impl BackendItem for JsClass {
             })
             .collect();
 
+        let method_options = JsFunctionConversionOptions {
+            config: options.map(|o| o.config.clone()).unwrap_or_default(),
+        };
         let mut methods = Vec::with_capacity(self.methods.len());
         for method in self.methods {
-            let result = method.to_ir(None);
+            let result = method.to_ir(Some(&method_options));
             log.add_warnings(result.log.warnings);
             methods.push(result.value);
         }
@@ -75,31 +78,40 @@ impl BackendItem for JsClass {
             })
             .collect();
 
-        ConversionResult::with_log(
-            LanguageStruct {
-                visibility: Visibility::Public,
-                struct_kind: LanguageStructKind::Class,
-                is_abstract: false,
-                is_final: false,
-                name: self.name,
-                generic_args: Vec::new(),
-                bases,
-                fields,
-                methods,
-                docs: self.doc.map(|doc| vec![doc]),
-                annotations: Vec::new(),
-                raw_attributes: Vec::new(),
-            },
-            log,
-        )
+        let mut ir = LanguageStruct {
+            visibility: Visibility::Public,
+            struct_kind: LanguageStructKind::Class,
+            is_abstract: false,
+            is_final: false,
+            name: self.name,
+            generic_args: Vec::new(),
+            bases,
+            fields,
+            methods,
+            docs: self.doc.map(|doc| vec![doc]),
+            annotations: Vec::new(),
+            raw_attributes: Vec::new(),
+        };
+        if let Some(hooks) = options.and_then(|options| options.config.hooks.as_ref()) {
+            hooks.after_to_ir_struct(&mut ir);
+        }
+
+        ConversionResult::with_log(ir, log)
     }
 
-    fn from_ir(input: Self::IrType, options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
+    fn from_ir(mut input: Self::IrType, options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
         let mut log = ConversionLog::new();
         let config = options.map(|options| options.config.clone()).unwrap_or_default();
+        if let Some(hooks) = &config.hooks {
+            hooks.before_from_ir_struct(&mut input);
+        }
 
         let name = rename_identifier(&config, &input.name, TargetLanguage::Js, IdentifierKind::Type);
         log.add_warnings(name.log.warnings);
+
+        if !input.generic_args.is_empty() {
+            log.add_warning(dropped_feature_warning("generic arguments", &input.name, "JavaScript"));
+        }
 
         if !input.annotations.is_empty() || !input.raw_attributes.is_empty() {
             log.add_warning(dropped_annotations_warning(
@@ -108,6 +120,10 @@ impl BackendItem for JsClass {
                 &input.name,
                 "JavaScript",
             ));
+        }
+
+        if !input.fields.is_empty() {
+            log.add_warning(dropped_feature_warning("field values", &input.name, "JavaScript"));
         }
 
         let mut fields = Vec::with_capacity(input.fields.len());

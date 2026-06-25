@@ -34,7 +34,7 @@ impl BackendItem for PythonEnum {
     type IrType = LanguageEnum;
     type ConversionOptions = PythonEnumConversionOptions;
 
-    fn to_ir(self, _options: Option<&Self::ConversionOptions>) -> ConversionResult<Self::IrType> {
+    fn to_ir(self, options: Option<&Self::ConversionOptions>) -> ConversionResult<Self::IrType> {
         let variants = self
             .members
             .into_iter()
@@ -45,7 +45,7 @@ impl BackendItem for PythonEnum {
             })
             .collect();
 
-        ConversionResult::new(LanguageEnum {
+        let mut ir = LanguageEnum {
             name: self.name,
             visibility: Visibility::Public,
             variants,
@@ -53,12 +53,20 @@ impl BackendItem for PythonEnum {
             docs: self.docstring.map(|docstring| vec![docstring]),
             annotations: Vec::new(),
             raw_attributes: Vec::new(),
-        })
+        };
+        if let Some(hooks) = options.and_then(|options| options.config.hooks.as_ref()) {
+            hooks.after_to_ir_enum(&mut ir);
+        }
+
+        ConversionResult::new(ir)
     }
 
-    fn from_ir(input: Self::IrType, options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
+    fn from_ir(mut input: Self::IrType, options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
         let mut log = ConversionLog::new();
         let config = options.map(|options| options.config.clone()).unwrap_or_default();
+        if let Some(hooks) = &config.hooks {
+            hooks.before_from_ir_enum(&mut input);
+        }
 
         let name = rename_identifier(&config, &input.name, TargetLanguage::Python, IdentifierKind::Type);
         log.add_warnings(name.log.warnings);

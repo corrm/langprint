@@ -2,7 +2,10 @@
 
 use langprint::{
     AVAILABLE_BACKENDS,
+    backends::BackendItem,
     backends::lua_backend::{LuaBackend, LuaField, LuaFunction, LuaModule},
+    conversion::ConversionWarning,
+    ir::{LanguageConstant, LanguageEnum, LanguageNamespace, Visibility},
     renderers::FunctionRenderer,
 };
 
@@ -98,4 +101,63 @@ fn renders_module_table_with_function_and_field() {
         rendered,
         "local M = {}\nM.version = \"1.0\"\n\n-- Greets a person.\nfunction M.greet(name)\n  return \"hi \" .. name\nend\n\nreturn M\n"
     );
+}
+
+#[test]
+fn module_fields_round_trip_through_constants() {
+    let module = LuaModule {
+        table_name: "M".to_string(),
+        fields: vec![LuaField {
+            name: "version".to_string(),
+            value: "\"1.0\"".to_string(),
+        }],
+        functions: vec![],
+        doc: None,
+    };
+
+    let ir = module.clone().to_ir(None);
+    assert!(ir.log.warnings.is_empty());
+    let constants = ir.value.constants.as_ref().unwrap();
+    assert_eq!(constants.len(), 1);
+    assert_eq!(constants[0].name, "version");
+    assert_eq!(constants[0].value, "\"1.0\"");
+
+    let back = LuaModule::from_ir(ir.value, None);
+    assert_eq!(back.value.fields, module.fields);
+}
+
+#[test]
+fn module_from_ir_warns_on_dropped_namespace_members() {
+    let namespace = LanguageNamespace {
+        name: "M".to_string(),
+        visibility: Visibility::Public,
+        defines: None,
+        constants: Some(vec![LanguageConstant {
+            name: "version".to_string(),
+            visibility: Visibility::Public,
+            data_type: String::new(),
+            value: "\"1.0\"".to_string(),
+            docs: None,
+        }]),
+        enums: Some(vec![LanguageEnum {
+            name: "Color".to_string(),
+            visibility: Visibility::Public,
+            variants: vec![],
+            underlying_type: None,
+            docs: None,
+            annotations: vec![],
+            raw_attributes: vec![],
+        }]),
+        structs: None,
+        functions: None,
+        namespaces: None,
+        docs: None,
+    };
+
+    let result = LuaModule::from_ir(namespace, None);
+    assert_eq!(result.value.fields.len(), 1);
+    assert!(result.log.warnings.iter().any(|warning| matches!(
+        warning,
+        ConversionWarning::UnsupportedFeature { feature, .. } if feature.contains("nested enums")
+    )));
 }

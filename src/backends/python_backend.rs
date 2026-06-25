@@ -13,7 +13,7 @@ pub mod function_types;
 pub mod struct_types;
 
 pub use backend::PythonBackend;
-pub use ctype_map::CtypeMap;
+pub use ctype_map::ctypes_type_map;
 pub use class_types::{
     PythonClass, PythonClassConversionOptions, PythonClassField, PythonClassRenderOptions,
 };

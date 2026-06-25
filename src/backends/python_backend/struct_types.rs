@@ -1,7 +1,7 @@
 use crate::{
-    backends::{python_backend::CtypeMap, BackendItem},
-    conversion::{dropped_annotations_warning, ConversionLog, ConversionResult, ConversionWarning},
-    convert::{rename_identifier, ConversionConfig, IdentifierKind},
+    backends::BackendItem,
+    conversion::{dropped_annotations_warning, dropped_feature_warning, ConversionLog, ConversionResult},
+    convert::{map_type, rename_identifier, ConversionConfig, IdentifierKind},
     ir::{LanguageField, LanguageStruct, LanguageStructKind, Visibility},
     type_map::TargetLanguage,
 };
@@ -34,7 +34,7 @@ impl BackendItem for PythonStruct {
     type IrType = LanguageStruct;
     type ConversionOptions = PythonStructConversionOptions;
 
-    fn to_ir(self, _options: Option<&Self::ConversionOptions>) -> ConversionResult<Self::IrType> {
+    fn to_ir(self, options: Option<&Self::ConversionOptions>) -> ConversionResult<Self::IrType> {
         let fields = self
             .fields
             .into_iter()
@@ -50,7 +50,7 @@ impl BackendItem for PythonStruct {
             })
             .collect();
 
-        ConversionResult::new(LanguageStruct {
+        let mut ir = LanguageStruct {
             visibility: Visibility::Public,
             struct_kind: LanguageStructKind::Struct,
             is_abstract: false,
@@ -63,16 +63,26 @@ impl BackendItem for PythonStruct {
             docs: self.docstring.map(|docstring| vec![docstring]),
             annotations: Vec::new(),
             raw_attributes: Vec::new(),
-        })
+        };
+        if let Some(hooks) = options.and_then(|options| options.config.hooks.as_ref()) {
+            hooks.after_to_ir_struct(&mut ir);
+        }
+
+        ConversionResult::new(ir)
     }
 
-    fn from_ir(input: Self::IrType, options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
+    fn from_ir(mut input: Self::IrType, options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
         let mut log = ConversionLog::new();
-        let default_options = PythonStructConversionOptions::default();
-        let options = options.unwrap_or(&default_options);
-        let config = &options.config;
+        let config = options.map(|o| o.config.clone()).unwrap_or_default();
+        if let Some(hooks) = &config.hooks {
+            hooks.before_from_ir_struct(&mut input);
+        }
 
-        let name = rename_identifier(config, &input.name, TargetLanguage::Python, IdentifierKind::Type);
+        if !input.generic_args.is_empty() {
+            log.add_warning(dropped_feature_warning("generic arguments", &input.name, "Python"));
+        }
+
+        let name = rename_identifier(&config, &input.name, TargetLanguage::Python, IdentifierKind::Type);
         log.add_warnings(name.log.warnings);
 
         if !input.annotations.is_empty() || !input.raw_attributes.is_empty() {
@@ -86,29 +96,15 @@ impl BackendItem for PythonStruct {
 
         let mut fields = Vec::with_capacity(input.fields.len());
         for field in input.fields {
-            let field_name = rename_identifier(config, &field.name, TargetLanguage::Python, IdentifierKind::Field);
+            let field_name = rename_identifier(&config, &field.name, TargetLanguage::Python, IdentifierKind::Field);
             log.add_warnings(field_name.log.warnings);
 
-            let ctype = if let Some(custom) = options.ctype_map.resolve_type(&field.field_type) {
-                custom.to_string()
-            } else if let Some(primitive) = config.type_map.resolve(&field.field_type) {
-                match options.ctype_map.resolve(primitive) {
-                    Some(ctype) => ctype.to_string(),
-                    None => {
-                        log.add_warning(ConversionWarning::UnsupportedFeature {
-                            feature: format!("field `{}` of type `{}`", field.name, field.field_type),
-                            resolution: "ctypes has no native type for it; emitted the spelling verbatim".to_string(),
-                        });
-                        field.field_type
-                    }
-                }
-            } else {
-                field.field_type
-            };
+            let mapped = map_type(&config, &field.field_type, TargetLanguage::Python);
+            log.add_warnings(mapped.log.warnings);
 
             fields.push(PythonStructField {
                 name: field_name.value,
-                ctype,
+                ctype: mapped.value,
             });
         }
 
@@ -124,21 +120,10 @@ impl BackendItem for PythonStruct {
 }
 
 /// Conversion options for Python ctypes structures.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct PythonStructConversionOptions {
     /// Cross-language conversion configuration.
     pub config: ConversionConfig,
-    /// Maps neutral primitives to their ctypes spellings; defaults to [`CtypeMap::builtin`].
-    pub ctype_map: CtypeMap,
-}
-
-impl Default for PythonStructConversionOptions {
-    fn default() -> Self {
-        Self {
-            config: ConversionConfig::default(),
-            ctype_map: CtypeMap::builtin(),
-        }
-    }
 }
 
 /// Render options for Python ctypes structures.

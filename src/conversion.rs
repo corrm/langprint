@@ -45,6 +45,21 @@ pub fn dropped_annotations_warning(count: usize, kind: &str, name: &str, languag
     }
 }
 
+/// Build the standard warning for a feature dropped during conversion because the target cannot
+/// carry it.
+///
+/// # Arguments
+///
+/// * `feature` - What was dropped (e.g. `"generic arguments"`, `"return type"`).
+/// * `name` - The owning item's source name.
+/// * `language` - The target language that cannot express the feature.
+pub fn dropped_feature_warning(feature: &str, name: &str, language: &str) -> ConversionWarning {
+    ConversionWarning::UnsupportedFeature {
+        feature: format!("{feature} on `{name}`"),
+        resolution: format!("{language} cannot express it; dropped"),
+    }
+}
+
 /// Log of conversion warnings.
 #[derive(Debug, Clone, Default)]
 pub struct ConversionLog {

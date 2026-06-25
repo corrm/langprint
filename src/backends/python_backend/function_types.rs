@@ -1,6 +1,6 @@
 use crate::{
     backends::BackendItem,
-    conversion::{dropped_annotations_warning, ConversionLog, ConversionResult},
+    conversion::{dropped_annotations_warning, dropped_feature_warning, ConversionLog, ConversionResult},
     convert::{map_type, rename_identifier, ConversionConfig, IdentifierKind},
     ir::{LanguageFunction, LanguageFunctionParameter, Visibility},
     type_map::{PrimitiveType, TargetLanguage},
@@ -85,7 +85,7 @@ impl BackendItem for PythonFunction {
     type IrType = LanguageFunction;
     type ConversionOptions = PythonFunctionConversionOptions;
 
-    fn to_ir(self, _options: Option<&Self::ConversionOptions>) -> ConversionResult<Self::IrType> {
+    fn to_ir(self, options: Option<&Self::ConversionOptions>) -> ConversionResult<Self::IrType> {
         let mut log = ConversionLog::new();
 
         let mut parameters = Vec::with_capacity(self.parameters.len());
@@ -95,44 +95,42 @@ impl BackendItem for PythonFunction {
             parameters.push(result.value);
         }
 
-        let docs = match (self.docstring, self.body) {
-            (Some(docstring), body) => {
-                let mut docs = vec![docstring];
-                if let Some(body) = body {
-                    docs.extend(body);
-                }
-                Some(docs)
-            }
-            (None, body) => body,
+        let mut ir = LanguageFunction {
+            name: self.name,
+            visibility: Visibility::Public,
+            parameters,
+            generic_args: Vec::new(),
+            return_type: self.return_type,
+            is_static: true,
+            is_abstract: false,
+            is_virtual: false,
+            is_override: false,
+            is_final: false,
+            body: self.body,
+            docs: self.docstring.map(|docstring| vec![docstring]),
+            annotations: Vec::new(),
+            raw_attributes: Vec::new(),
         };
+        if let Some(hooks) = options.and_then(|options| options.config.hooks.as_ref()) {
+            hooks.after_to_ir_function(&mut ir);
+        }
 
-        ConversionResult::with_log(
-            LanguageFunction {
-                name: self.name,
-                visibility: Visibility::Public,
-                parameters,
-                generic_args: Vec::new(),
-                return_type: self.return_type,
-                is_static: true,
-                is_abstract: false,
-                is_virtual: false,
-                is_override: false,
-                is_final: false,
-                body: docs,
-                docs: None,
-                annotations: Vec::new(),
-                raw_attributes: Vec::new(),
-            },
-            log,
-        )
+        ConversionResult::with_log(ir, log)
     }
 
-    fn from_ir(input: Self::IrType, options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
+    fn from_ir(mut input: Self::IrType, options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
         let mut log = ConversionLog::new();
         let config = options.map(|options| options.config.clone()).unwrap_or_default();
+        if let Some(hooks) = &config.hooks {
+            hooks.before_from_ir_function(&mut input);
+        }
 
         let name = rename_identifier(&config, &input.name, TargetLanguage::Python, IdentifierKind::Function);
         log.add_warnings(name.log.warnings);
+
+        if !input.generic_args.is_empty() {
+            log.add_warning(dropped_feature_warning("generic arguments", &input.name, "Python"));
+        }
 
         if !input.annotations.is_empty() || !input.raw_attributes.is_empty() {
             log.add_warning(dropped_annotations_warning(

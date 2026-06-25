@@ -111,7 +111,7 @@ fn main() {
 
     // Customize the conversion: extend the built-in TypeMap with a game type, override an output
     // spelling, and turn off idiomatic renaming. The map is exposed for exactly this.
-    let mut type_map = TypeMap::builtin();
+    let mut type_map = TypeMap::default();
     type_map.insert_spelling("FString", PrimitiveType::Str);
     type_map.set_output(PrimitiveType::Str, TargetLanguage::CSharp, "string");
     let config = ConversionConfig::new(type_map, false);

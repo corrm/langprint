@@ -469,7 +469,7 @@ impl FunctionRenderer for CppBackend {
             write!(out, ">{}{}", self.new_line.as_str(), indent_str)?;
         }
 
-        if input.is_extern_c {
+        if input.is_extern_c && input.template_params.is_empty() {
             write!(out, "extern \"C\" ")?;
         }
 
@@ -570,12 +570,9 @@ impl FunctionRenderer for CppBackend {
             || (input.is_friend && options.render_body_if_friend);
         let template_ok_to_skip: bool = input.template_params.is_empty() || !options.render_body_if_template;
         let friend_ok_to_skip: bool = !input.is_friend || !options.render_body_if_friend;
-        if !options.force_render_body && base_skip && template_ok_to_skip && friend_ok_to_skip {
-            write!(out, ";")?;
-        } else {
-            // Render function body for definitions
-            if let Some(body_lines) = &input.body {
-                // Use the actual function body if available
+        let skip_body: bool = !options.force_render_body && base_skip && template_ok_to_skip && friend_ok_to_skip;
+        match (&input.body, skip_body) {
+            (Some(body_lines), false) => {
                 if self.open_brace_on_new_line {
                     write!(out, "{0}{1}{{{0}", self.new_line.as_str(), indent_str)?
                 } else {
@@ -595,29 +592,8 @@ impl FunctionRenderer for CppBackend {
                 }
 
                 write!(out, "{}}}", indent_str)?;
-            } else {
-                // Use placeholder for empty body
-                // Increase indent level for function body
-                let body_indent_str: String = indent(*indent_level + 1, self.indent_size, self.indent_style);
-
-                if self.open_brace_on_new_line {
-                    write!(
-                        out,
-                        "{0}{1}{{{0}{2}// Function body{0}{1}}}",
-                        self.new_line.as_str(),
-                        indent_str,
-                        body_indent_str
-                    )?
-                } else {
-                    write!(
-                        out,
-                        " {{{0}{1}// Function body{0}{2}}}",
-                        self.new_line.as_str(),
-                        body_indent_str,
-                        indent_str
-                    )?
-                };
             }
+            _ => write!(out, ";")?,
         }
 
         // Write 'after' content if provided
@@ -1098,7 +1074,7 @@ impl CppBackend {
 mod tests {
     use super::*;
     use crate::backends::cpp_backend::struct_types::CppStructKind;
-    use crate::backends::cpp_backend::{CppField, CppStruct};
+    use crate::backends::cpp_backend::{CppField, CppGenericArgument, CppStruct};
 
     fn test_backend() -> CppBackend {
         CppBackend {
@@ -1225,5 +1201,42 @@ mod tests {
             .expect("render function");
 
         assert!(!output.contains("extern"), "output was: {output}");
+    }
+
+    #[test]
+    fn definition_with_no_body_renders_declaration() {
+        let backend: CppBackend = test_backend();
+        let input = free_function("no_body", false);
+        let options = CppFunctionRenderOptions {
+            render_definition: true,
+            ..Default::default()
+        };
+
+        let mut indent_level: i32 = 0;
+        let output: String = backend
+            .render_function::<&str>(&input, None, None, Some(&options), &mut indent_level)
+            .expect("render function");
+
+        assert!(output.trim_end().ends_with(';'), "output was: {output}");
+        assert!(!output.contains('{'), "output was: {output}");
+        assert!(!output.contains("// Function body"), "output was: {output}");
+    }
+
+    #[test]
+    fn templated_function_omits_extern_c() {
+        let backend: CppBackend = test_backend();
+        let mut input = free_function("templated", true);
+        input.template_params = vec![CppGenericArgument {
+            keyword: "class".to_string(),
+            name: "T".to_string(),
+            default_value: None,
+        }];
+
+        let mut indent_level: i32 = 0;
+        let output: String = backend
+            .render_function::<&str>(&input, None, None, None, &mut indent_level)
+            .expect("render function");
+
+        assert!(!output.contains("extern \"C\""), "output was: {output}");
     }
 }

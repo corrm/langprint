@@ -2,9 +2,21 @@
 
 use langprint::{
     AVAILABLE_BACKENDS,
+    backends::BackendItem,
     backends::js_backend::{JsBackend, JsClass, JsField, JsFunction, JsParameter},
+    conversion::ConversionWarning,
+    ir::{LanguageFunction, LanguageGenericArgument, LanguageStruct, LanguageStructKind, Visibility},
     renderers::FunctionRenderer,
 };
+
+fn warns_generic_arguments(warnings: &[ConversionWarning]) -> bool {
+    warnings.iter().any(|warning| {
+        matches!(
+            warning,
+            ConversionWarning::UnsupportedFeature { feature, .. } if feature.contains("generic arguments")
+        )
+    })
+}
 
 #[test]
 fn js_is_a_registered_backend() {
@@ -188,4 +200,48 @@ fn renders_class_extends() {
         rendered,
         "class Dog extends Animal {\n  legs = 4;\n\n  speak() {\n    return \"woof\";\n  }\n}\n"
     );
+}
+
+#[test]
+fn function_from_ir_warns_on_dropped_generics() {
+    let function = LanguageFunction {
+        name: "identity".to_string(),
+        visibility: Visibility::Public,
+        parameters: vec![],
+        generic_args: vec![LanguageGenericArgument { name: "T".to_string(), keyword: String::new(), default_value: None, where_clause: None }],
+        return_type: None,
+        is_static: false,
+        is_abstract: false,
+        is_virtual: false,
+        is_override: false,
+        is_final: false,
+        body: None,
+        docs: None,
+        annotations: vec![],
+        raw_attributes: vec![],
+    };
+
+    let result = JsFunction::from_ir(function, None);
+    assert!(warns_generic_arguments(&result.log.warnings));
+}
+
+#[test]
+fn class_from_ir_warns_on_dropped_generics() {
+    let class = LanguageStruct {
+        visibility: Visibility::Public,
+        struct_kind: LanguageStructKind::Class,
+        is_abstract: false,
+        is_final: false,
+        name: "Box".to_string(),
+        generic_args: vec![LanguageGenericArgument { name: "T".to_string(), keyword: String::new(), default_value: None, where_clause: None }],
+        bases: vec![],
+        fields: vec![],
+        methods: vec![],
+        docs: None,
+        annotations: vec![],
+        raw_attributes: vec![],
+    };
+
+    let result = JsClass::from_ir(class, None);
+    assert!(warns_generic_arguments(&result.log.warnings));
 }

@@ -1,14 +1,16 @@
 //! Per-backend import/using/require management.
 //!
-//! Each backend tracks the imports its rendered output needs and emits them in the language's
-//! native syntax, deduped and deterministically ordered. [`ImportSet`] is the collector: callers
-//! [`add`](ImportSet::add) explicit entries or [`add_type_ref`](ImportSet::add_type_ref) a type name
-//! that an [`ImportMap`] resolves to an import. [`ImportMap`] mirrors [`TypeMap`](crate::type_map::TypeMap):
-//! a [`builtin`](ImportMap::builtin) table of high-confidence, common mappings plus
-//! `insert`/`extend`/`clear` so callers curate it.
+//! This is a consumer-driven utility: the consumer builds an [`ImportSet`] for its target language,
+//! [`add`](ImportSet::add)s explicit entries or [`add_type_ref`](ImportSet::add_type_ref)s a type
+//! name that an [`ImportMap`] resolves to an import, then prepends [`render`](ImportSet::render) to
+//! its output. Entries are deduped and deterministically ordered, rendered in the language's native
+//! syntax. Backend renderers do not auto-track imports; auto-wiring this into the render paths is a
+//! possible future enhancement.
 //!
-//! Rendering is additive: an [`ImportSet`] with no entries renders to an empty string, so a backend
-//! that registers nothing is byte-identical to one that never touched imports.
+//! [`ImportMap`] mirrors [`TypeMap`](crate::type_map::TypeMap): a [`builtin`](ImportMap::builtin)
+//! table of high-confidence, common mappings plus `insert`/`extend`/`clear` so callers curate it.
+//!
+//! Rendering is additive: an [`ImportSet`] with no entries renders to an empty string.
 
 use std::collections::{BTreeSet, HashMap};
 
@@ -212,6 +214,10 @@ impl ImportMap {
     }
 
     /// Create the built-in, high-confidence map for `language`.
+    ///
+    /// This is the only map `builtin` that takes a [`TargetLanguage`]: its entries are
+    /// [`ImportEntry`] values pre-shaped for one language. The other maps are multi-language tables
+    /// keyed internally by language, so their `builtin` takes no argument.
     ///
     /// Lua and JS return an empty map: their imports are consumer-driven and inventing builtin
     /// module names would be guessing. Rust returns empty too — primitives need no `use`.

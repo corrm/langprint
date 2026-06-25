@@ -7,6 +7,9 @@
 //! lossy bridge for cross-language conversion: `to_ir` reports every feature it cannot carry, and
 //! `from_ir` lowers the IR into each target language's idioms. Single-language use never touches
 //! the IR.
+//!
+//! Map placement follows one rule: cross-language mapping tables ([`TypeMap`], [`ImportMap`],
+//! [`NamingMap`], [`KeywordMap`], [`AnnotationMap`]) are re-exported at the crate root.
 
 pub mod backends;
 pub mod conversion;

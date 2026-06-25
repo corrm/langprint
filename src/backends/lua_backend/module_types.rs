@@ -1,8 +1,8 @@
 use crate::{
     backends::BackendItem,
-    conversion::{ConversionLog, ConversionResult, ConversionWarning},
+    conversion::{dropped_feature_warning, ConversionLog, ConversionResult},
     convert::{rename_identifier, ConversionConfig, IdentifierKind},
-    ir::{LanguageNamespace, Visibility},
+    ir::{LanguageConstant, LanguageNamespace, Visibility},
     type_map::TargetLanguage,
 };
 
@@ -40,18 +40,29 @@ impl BackendItem for LuaModule {
     type IrType = LanguageNamespace;
     type ConversionOptions = LuaModuleConversionOptions;
 
-    fn to_ir(self, _options: Option<&Self::ConversionOptions>) -> ConversionResult<Self::IrType> {
+    fn to_ir(self, options: Option<&Self::ConversionOptions>) -> ConversionResult<Self::IrType> {
         let mut log = ConversionLog::new();
+        let config = options.map(|o| o.config.clone()).unwrap_or_default();
 
-        if !self.fields.is_empty() {
-            log.add_warning(ConversionWarning::Other(
-                "Lua module field assignments have no IR namespace home; dropping them".to_string(),
-            ));
-        }
+        let constants = self
+            .fields
+            .into_iter()
+            .map(|field| {
+                let renamed = rename_identifier(&config, &field.name, TargetLanguage::Lua, IdentifierKind::Field);
+                LanguageConstant {
+                    name: renamed.value,
+                    visibility: Visibility::Public,
+                    data_type: String::new(),
+                    value: field.value,
+                    docs: None,
+                }
+            })
+            .collect::<Vec<_>>();
 
+        let function_options = LuaFunctionConversionOptions { config: config.clone() };
         let mut functions = Vec::with_capacity(self.functions.len());
         for function in self.functions {
-            let result = function.to_ir(None);
+            let result = function.to_ir(Some(&function_options));
             log.add_warnings(result.log.warnings);
             functions.push(result.value);
         }
@@ -61,7 +72,7 @@ impl BackendItem for LuaModule {
                 name: self.table_name,
                 visibility: Visibility::Public,
                 defines: None,
-                constants: None,
+                constants: (!constants.is_empty()).then_some(constants),
                 enums: None,
                 structs: None,
                 functions: Some(functions),
@@ -80,6 +91,16 @@ impl BackendItem for LuaModule {
         let table_name = rename_identifier(&config, &input.name, TargetLanguage::Lua, IdentifierKind::Namespace);
         log.add_warnings(table_name.log.warnings);
 
+        let fields = input
+            .constants
+            .into_iter()
+            .flatten()
+            .map(|constant| LuaField {
+                name: constant.name,
+                value: constant.value,
+            })
+            .collect();
+
         let mut functions = Vec::new();
         if let Some(input_functions) = input.functions {
             functions.reserve(input_functions.len());
@@ -90,10 +111,23 @@ impl BackendItem for LuaModule {
             }
         }
 
+        if input.enums.is_some_and(|enums| !enums.is_empty()) {
+            log.add_warning(dropped_feature_warning("nested enums", &input.name, "Lua"));
+        }
+        if input.structs.is_some_and(|structs| !structs.is_empty()) {
+            log.add_warning(dropped_feature_warning("nested structs", &input.name, "Lua"));
+        }
+        if input.defines.is_some_and(|defines| !defines.is_empty()) {
+            log.add_warning(dropped_feature_warning("defines", &input.name, "Lua"));
+        }
+        if input.namespaces.is_some_and(|namespaces| !namespaces.is_empty()) {
+            log.add_warning(dropped_feature_warning("nested namespaces", &input.name, "Lua"));
+        }
+
         ConversionResult::with_log(
             LuaModule {
                 table_name: table_name.value,
-                fields: Vec::new(),
+                fields,
                 functions,
                 doc: input.docs.map(|docs| docs.join("\n")),
             },

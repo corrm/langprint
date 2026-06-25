@@ -47,7 +47,7 @@ impl PythonBackend {
             if index == 0 {
                 write!(out, "{}\"\"\"{}", self.indent(indent_level), line)?;
             } else {
-                write!(out, "{}{}", self.new_line.as_str(), line)?;
+                write!(out, "{}{}{}", self.new_line.as_str(), self.indent(indent_level), line)?;
             }
         }
         write!(out, "\"\"\"{}", self.new_line.as_str())
