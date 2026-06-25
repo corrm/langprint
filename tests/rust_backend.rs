@@ -1,7 +1,7 @@
 //! Tests for the Rust backend: exact-output rendering and IR round-trip/warning behavior.
 
 use langprint::{
-    available_backends,
+    AVAILABLE_BACKENDS,
     backends::{
         BackendItem,
         rust_backend::{
@@ -16,7 +16,7 @@ use langprint::{
 
 #[test]
 fn rust_is_a_registered_backend() {
-    assert!(available_backends().contains(&"Rust"));
+    assert!(AVAILABLE_BACKENDS.contains(&"Rust"));
 }
 
 #[test]

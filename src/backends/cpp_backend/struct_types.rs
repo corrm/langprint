@@ -102,12 +102,11 @@ impl BackendItem for CppStruct {
         // Convert template parameters to generic arguments
         let mut generic_args = Vec::with_capacity(self.template_params.len());
         for template_param in self.template_params {
-            generic_args.push(LanguageGenericArgument {
-                name: template_param.name,
-                keyword: template_param.keyword,
-                default_value: template_param.default_value,
-                where_clause: None, // C++ doesn't use where clauses
-            });
+            let result = template_param.to_ir(None);
+            if result.log.has_warnings() {
+                result_log.add_warnings(result.log.warnings);
+            }
+            generic_args.push(result.value);
         }
 
         if self.alignment.is_some() {
@@ -191,11 +190,11 @@ impl BackendItem for CppStruct {
         // Convert generic arguments to template parameters
         let mut template_params = Vec::with_capacity(input.generic_args.len());
         for generic_arg in &input.generic_args {
-            template_params.push(CppGenericArgument {
-                name: generic_arg.name.clone(),
-                keyword: generic_arg.keyword.clone(),
-                default_value: generic_arg.default_value.clone(),
-            });
+            let result = CppGenericArgument::from_ir(generic_arg.clone(), None);
+            if result.log.has_warnings() {
+                result_log.add_warnings(result.log.warnings);
+            }
+            template_params.push(result.value);
         }
 
         // Convert visibility

@@ -1,3 +1,4 @@
+use crate::backends::BackendItem;
 use crate::conversion::ConversionResult;
 use crate::ir::LanguageGenericArgument;
 
@@ -21,12 +22,15 @@ const LIFETIME_KEYWORD: &str = "lifetime";
 /// Keyword prefix used in the neutral IR to mark a Rust const-generic parameter.
 const CONST_KEYWORD_PREFIX: &str = "const ";
 
-impl RustGenericArgument {
-    /// Project this Rust generic parameter into the neutral IR.
-    ///
-    /// Rust generics carry losslessly, so the result never warns; the [`ConversionResult`] shape
-    /// keeps the API uniform with backends whose generics can lose information.
-    pub(crate) fn to_ir(&self) -> ConversionResult<LanguageGenericArgument> {
+/// Conversion options for Rust generic arguments.
+#[derive(Debug, Clone, Default)]
+pub struct RustGenericArgumentConversionOptions;
+
+impl BackendItem for RustGenericArgument {
+    type IrType = LanguageGenericArgument;
+    type ConversionOptions = RustGenericArgumentConversionOptions;
+
+    fn to_ir(self, _options: Option<&Self::ConversionOptions>) -> ConversionResult<Self::IrType> {
         let keyword = if self.is_lifetime {
             LIFETIME_KEYWORD.to_string()
         } else if let Some(const_type) = &self.const_type {
@@ -36,15 +40,14 @@ impl RustGenericArgument {
         };
 
         ConversionResult::new(LanguageGenericArgument {
-            name: self.name.clone(),
+            name: self.name,
             keyword,
-            default_value: self.default_value.clone(),
-            where_clause: self.bounds.clone(),
+            default_value: self.default_value,
+            where_clause: self.bounds,
         })
     }
 
-    /// Build a Rust generic parameter from a neutral IR generic argument.
-    pub(crate) fn from_ir(input: &LanguageGenericArgument) -> ConversionResult<Self> {
+    fn from_ir(input: Self::IrType, _options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
         let is_lifetime = input.keyword == LIFETIME_KEYWORD;
         let const_type = input
             .keyword
@@ -52,14 +55,16 @@ impl RustGenericArgument {
             .map(|rest| rest.to_string());
 
         ConversionResult::new(RustGenericArgument {
-            name: input.name.clone(),
+            name: input.name,
             is_lifetime,
             const_type,
-            bounds: input.where_clause.clone(),
-            default_value: input.default_value.clone(),
+            bounds: input.where_clause,
+            default_value: input.default_value,
         })
     }
+}
 
+impl RustGenericArgument {
     /// Render this parameter inside an angle-bracket generic list (without the brackets).
     pub(crate) fn render_decl(&self) -> String {
         if self.is_lifetime {

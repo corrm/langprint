@@ -77,8 +77,8 @@ impl BackendItem for RustStruct {
         }
 
         let mut generic_args = Vec::with_capacity(self.generic_args.len());
-        for generic in &self.generic_args {
-            let result = generic.to_ir();
+        for generic in self.generic_args {
+            let result = generic.to_ir(None);
             log.add_warnings(result.log.warnings);
             generic_args.push(result.value);
         }
@@ -145,7 +145,7 @@ impl BackendItem for RustStruct {
 
         let mut generic_args = Vec::with_capacity(input.generic_args.len());
         for generic in &input.generic_args {
-            let result = RustGenericArgument::from_ir(generic);
+            let result = RustGenericArgument::from_ir(generic.clone(), None);
             log.add_warnings(result.log.warnings);
             generic_args.push(result.value);
         }

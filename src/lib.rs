@@ -20,7 +20,5 @@ pub mod type_map;
 pub use convert::ConversionConfig;
 pub use type_map::{PrimitiveType, TargetLanguage, TypeMap};
 
-/// Get a list of available backend names
-pub fn available_backends() -> Vec<&'static str> {
-    vec!["C++", "Rust", "C#"]
-}
+/// Available backend names.
+pub const AVAILABLE_BACKENDS: &[&str] = &["C++", "Rust", "C#"];

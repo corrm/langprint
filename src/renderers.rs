@@ -5,6 +5,15 @@ use std::{
 
 use crate::backends::{BackendItem, BackendMetadata};
 
+fn render_to_string<F>(f: F) -> Result<String, io::Error>
+where
+    F: FnOnce(&mut Vec<u8>) -> Result<(), io::Error>,
+{
+    let mut output = Vec::new();
+    f(&mut output)?;
+    Ok(String::from_utf8(output).expect("Rendered output is not valid UTF-8"))
+}
+
 /// Trait for rendering defines.
 #[allow(clippy::declare_interior_mutable_const)]
 pub trait DefinitionRenderer: BackendMetadata {
@@ -58,9 +67,7 @@ pub trait DefinitionRenderer: BackendMetadata {
         options: Option<&Self::RenderOptions>,
         indent_level: &mut i32,
     ) -> Result<String, io::Error> {
-        let mut output: Vec<u8> = Vec::new();
-        self.render_definition_to(input, before, after, options, indent_level, &mut output)?;
-        Ok(String::from_utf8(output).expect("Rendered output is not valid UTF-8"))
+        render_to_string(|out| self.render_definition_to(input, before, after, options, indent_level, out))
     }
 }
 
@@ -114,9 +121,7 @@ pub trait NamespaceRenderer: BackendMetadata {
         options: Option<&Self::RenderOptions>,
         indent_level: &mut i32,
     ) -> Result<String, io::Error> {
-        let mut output: Vec<u8> = Vec::new();
-        self.render_namespace_to(input, before, after, options, indent_level, &mut output)?;
-        Ok(String::from_utf8(output).expect("Rendered output is not valid UTF-8"))
+        render_to_string(|out| self.render_namespace_to(input, before, after, options, indent_level, out))
     }
 }
 
@@ -169,9 +174,7 @@ pub trait ConstantRenderer: BackendMetadata {
         options: Option<&Self::RenderOptions>,
         indent_level: &mut i32,
     ) -> Result<String, io::Error> {
-        let mut output: Vec<u8> = Vec::new();
-        self.render_constant_to(input, before, after, options, indent_level, &mut output)?;
-        Ok(String::from_utf8(output).expect("Rendered output is not valid UTF-8"))
+        render_to_string(|out| self.render_constant_to(input, before, after, options, indent_level, out))
     }
 }
 
@@ -224,9 +227,7 @@ pub trait FunctionRenderer: BackendMetadata {
         options: Option<&Self::RenderOptions>,
         indent_level: &mut i32,
     ) -> Result<String, io::Error> {
-        let mut output: Vec<u8> = Vec::new();
-        self.render_function_to(input, before, after, options, indent_level, &mut output)?;
-        Ok(String::from_utf8(output).expect("Rendered output is not valid UTF-8"))
+        render_to_string(|out| self.render_function_to(input, before, after, options, indent_level, out))
     }
 }
 
@@ -290,17 +291,7 @@ pub trait EnumRenderer: BackendMetadata {
         variant_options: Option<&Self::EnumVariantRenderOptions>,
         indent_level: &mut i32,
     ) -> Result<String, io::Error> {
-        let mut output: Vec<u8> = Vec::new();
-        self.render_enum_to(
-            input,
-            before,
-            after,
-            options,
-            variant_options,
-            indent_level,
-            &mut output,
-        )?;
-        Ok(String::from_utf8(output).expect("Rendered output is not valid UTF-8"))
+        render_to_string(|out| self.render_enum_to(input, before, after, options, variant_options, indent_level, out))
     }
 }
 
@@ -354,9 +345,7 @@ pub trait StructRenderer: BackendMetadata {
         options: Option<&Self::RenderOptions>,
         indent_level: &mut i32,
     ) -> Result<String, io::Error> {
-        let mut output: Vec<u8> = Vec::new();
-        self.render_struct_to(input, before, after, options, indent_level, &mut output)?;
-        Ok(String::from_utf8(output).expect("Rendered output is not valid UTF-8"))
+        render_to_string(|out| self.render_struct_to(input, before, after, options, indent_level, out))
     }
 }
 
@@ -410,8 +399,6 @@ pub trait InterfaceRenderer: BackendMetadata {
         options: Option<&Self::RenderOptions>,
         indent_level: &mut i32,
     ) -> Result<String, io::Error> {
-        let mut output: Vec<u8> = Vec::new();
-        self.render_interface_to(input, before, after, options, indent_level, &mut output)?;
-        Ok(String::from_utf8(output).expect("Rendered output is not valid UTF-8"))
+        render_to_string(|out| self.render_interface_to(input, before, after, options, indent_level, out))
     }
 }

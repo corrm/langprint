@@ -1,3 +1,4 @@
+use crate::backends::BackendItem;
 use crate::conversion::{ConversionLog, ConversionResult, ConversionWarning};
 use crate::ir::LanguageGenericArgument;
 
@@ -10,24 +11,24 @@ pub struct CSharpGenericArgument {
     pub constraints: Option<String>,
 }
 
-impl CSharpGenericArgument {
-    /// Project this C# generic parameter into the neutral IR.
-    ///
-    /// A C# generic parameter carries no default or kind keyword, so the result never warns.
-    pub(crate) fn to_ir(&self) -> ConversionResult<LanguageGenericArgument> {
+/// Conversion options for C# generic arguments.
+#[derive(Debug, Clone, Default)]
+pub struct CSharpGenericArgumentConversionOptions;
+
+impl BackendItem for CSharpGenericArgument {
+    type IrType = LanguageGenericArgument;
+    type ConversionOptions = CSharpGenericArgumentConversionOptions;
+
+    fn to_ir(self, _options: Option<&Self::ConversionOptions>) -> ConversionResult<Self::IrType> {
         ConversionResult::new(LanguageGenericArgument {
-            name: self.name.clone(),
+            name: self.name,
             keyword: String::new(),
             default_value: None,
-            where_clause: self.constraints.clone(),
+            where_clause: self.constraints,
         })
     }
 
-    /// Build a C# generic parameter from a neutral IR generic argument.
-    ///
-    /// C# cannot express a generic default or a lifetime/const-generic kind, so either is reported
-    /// as dropped.
-    pub(crate) fn from_ir(input: &LanguageGenericArgument) -> ConversionResult<Self> {
+    fn from_ir(input: Self::IrType, _options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
         let mut log = ConversionLog::new();
 
         if input.default_value.is_some() {
@@ -45,8 +46,8 @@ impl CSharpGenericArgument {
 
         ConversionResult::with_log(
             CSharpGenericArgument {
-                name: input.name.clone(),
-                constraints: input.where_clause.clone(),
+                name: input.name,
+                constraints: input.where_clause,
             },
             log,
         )

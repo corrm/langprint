@@ -158,7 +158,7 @@ has no namespace-level free functions — it is dropped with a `ConversionWarnin
 | Rust     | `Rust*`             | structs + inherent `impl` blocks, derives, tuple structs, enums with data |
 | C#       | `CSharp*`           | classes/structs/records, properties, interfaces, `[Flags]` enums, sealing rules |
 
-`langprint::available_backends()` returns the live list.
+`langprint::AVAILABLE_BACKENDS` is the live list.
 
 ## Project generators
 
