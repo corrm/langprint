@@ -170,9 +170,9 @@ via `langprint::project_gen`:
 - `CargoGenerator` (Rust)
 - `CSharpProjectGenerator` (.NET SDK-style `.csproj`)
 
-### ProjectBuilder (recommended)
+### ProjectBuilder
 
-The easiest way to construct a spec is the fluent builder:
+Construct a spec with the fluent builder:
 
 ```rust
 use langprint::project_gen::{ProjectBuilder, LanguageStandard, OutputKind, Platform};
@@ -187,7 +187,7 @@ let spec = ProjectBuilder::new("my_lib", LanguageStandard::Cpp17, OutputKind::St
     .unwrap();
 ```
 
-It covers every `ProjectSpec` field and works across all supported languages:
+It works across all supported languages:
 
 ```rust
 // Rust crate
@@ -203,12 +203,7 @@ let spec = ProjectBuilder::new("MyLib", LanguageStandard::CSharp12, OutputKind::
     .unwrap();
 ```
 
-`build()` validates the spec (non-empty name, at least one source file, consistent PCH config)
-and returns `Result<ProjectSpec, ProjectGenError>`.
-
-#### Populate from rendered files
-
-Chain `populate_from_files` to auto-classify sources/headers from your rendered output:
+Chain `populate_from_files` to auto-classify sources/headers from rendered output:
 
 ```rust
 let files: Vec<(PathBuf, String)> = /* rendered declarations */;
@@ -220,24 +215,10 @@ let spec = ProjectBuilder::new("my_lib", LanguageStandard::Cpp17, OutputKind::St
 ```
 
 This classifies `.h`/`.hpp`/`.hxx` as headers, everything else as sources, and infers
-`include_dirs` from parent directories.
+`include_dirs` from parent directories. `write_files` is available for disk I/O.
 
-### Convenience helpers
-
-For direct file I/O without the builder, two standalone helpers are available:
-
-```rust
-use langprint::project_gen::{ProjectSpec, write_files, OutputKind, LanguageStandard};
-
-// Write rendered files to disk (creates parent dirs).
-write_files(&files, &output_dir)?;
-
-// Build a spec, auto-classifying sources/headers from the file list.
-let spec = ProjectSpec::new("my_project", LanguageStandard::Cpp17, OutputKind::StaticLib)
-    .populate_from_files(&files);
-```
-
-Both helpers are optional — you retain full control over rendering and spec construction.
+`build()` validates the spec (non-empty name, at least one source file, consistent PCH config)
+and returns `Result<ProjectSpec, ProjectGenError>`.
 ## Scope
 
 langprint models declarations and their layout, not arbitrary source code or runtime behavior. If
