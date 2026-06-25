@@ -2,10 +2,11 @@ use crate::{
     backends::BackendItem,
     conversion::{ConversionLog, ConversionResult, ConversionWarning},
     convert::{ConversionConfig, IdentifierKind, map_type, rename_identifier},
-    ir::{LanguageFunction, LanguageFunctionParameter},
+    ir::{LanguageFunction, LanguageFunctionParameter, RawAttribute},
     type_map::{PrimitiveType, TargetLanguage},
 };
 
+use super::attributes::{annotation_to_rust_attribute, rust_attribute_to_annotation};
 use super::{RustGenericArgument, RustVisibility};
 
 /// The receiver of a Rust method.
@@ -147,11 +148,16 @@ impl BackendItem for RustFunction {
                 resolution: "dropped from the language-agnostic IR".to_string(),
             });
         }
+        let mut annotations = Vec::new();
+        let mut raw_attributes = Vec::new();
         for attribute in &self.attributes {
-            log.add_warning(ConversionWarning::UnsupportedFeature {
-                feature: format!("attribute `#[{}]` on function `{}`", attribute, self.name),
-                resolution: "Rust attributes are dropped from the language-agnostic IR".to_string(),
-            });
+            match rust_attribute_to_annotation(attribute) {
+                Some(annotation) => annotations.push(annotation),
+                None => raw_attributes.push(RawAttribute {
+                    source: TargetLanguage::Rust,
+                    text: attribute.clone(),
+                }),
+            }
         }
         if matches!(self.self_kind, RustSelfKind::RefMut | RustSelfKind::Owned) {
             log.add_warning(ConversionWarning::UnsupportedFeature {
@@ -195,6 +201,8 @@ impl BackendItem for RustFunction {
                 is_final: false,
                 body: self.body,
                 docs: self.docs,
+                annotations,
+                raw_attributes,
             },
             log,
         )
@@ -267,6 +275,21 @@ impl BackendItem for RustFunction {
             RustSelfKind::Ref
         };
 
+        let mut attributes = Vec::new();
+        for annotation in &input.annotations {
+            attributes.push(annotation_to_rust_attribute(annotation));
+        }
+        for raw in &input.raw_attributes {
+            if raw.source != TargetLanguage::Rust {
+                log.add_warning(ConversionWarning::UnsupportedFeature {
+                    feature: format!("opaque {:?} attribute `{}`", raw.source, raw.text),
+                    resolution: "cannot translate to Rust; dropped".to_string(),
+                });
+                continue;
+            }
+            attributes.push(raw.text.clone());
+        }
+
         ConversionResult::with_log(
             RustFunction {
                 name: name.value,
@@ -280,7 +303,7 @@ impl BackendItem for RustFunction {
                 is_const: false,
                 abi: None,
                 body: input.body,
-                attributes: Vec::new(),
+                attributes,
                 docs: input.docs,
             },
             log,

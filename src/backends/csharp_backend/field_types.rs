@@ -2,11 +2,12 @@ use crate::{
     backends::BackendItem,
     conversion::{ConversionLog, ConversionResult, ConversionWarning},
     convert::{ConversionConfig, IdentifierKind, map_type, rename_identifier},
-    ir::LanguageField,
+    ir::{LanguageField, RawAttribute},
     type_map::TargetLanguage,
 };
 
 use super::CSharpVisibility;
+use super::attributes::{annotation_to_csharp_attribute, csharp_attribute_to_annotation};
 
 /// Represents a C# field.
 #[derive(Debug, Clone, PartialEq)]
@@ -50,11 +51,16 @@ impl BackendItem for CSharpField {
                 resolution: "field initializer dropped from the language-agnostic IR".to_string(),
             });
         }
+        let mut annotations = Vec::new();
+        let mut raw_attributes = Vec::new();
         for attribute in &self.attributes {
-            log.add_warning(ConversionWarning::UnsupportedFeature {
-                feature: format!("attribute `[{}]` on field `{}`", attribute, self.name),
-                resolution: "C# attributes dropped from the language-agnostic IR".to_string(),
-            });
+            match csharp_attribute_to_annotation(attribute) {
+                Some(annotation) => annotations.push(annotation),
+                None => raw_attributes.push(RawAttribute {
+                    source: TargetLanguage::CSharp,
+                    text: attribute.clone(),
+                }),
+            }
         }
 
         let visibility = self.visibility.to_ir(None);
@@ -67,6 +73,8 @@ impl BackendItem for CSharpField {
             is_static: self.is_static,
             is_const: self.is_const,
             docs: self.docs,
+            annotations,
+            raw_attributes,
         };
         ConversionResult::with_log(field, log)
     }
@@ -84,6 +92,23 @@ impl BackendItem for CSharpField {
         let visibility = CSharpVisibility::from_ir(input.visibility, None);
         log.add_warnings(visibility.log.warnings);
 
+        let mut attributes = Vec::new();
+        for annotation in &input.annotations {
+            if let Some(rendered) = annotation_to_csharp_attribute(annotation) {
+                attributes.push(rendered);
+            }
+        }
+        for raw in &input.raw_attributes {
+            if raw.source != TargetLanguage::CSharp {
+                log.add_warning(ConversionWarning::UnsupportedFeature {
+                    feature: format!("opaque {:?} attribute `{}`", raw.source, raw.text),
+                    resolution: "cannot translate to C#; dropped".to_string(),
+                });
+                continue;
+            }
+            attributes.push(raw.text.clone());
+        }
+
         let field = CSharpField {
             name: name.value,
             field_type: field_type.value,
@@ -92,7 +117,7 @@ impl BackendItem for CSharpField {
             is_const: input.is_const,
             is_readonly: false,
             initializer: None,
-            attributes: Vec::new(),
+            attributes,
             docs: input.docs,
         };
         ConversionResult::with_log(field, log)

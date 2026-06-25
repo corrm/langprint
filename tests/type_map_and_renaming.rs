@@ -17,6 +17,8 @@ fn ir_field(name: &str, field_type: &str) -> LanguageField {
         is_static: false,
         is_const: false,
         docs: None,
+        annotations: Vec::new(),
+        raw_attributes: Vec::new(),
     }
 }
 
@@ -111,6 +113,8 @@ fn csharp_generic_default_is_reported() {
         fields: vec![],
         methods: vec![],
         docs: None,
+        annotations: Vec::new(),
+        raw_attributes: Vec::new(),
     };
 
     let result = CSharpType::from_ir(ir, None);

@@ -107,6 +107,8 @@ impl BackendItem for PythonFunction {
                 is_final: false,
                 body: docs,
                 docs: None,
+                annotations: Vec::new(),
+                raw_attributes: Vec::new(),
             },
             log,
         )

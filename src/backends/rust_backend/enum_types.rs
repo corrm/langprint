@@ -2,11 +2,12 @@ use crate::{
     backends::BackendItem,
     conversion::{ConversionLog, ConversionResult, ConversionWarning},
     convert::{ConversionConfig, map_type},
-    ir::{EnumVariant, EnumVariantValue, LanguageEnum},
+    ir::{EnumVariant, EnumVariantValue, LanguageEnum, RawAttribute},
     type_map::TargetLanguage,
 };
 
 use super::RustVisibility;
+use super::attributes::rust_attribute_to_annotation;
 
 /// Whether a `#[repr(...)]` token is an integral representation that maps to an enum underlying type.
 fn is_integral_repr(repr: &str) -> bool {
@@ -64,20 +65,25 @@ impl BackendItem for RustEnum {
     fn to_ir(self, _options: Option<&Self::ConversionOptions>) -> ConversionResult<Self::IrType> {
         let mut log = ConversionLog::new();
 
-        if !self.derives.is_empty() {
-            log.add_warning(ConversionWarning::UnsupportedFeature {
-                feature: format!("derives on enum `{}`", self.name),
-                resolution: "Rust derives are dropped from the language-agnostic IR".to_string(),
+        let mut annotations = Vec::new();
+        let mut raw_attributes = Vec::new();
+        for derive in &self.derives {
+            raw_attributes.push(RawAttribute {
+                source: TargetLanguage::Rust,
+                text: format!("derive({derive})"),
             });
         }
 
         let underlying_type = match self.repr {
             Some(repr) if is_integral_repr(&repr) => Some(repr),
             Some(repr) => {
-                log.add_warning(ConversionWarning::UnsupportedFeature {
-                    feature: format!("#[repr({repr})] on enum `{}`", self.name),
-                    resolution: "only integral reprs map to an enum underlying type; dropped".to_string(),
-                });
+                match rust_attribute_to_annotation(&format!("repr({repr})")) {
+                    Some(annotation) => annotations.push(annotation),
+                    None => raw_attributes.push(RawAttribute {
+                        source: TargetLanguage::Rust,
+                        text: format!("repr({repr})"),
+                    }),
+                }
                 None
             }
             None => None,
@@ -108,6 +114,8 @@ impl BackendItem for RustEnum {
                 variants,
                 underlying_type,
                 docs: self.docs,
+                annotations,
+                raw_attributes,
             },
             log,
         )
@@ -119,6 +127,20 @@ impl BackendItem for RustEnum {
 
         let visibility = RustVisibility::from_ir(input.visibility, None);
         log.add_warnings(visibility.log.warnings);
+
+        let mut derives = Vec::new();
+        for raw in &input.raw_attributes {
+            if raw.source != TargetLanguage::Rust {
+                log.add_warning(ConversionWarning::UnsupportedFeature {
+                    feature: format!("opaque {:?} attribute `{}`", raw.source, raw.text),
+                    resolution: "cannot translate to Rust; dropped".to_string(),
+                });
+                continue;
+            }
+            if let Some(derive) = raw.text.strip_prefix("derive(").and_then(|rest| rest.strip_suffix(")")) {
+                derives.push(derive.to_string());
+            }
+        }
 
         let repr = match input.underlying_type {
             Some(underlying_type) => {
@@ -150,7 +172,7 @@ impl BackendItem for RustEnum {
                 visibility: visibility.value,
                 variants,
                 repr,
-                derives: Vec::new(),
+                derives,
                 docs: input.docs,
             },
             log,

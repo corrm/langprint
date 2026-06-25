@@ -2,8 +2,11 @@ use crate::{
     backends::BackendItem,
     conversion::{ConversionLog, ConversionResult, ConversionWarning},
     convert::ConversionConfig,
-    ir::{LanguageStruct, LanguageStructKind},
+    ir::{LanguageStruct, LanguageStructKind, RawAttribute},
+    type_map::TargetLanguage,
 };
+
+use super::attributes::{annotation_to_rust_attribute, rust_attribute_to_annotation};
 
 use super::{
     RustField, RustFieldConversionOptions, RustFunction, RustFunctionConversionOptions, RustGenericArgument,
@@ -40,17 +43,22 @@ impl BackendItem for RustStruct {
     fn to_ir(self, _options: Option<&Self::ConversionOptions>) -> ConversionResult<Self::IrType> {
         let mut log = ConversionLog::new();
 
-        if !self.derives.is_empty() {
-            log.add_warning(ConversionWarning::UnsupportedFeature {
-                feature: format!("derives on struct `{}`", self.name),
-                resolution: "Rust derives are dropped from the language-agnostic IR".to_string(),
+        let mut annotations = Vec::new();
+        let mut raw_attributes = Vec::new();
+        for derive in &self.derives {
+            raw_attributes.push(RawAttribute {
+                source: TargetLanguage::Rust,
+                text: format!("derive({derive})"),
             });
         }
         for attribute in &self.attributes {
-            log.add_warning(ConversionWarning::UnsupportedFeature {
-                feature: format!("attribute `#[{}]` on struct `{}`", attribute, self.name),
-                resolution: "Rust attributes are dropped from the language-agnostic IR".to_string(),
-            });
+            match rust_attribute_to_annotation(attribute) {
+                Some(annotation) => annotations.push(annotation),
+                None => raw_attributes.push(RawAttribute {
+                    source: TargetLanguage::Rust,
+                    text: attribute.clone(),
+                }),
+            }
         }
         if self.is_tuple {
             log.add_warning(ConversionWarning::UnsupportedFeature {
@@ -96,6 +104,8 @@ impl BackendItem for RustStruct {
                 fields,
                 methods,
                 docs: self.docs,
+                annotations,
+                raw_attributes,
             },
             log,
         )
@@ -127,6 +137,25 @@ impl BackendItem for RustStruct {
         let visibility = RustVisibility::from_ir(input.visibility, None);
         log.add_warnings(visibility.log.warnings);
 
+        let mut derives = Vec::new();
+        let mut attributes = Vec::new();
+        for annotation in &input.annotations {
+            attributes.push(annotation_to_rust_attribute(annotation));
+        }
+        for raw in &input.raw_attributes {
+            if raw.source != TargetLanguage::Rust {
+                log.add_warning(ConversionWarning::UnsupportedFeature {
+                    feature: format!("opaque {:?} attribute `{}`", raw.source, raw.text),
+                    resolution: "cannot translate to Rust; dropped".to_string(),
+                });
+                continue;
+            }
+            match raw.text.strip_prefix("derive(").and_then(|rest| rest.strip_suffix(")")) {
+                Some(derive) => derives.push(derive.to_string()),
+                None => attributes.push(raw.text.clone()),
+            }
+        }
+
         let field_options = RustFieldConversionOptions { config: config.clone() };
         let mut fields = Vec::with_capacity(input.fields.len());
         for field in input.fields {
@@ -157,8 +186,8 @@ impl BackendItem for RustStruct {
                 generic_args,
                 fields,
                 methods,
-                derives: Vec::new(),
-                attributes: Vec::new(),
+                derives,
+                attributes,
                 is_tuple: false,
                 docs: input.docs,
             },

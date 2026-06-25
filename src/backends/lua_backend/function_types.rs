@@ -58,6 +58,8 @@ impl BackendItem for LuaFunction {
             is_final: false,
             body: self.body,
             docs: self.doc.map(|doc| vec![doc]),
+            annotations: Vec::new(),
+            raw_attributes: Vec::new(),
         })
     }
 

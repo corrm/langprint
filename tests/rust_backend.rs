@@ -10,8 +10,9 @@ use langprint::{
         },
     },
     conversion::ConversionWarning,
-    ir::Visibility,
+    ir::{Annotation, RawAttribute, Visibility},
     renderers::{ConstantRenderer, DefinitionRenderer, EnumRenderer, FunctionRenderer, StructRenderer},
+    type_map::TargetLanguage,
 };
 
 #[test]
@@ -307,7 +308,7 @@ fn enum_variant_payloads_round_trip_through_ir() {
 }
 
 #[test]
-fn struct_to_ir_warns_on_rust_only_features() {
+fn struct_to_ir_preserves_derives_and_repr() {
     let value = RustStruct {
         name: "Foo".to_string(),
         visibility: RustVisibility::Pub,
@@ -327,14 +328,18 @@ fn struct_to_ir_warns_on_rust_only_features() {
     };
 
     let result = value.to_ir(None);
-    // One warning for the derive, one for the attribute.
-    assert_eq!(result.log.warnings.len(), 2);
-    assert!(
-        result
-            .log
-            .warnings
-            .iter()
-            .all(|w| matches!(w, ConversionWarning::UnsupportedFeature { .. }))
+    // Attributes are preserved now, not dropped: no warning for derives/repr.
+    assert!(result.log.warnings.is_empty());
+
+    // `repr(C)` is curated Tier-1 vocabulary.
+    assert_eq!(result.value.annotations, vec![Annotation::ReprC]);
+    // The derive is carried verbatim as a source-tagged Tier-2 attribute.
+    assert_eq!(
+        result.value.raw_attributes,
+        vec![RawAttribute {
+            source: TargetLanguage::Rust,
+            text: "derive(Debug)".to_string(),
+        }]
     );
 
     // Common fields survive the projection.

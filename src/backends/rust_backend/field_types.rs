@@ -2,11 +2,12 @@ use crate::{
     backends::BackendItem,
     conversion::{ConversionLog, ConversionResult, ConversionWarning},
     convert::{ConversionConfig, IdentifierKind, map_type, rename_identifier},
-    ir::LanguageField,
+    ir::{LanguageField, RawAttribute},
     type_map::TargetLanguage,
 };
 
 use super::RustVisibility;
+use super::attributes::{annotation_to_rust_attribute, rust_attribute_to_annotation};
 
 /// Represents a field of a Rust struct.
 #[derive(Debug, Clone, PartialEq)]
@@ -30,11 +31,16 @@ impl BackendItem for RustField {
     fn to_ir(self, _options: Option<&Self::ConversionOptions>) -> ConversionResult<Self::IrType> {
         let mut log = ConversionLog::new();
 
+        let mut annotations = Vec::new();
+        let mut raw_attributes = Vec::new();
         for attribute in &self.attributes {
-            log.add_warning(ConversionWarning::UnsupportedFeature {
-                feature: format!("attribute `#[{}]` on field `{}`", attribute, self.name),
-                resolution: "Rust attributes are dropped from the language-agnostic IR".to_string(),
-            });
+            match rust_attribute_to_annotation(attribute) {
+                Some(annotation) => annotations.push(annotation),
+                None => raw_attributes.push(RawAttribute {
+                    source: TargetLanguage::Rust,
+                    text: attribute.clone(),
+                }),
+            }
         }
 
         let visibility = self.visibility.to_ir(None);
@@ -48,6 +54,8 @@ impl BackendItem for RustField {
                 is_static: false,
                 is_const: false,
                 docs: self.docs,
+                annotations,
+                raw_attributes,
             },
             log,
         )
@@ -79,12 +87,27 @@ impl BackendItem for RustField {
         let visibility = RustVisibility::from_ir(input.visibility, None);
         log.add_warnings(visibility.log.warnings);
 
+        let mut attributes = Vec::new();
+        for annotation in &input.annotations {
+            attributes.push(annotation_to_rust_attribute(annotation));
+        }
+        for raw in &input.raw_attributes {
+            if raw.source != TargetLanguage::Rust {
+                log.add_warning(ConversionWarning::UnsupportedFeature {
+                    feature: format!("opaque {:?} attribute `{}`", raw.source, raw.text),
+                    resolution: "cannot translate to Rust; dropped".to_string(),
+                });
+                continue;
+            }
+            attributes.push(raw.text.clone());
+        }
+
         ConversionResult::with_log(
             RustField {
                 name: name.value,
                 field_type: field_type.value,
                 visibility: visibility.value,
-                attributes: Vec::new(),
+                attributes,
                 docs: input.docs,
             },
             log,

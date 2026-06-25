@@ -140,6 +140,8 @@ impl BackendItem for CppEnum {
                 .collect(),
             underlying_type: self.underlying_type,
             docs: self.docs,
+            annotations: Vec::new(),
+            raw_attributes: Vec::new(),
         };
 
         ConversionResult::with_log(language_enum, result_log)
@@ -171,6 +173,15 @@ impl BackendItem for CppEnum {
                 result_log.add_warnings(converted.log.warnings);
             }
             variants.push(converted.value);
+        }
+
+        for raw in &input.raw_attributes {
+            if raw.source != TargetLanguage::Cpp {
+                result_log.add_warning(ConversionWarning::UnsupportedFeature {
+                    feature: format!("opaque {:?} attribute `{}`", raw.source, raw.text),
+                    resolution: "cannot translate to C++; dropped".to_string(),
+                });
+            }
         }
 
         ConversionResult::with_log(

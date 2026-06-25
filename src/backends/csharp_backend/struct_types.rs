@@ -2,10 +2,11 @@ use crate::{
     backends::BackendItem,
     conversion::{ConversionLog, ConversionResult, ConversionWarning},
     convert::{ConversionConfig, IdentifierKind, rename_identifier},
-    ir::{LanguageBase, LanguageField, LanguageStruct, LanguageStructKind, Visibility},
+    ir::{LanguageBase, LanguageField, LanguageStruct, LanguageStructKind, RawAttribute, Visibility},
     type_map::TargetLanguage,
 };
 
+use super::attributes::{annotation_to_csharp_attribute, csharp_attribute_to_annotation};
 use super::{
     CSharpField, CSharpFieldConversionOptions, CSharpGenericArgument, CSharpMethod, CSharpMethodConversionOptions,
     CSharpProperty, CSharpVisibility,
@@ -137,11 +138,16 @@ impl BackendItem for CSharpType {
                 resolution: "unsafe modifier dropped from the language-agnostic IR".to_string(),
             });
         }
+        let mut annotations = Vec::new();
+        let mut raw_attributes = Vec::new();
         for attribute in &self.attributes {
-            log.add_warning(ConversionWarning::UnsupportedFeature {
-                feature: format!("attribute `[{}]` on type `{}`", attribute, self.name),
-                resolution: "C# attributes dropped from the language-agnostic IR".to_string(),
-            });
+            match csharp_attribute_to_annotation(attribute) {
+                Some(annotation) => annotations.push(annotation),
+                None => raw_attributes.push(RawAttribute {
+                    source: TargetLanguage::CSharp,
+                    text: attribute.clone(),
+                }),
+            }
         }
 
         let visibility = self.visibility.to_ir(None);
@@ -181,6 +187,8 @@ impl BackendItem for CSharpType {
                 is_static: property.is_static,
                 is_const: false,
                 docs: property.docs,
+                annotations: Vec::new(),
+                raw_attributes: Vec::new(),
             });
         }
 
@@ -209,6 +217,8 @@ impl BackendItem for CSharpType {
             fields,
             methods,
             docs: self.docs,
+            annotations,
+            raw_attributes,
         };
         ConversionResult::with_log(language_struct, log)
     }
@@ -243,6 +253,23 @@ impl BackendItem for CSharpType {
 
         let visibility = CSharpVisibility::from_ir(input.visibility, None);
         log.add_warnings(visibility.log.warnings);
+
+        let mut attributes = Vec::new();
+        for annotation in &input.annotations {
+            if let Some(rendered) = annotation_to_csharp_attribute(annotation) {
+                attributes.push(rendered);
+            }
+        }
+        for raw in &input.raw_attributes {
+            if raw.source != TargetLanguage::CSharp {
+                log.add_warning(ConversionWarning::UnsupportedFeature {
+                    feature: format!("opaque {:?} attribute `{}`", raw.source, raw.text),
+                    resolution: "cannot translate to C#; dropped".to_string(),
+                });
+                continue;
+            }
+            attributes.push(raw.text.clone());
+        }
 
         let mut bases = input.bases.into_iter();
         let base_class = bases.next().map(|base| base.name);
@@ -286,7 +313,7 @@ impl BackendItem for CSharpType {
             fields,
             properties: Vec::new(),
             methods,
-            attributes: Vec::new(),
+            attributes,
             docs: input.docs,
         };
         ConversionResult::with_log(csharp_type, log)

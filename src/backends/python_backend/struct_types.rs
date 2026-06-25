@@ -44,6 +44,8 @@ impl BackendItem for PythonStruct {
                 is_static: false,
                 is_const: false,
                 docs: None,
+                annotations: Vec::new(),
+                raw_attributes: Vec::new(),
             })
             .collect();
 
@@ -58,6 +60,8 @@ impl BackendItem for PythonStruct {
             fields,
             methods: Vec::new(),
             docs: self.docstring.map(|docstring| vec![docstring]),
+            annotations: Vec::new(),
+            raw_attributes: Vec::new(),
         })
     }
 

@@ -11,7 +11,7 @@ use langprint::backends::cpp_backend::{
     CppVisibility,
 };
 use langprint::conversion::ConversionWarning;
-use langprint::ir::{EnumVariant, EnumVariantValue, LanguageEnum, Visibility};
+use langprint::ir::{Annotation, EnumVariant, EnumVariantValue, LanguageEnum, Visibility};
 
 fn clean_field(name: &str) -> CppField {
     CppField {
@@ -120,10 +120,6 @@ fn field_reports_every_dropped_cpp_feature() {
                 resolution: "bit-field width dropped from the language-agnostic IR".to_string(),
             },
             ConversionWarning::UnsupportedFeature {
-                feature: "`alignas` on field `flags`".to_string(),
-                resolution: "explicit alignment dropped from the language-agnostic IR".to_string(),
-            },
-            ConversionWarning::UnsupportedFeature {
                 feature: "`inline` specifier on field `flags`".to_string(),
                 resolution: "inline specifier dropped from the language-agnostic IR".to_string(),
             },
@@ -137,6 +133,9 @@ fn field_reports_every_dropped_cpp_feature() {
             },
         ]
     );
+
+    // `alignas` is now preserved as curated Tier-1 vocabulary, not dropped.
+    assert_eq!(ir.value.annotations, vec![Annotation::Aligned(16)]);
 }
 
 #[test]
@@ -259,6 +258,8 @@ fn from_ir_defaults_enum_to_scoped() {
         }],
         underlying_type: None,
         docs: None,
+        annotations: Vec::new(),
+        raw_attributes: Vec::new(),
     };
 
     let back = CppEnum::from_ir(language_enum, None);

@@ -2,11 +2,12 @@ use crate::{
     backends::BackendItem,
     conversion::{ConversionLog, ConversionResult, ConversionWarning},
     convert::{ConversionConfig, IdentifierKind, map_type, rename_identifier},
-    ir::{EnumVariant, EnumVariantValue, LanguageEnum},
+    ir::{EnumVariant, EnumVariantValue, LanguageEnum, RawAttribute},
     type_map::TargetLanguage,
 };
 
 use super::CSharpVisibility;
+use super::attributes::csharp_attribute_to_annotation;
 
 /// Represents a single member of a C# enum.
 #[derive(Debug, Clone, PartialEq)]
@@ -45,17 +46,22 @@ impl BackendItem for CSharpEnum {
     fn to_ir(self, _options: Option<&Self::ConversionOptions>) -> ConversionResult<Self::IrType> {
         let mut log = ConversionLog::new();
 
+        let mut annotations = Vec::new();
+        let mut raw_attributes = Vec::new();
         if self.is_flags {
-            log.add_warning(ConversionWarning::UnsupportedFeature {
-                feature: format!("`[Flags]` on enum `{}`", self.name),
-                resolution: "Flags attribute dropped from the language-agnostic IR".to_string(),
+            raw_attributes.push(RawAttribute {
+                source: TargetLanguage::CSharp,
+                text: "Flags".to_string(),
             });
         }
         for attribute in &self.attributes {
-            log.add_warning(ConversionWarning::UnsupportedFeature {
-                feature: format!("attribute `[{}]` on enum `{}`", attribute, self.name),
-                resolution: "C# attributes dropped from the language-agnostic IR".to_string(),
-            });
+            match csharp_attribute_to_annotation(attribute) {
+                Some(annotation) => annotations.push(annotation),
+                None => raw_attributes.push(RawAttribute {
+                    source: TargetLanguage::CSharp,
+                    text: attribute.clone(),
+                }),
+            }
         }
 
         let visibility = self.visibility.to_ir(None);
@@ -80,6 +86,8 @@ impl BackendItem for CSharpEnum {
             variants,
             underlying_type: self.underlying_type,
             docs: self.docs,
+            annotations,
+            raw_attributes,
         };
         ConversionResult::with_log(language_enum, log)
     }
@@ -93,6 +101,23 @@ impl BackendItem for CSharpEnum {
 
         let visibility = CSharpVisibility::from_ir(input.visibility, None);
         log.add_warnings(visibility.log.warnings);
+
+        let mut is_flags = false;
+        let mut attributes = Vec::new();
+        for raw in &input.raw_attributes {
+            if raw.source != TargetLanguage::CSharp {
+                log.add_warning(ConversionWarning::UnsupportedFeature {
+                    feature: format!("opaque {:?} attribute `{}`", raw.source, raw.text),
+                    resolution: "cannot translate to C#; dropped".to_string(),
+                });
+                continue;
+            }
+            if raw.text == "Flags" {
+                is_flags = true;
+            } else {
+                attributes.push(raw.text.clone());
+            }
+        }
 
         let underlying_type = match input.underlying_type {
             Some(underlying_type) => {
@@ -132,8 +157,8 @@ impl BackendItem for CSharpEnum {
             visibility: visibility.value,
             underlying_type,
             members,
-            is_flags: false,
-            attributes: Vec::new(),
+            is_flags,
+            attributes,
             docs: input.docs,
         };
         ConversionResult::with_log(csharp_enum, log)

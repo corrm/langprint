@@ -5,8 +5,9 @@ use langprint::backends::csharp_backend::{
     CSharpBackend, CSharpConstant, CSharpEnum, CSharpEnumMember, CSharpField, CSharpMethod, CSharpParameter,
     CSharpProperty, CSharpType, CSharpTypeKind, CSharpVisibility,
 };
-use langprint::ir::{EnumVariant, EnumVariantValue, LanguageEnum, Visibility};
+use langprint::ir::{EnumVariant, EnumVariantValue, LanguageEnum, RawAttribute, Visibility};
 use langprint::renderers::{ConstantRenderer, EnumRenderer, FunctionRenderer, StructRenderer};
+use langprint::type_map::TargetLanguage;
 
 fn backend() -> CSharpBackend {
     CSharpBackend::default()
@@ -243,7 +244,7 @@ fn class_round_trips_through_ir() {
 }
 
 #[test]
-fn to_ir_warns_on_property_readonly_async_and_flags() {
+fn to_ir_warns_on_property_readonly_async_and_preserves_flags() {
     // Property on a type → lowered to a field, with a warning.
     let mut ty = empty_type(CSharpTypeKind::Class, "Bag");
     ty.properties.push(CSharpProperty {
@@ -272,7 +273,7 @@ fn to_ir_warns_on_property_readonly_async_and_flags() {
     run.is_async = true;
     assert_eq!(run.to_ir(None).log.warnings.len(), 1);
 
-    // [Flags] enum → warning.
+    // [Flags] enum → preserved as a C#-tagged raw attribute, not dropped.
     let flags_enum = CSharpEnum {
         name: "E".to_string(),
         visibility: CSharpVisibility::Public,
@@ -282,7 +283,15 @@ fn to_ir_warns_on_property_readonly_async_and_flags() {
         attributes: Vec::new(),
         docs: None,
     };
-    assert_eq!(flags_enum.to_ir(None).log.warnings.len(), 1);
+    let flags_ir = flags_enum.to_ir(None);
+    assert!(flags_ir.log.warnings.is_empty());
+    assert_eq!(
+        flags_ir.value.raw_attributes,
+        vec![RawAttribute {
+            source: TargetLanguage::CSharp,
+            text: "Flags".to_string(),
+        }]
+    );
 }
 
 #[test]
@@ -304,6 +313,8 @@ fn from_ir_warns_on_data_carrying_enum_variant() {
         ],
         underlying_type: None,
         docs: None,
+        annotations: Vec::new(),
+        raw_attributes: Vec::new(),
     };
     let result = CSharpEnum::from_ir(language_enum, None);
     assert_eq!(result.log.warnings.len(), 1);

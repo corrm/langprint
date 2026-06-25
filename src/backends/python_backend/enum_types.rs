@@ -50,6 +50,8 @@ impl BackendItem for PythonEnum {
             variants,
             underlying_type: None,
             docs: self.docstring.map(|docstring| vec![docstring]),
+            annotations: Vec::new(),
+            raw_attributes: Vec::new(),
         })
     }
 

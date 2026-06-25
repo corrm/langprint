@@ -1,4 +1,4 @@
-use super::{LanguageGenericArgument, Visibility};
+use super::{Annotation, LanguageGenericArgument, RawAttribute, Visibility};
 
 /// Represents a function parameter.
 #[derive(Debug, Clone, PartialEq)]
@@ -38,4 +38,8 @@ pub struct LanguageFunction {
     pub body: Option<Vec<String>>,
     /// Documentation for the function.
     pub docs: Option<Vec<String>>,
+    /// Curated source-neutral annotations (Tier 1).
+    pub annotations: Vec<Annotation>,
+    /// Opaque source-tagged attributes carried verbatim (Tier 2).
+    pub raw_attributes: Vec<RawAttribute>,
 }

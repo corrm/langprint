@@ -7,7 +7,7 @@ use langprint::backends::rust_backend::{
     RustBackend, RustEnum, RustEnumVariant, RustEnumVariantValue, RustFunction, RustSelfKind, RustVisibility,
 };
 use langprint::conversion::ConversionWarning;
-use langprint::ir::{LanguageStruct, LanguageStructKind, Visibility};
+use langprint::ir::{Annotation, LanguageStruct, LanguageStructKind, Visibility};
 use langprint::renderers::{FunctionRenderer, StructRenderer};
 use langprint::text::{IndentStyle, NewLineStyle};
 
@@ -66,9 +66,10 @@ fn rust_mut_receiver_warns_on_to_ir() {
     );
 }
 
-/// S6: only integral `repr`s become an enum underlying type; `repr(C)` is dropped with a warning.
+/// S6: only integral `repr`s become an enum underlying type; `repr(C)` is preserved as the curated
+/// `Annotation::ReprC` (no longer dropped with a warning).
 #[test]
-fn rust_repr_c_enum_warns_and_drops_underlying() {
+fn rust_repr_c_enum_maps_to_repr_c_annotation() {
     let e = RustEnum {
         name: "E".to_string(),
         visibility: RustVisibility::Pub,
@@ -83,13 +84,8 @@ fn rust_repr_c_enum_warns_and_drops_underlying() {
     };
     let result = e.to_ir(None);
     assert_eq!(result.value.underlying_type, None);
-    assert_eq!(
-        result.log.warnings,
-        vec![ConversionWarning::UnsupportedFeature {
-            feature: "#[repr(C)] on enum `E`".to_string(),
-            resolution: "only integral reprs map to an enum underlying type; dropped".to_string(),
-        }]
-    );
+    assert!(result.log.warnings.is_empty());
+    assert_eq!(result.value.annotations, vec![Annotation::ReprC]);
 }
 
 /// N7: a declaration-only Rust function renders as a bare signature, not an `unimplemented!()` body.
@@ -157,6 +153,8 @@ fn csharp_abstract_struct_lowers_to_class() {
         fields: vec![],
         methods: vec![],
         docs: None,
+        annotations: Vec::new(),
+        raw_attributes: Vec::new(),
     };
     let cs = CSharpType::from_ir(ir, None);
     assert_eq!(

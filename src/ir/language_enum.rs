@@ -1,4 +1,4 @@
-use super::Visibility;
+use super::{Annotation, RawAttribute, Visibility};
 
 /// Represents different kinds of enum variants.
 #[derive(Debug, Clone, PartialEq)]
@@ -34,4 +34,8 @@ pub struct LanguageEnum {
     pub underlying_type: Option<String>,
     /// Documentation for the enum.
     pub docs: Option<Vec<String>>,
+    /// Curated source-neutral annotations (Tier 1).
+    pub annotations: Vec<Annotation>,
+    /// Opaque source-tagged attributes carried verbatim (Tier 2).
+    pub raw_attributes: Vec<RawAttribute>,
 }

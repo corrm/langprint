@@ -53,6 +53,8 @@ impl BackendItem for JsClass {
                 is_static: field.is_static,
                 is_const: false,
                 docs: None,
+                annotations: Vec::new(),
+                raw_attributes: Vec::new(),
             })
             .collect();
 
@@ -84,6 +86,8 @@ impl BackendItem for JsClass {
                 fields,
                 methods,
                 docs: self.doc.map(|doc| vec![doc]),
+                annotations: Vec::new(),
+                raw_attributes: Vec::new(),
             },
             log,
         )

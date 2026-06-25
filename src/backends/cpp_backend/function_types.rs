@@ -168,6 +168,8 @@ impl BackendItem for CppFunction {
             is_final: self.is_final,
             body: self.body.clone(),
             docs: self.docs,
+            annotations: Vec::new(),
+            raw_attributes: Vec::new(),
         };
 
         ConversionResult::with_log(lang_function, result_log)
@@ -217,6 +219,15 @@ impl BackendItem for CppFunction {
         // Collect any warnings from visibility conversion
         if visibility_result.log.has_warnings() {
             result_log.add_warnings(visibility_result.log.warnings);
+        }
+
+        for raw in &input.raw_attributes {
+            if raw.source != TargetLanguage::Cpp {
+                result_log.add_warning(ConversionWarning::UnsupportedFeature {
+                    feature: format!("opaque {:?} attribute `{}`", raw.source, raw.text),
+                    resolution: "cannot translate to C++; dropped".to_string(),
+                });
+            }
         }
 
         let cpp_function = CppFunction {

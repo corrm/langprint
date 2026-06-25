@@ -1,6 +1,6 @@
 //! Field type used in structs and classes.
 
-use super::Visibility;
+use super::{Annotation, RawAttribute, Visibility};
 
 /// Represents a field in a struct or class.
 #[derive(Debug, Clone, PartialEq)]
@@ -17,4 +17,8 @@ pub struct LanguageField {
     pub is_const: bool,
     /// Documentation for the field.
     pub docs: Option<Vec<String>>,
+    /// Curated source-neutral annotations (Tier 1).
+    pub annotations: Vec<Annotation>,
+    /// Opaque source-tagged attributes carried verbatim (Tier 2).
+    pub raw_attributes: Vec<RawAttribute>,
 }

@@ -2,10 +2,11 @@ use crate::{
     backends::BackendItem,
     conversion::{ConversionLog, ConversionResult, ConversionWarning},
     convert::{ConversionConfig, IdentifierKind, map_type, rename_identifier},
-    ir::{LanguageFunction, LanguageFunctionParameter},
+    ir::{LanguageFunction, LanguageFunctionParameter, RawAttribute},
     type_map::{PrimitiveType, TargetLanguage},
 };
 
+use super::attributes::{annotation_to_csharp_attribute, csharp_attribute_to_annotation};
 use super::{CSharpGenericArgument, CSharpVisibility};
 
 /// Represents a C# method parameter.
@@ -107,11 +108,16 @@ impl BackendItem for CSharpMethod {
                 resolution: "unsafe modifier dropped from the language-agnostic IR".to_string(),
             });
         }
+        let mut annotations = Vec::new();
+        let mut raw_attributes = Vec::new();
         for attribute in &self.attributes {
-            log.add_warning(ConversionWarning::UnsupportedFeature {
-                feature: format!("attribute `[{}]` on method `{}`", attribute, self.name),
-                resolution: "C# attributes dropped from the language-agnostic IR".to_string(),
-            });
+            match csharp_attribute_to_annotation(attribute) {
+                Some(annotation) => annotations.push(annotation),
+                None => raw_attributes.push(RawAttribute {
+                    source: TargetLanguage::CSharp,
+                    text: attribute.clone(),
+                }),
+            }
         }
 
         let visibility = self.visibility.to_ir(None);
@@ -144,6 +150,8 @@ impl BackendItem for CSharpMethod {
             is_final: self.is_sealed,
             body: self.body,
             docs: self.docs,
+            annotations,
+            raw_attributes,
         };
         ConversionResult::with_log(function, log)
     }
@@ -184,6 +192,23 @@ impl BackendItem for CSharpMethod {
             None => None,
         };
 
+        let mut attributes = Vec::new();
+        for annotation in &input.annotations {
+            if let Some(rendered) = annotation_to_csharp_attribute(annotation) {
+                attributes.push(rendered);
+            }
+        }
+        for raw in &input.raw_attributes {
+            if raw.source != TargetLanguage::CSharp {
+                log.add_warning(ConversionWarning::UnsupportedFeature {
+                    feature: format!("opaque {:?} attribute `{}`", raw.source, raw.text),
+                    resolution: "cannot translate to C#; dropped".to_string(),
+                });
+                continue;
+            }
+            attributes.push(raw.text.clone());
+        }
+
         let method = CSharpMethod {
             name: name.value,
             visibility: visibility.value,
@@ -198,7 +223,7 @@ impl BackendItem for CSharpMethod {
             is_async: false,
             is_unsafe: false,
             body: input.body,
-            attributes: Vec::new(),
+            attributes,
             docs: input.docs,
         };
         ConversionResult::with_log(method, log)

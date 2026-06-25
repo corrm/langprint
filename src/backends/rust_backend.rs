@@ -1,5 +1,6 @@
 //! Rust backend for the neutral declaration model.
 
+pub mod attributes;
 pub mod backend;
 pub mod constant_types;
 pub mod define_types;

@@ -51,6 +51,8 @@ impl BackendItem for PythonClass {
                 is_static: true,
                 is_const: false,
                 docs: None,
+                annotations: Vec::new(),
+                raw_attributes: Vec::new(),
             })
             .collect();
 
@@ -82,6 +84,8 @@ impl BackendItem for PythonClass {
                 fields,
                 methods,
                 docs: self.docstring.map(|docstring| vec![docstring]),
+                annotations: Vec::new(),
+                raw_attributes: Vec::new(),
             },
             log,
         )

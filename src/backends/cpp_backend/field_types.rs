@@ -2,7 +2,7 @@ use crate::{
     backends::BackendItem,
     conversion::{ConversionLog, ConversionResult, ConversionWarning},
     convert::{ConversionConfig, map_type},
-    ir::LanguageField,
+    ir::{Annotation, LanguageField},
     type_map::TargetLanguage,
 };
 
@@ -61,11 +61,9 @@ impl BackendItem for CppField {
                 resolution: "bit-field width dropped from the language-agnostic IR".to_string(),
             });
         }
-        if self.alignment.is_some() {
-            result_log.add_warning(ConversionWarning::UnsupportedFeature {
-                feature: format!("`alignas` on field `{}`", self.name),
-                resolution: "explicit alignment dropped from the language-agnostic IR".to_string(),
-            });
+        let mut annotations = Vec::new();
+        if let Some(alignment) = self.alignment {
+            annotations.push(Annotation::Aligned(alignment));
         }
         if self.is_inline {
             result_log.add_warning(ConversionWarning::UnsupportedFeature {
@@ -93,6 +91,8 @@ impl BackendItem for CppField {
             is_static: self.is_static,
             is_const: self.is_const,
             docs: self.docs,
+            annotations,
+            raw_attributes: Vec::new(),
         };
 
         ConversionResult::with_log(language_field, result_log)
@@ -111,13 +111,28 @@ impl BackendItem for CppField {
         let field_type = map_type(&config, &input.field_type, TargetLanguage::Cpp);
         result_log.add_warnings(field_type.log.warnings);
 
+        let mut alignment = None;
+        for annotation in &input.annotations {
+            if let Annotation::Aligned(n) = annotation {
+                alignment = Some(*n);
+            }
+        }
+        for raw in &input.raw_attributes {
+            if raw.source != TargetLanguage::Cpp {
+                result_log.add_warning(ConversionWarning::UnsupportedFeature {
+                    feature: format!("opaque {:?} attribute `{}`", raw.source, raw.text),
+                    resolution: "cannot translate to C++; dropped".to_string(),
+                });
+            }
+        }
+
         let cpp_field = CppField {
             name: input.name,
             field_type: field_type.value,
             visibility: visibility.value,
             array_size: None,
             bit_field_size: None,
-            alignment: None,
+            alignment,
             is_static: input.is_static,
             is_const: input.is_const,
             is_inline: false,

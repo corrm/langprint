@@ -5,6 +5,7 @@
 //! when converting between language backends; single-language features live in the native backend
 //! models and are reported via [`crate::conversion::ConversionWarning`] when projected to the IR.
 
+mod annotation;
 mod language_constant;
 mod language_definition;
 mod language_enum;
@@ -15,6 +16,7 @@ mod language_namespace;
 mod language_struct;
 mod visibility;
 
+pub use annotation::{Annotation, RawAttribute};
 pub use language_constant::LanguageConstant;
 pub use language_definition::LanguageDefinition;
 pub use language_enum::{EnumVariant, EnumVariantValue, LanguageEnum};

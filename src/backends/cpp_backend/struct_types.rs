@@ -3,11 +3,12 @@ use super::{
     CppFunctionRenderOptions, CppGenericArgument, CppVisibility,
 };
 use crate::ir::LanguageStructKind;
+use crate::type_map::TargetLanguage;
 use crate::{
     backends::BackendItem,
     conversion::{ConversionLog, ConversionResult, ConversionWarning},
     convert::ConversionConfig,
-    ir::{LanguageBase, LanguageGenericArgument, LanguageStruct, Visibility},
+    ir::{Annotation, LanguageBase, LanguageGenericArgument, LanguageStruct, Visibility},
 };
 
 /// Represents a base/super with its visibility in C++.
@@ -109,11 +110,9 @@ impl BackendItem for CppStruct {
             generic_args.push(result.value);
         }
 
-        if self.alignment.is_some() {
-            result_log.add_warning(ConversionWarning::UnsupportedFeature {
-                feature: format!("`alignas` on struct `{}`", self.name),
-                resolution: "explicit alignment dropped from the language-agnostic IR".to_string(),
-            });
+        let mut annotations = Vec::new();
+        if let Some(alignment) = self.alignment {
+            annotations.push(Annotation::Aligned(alignment));
         }
 
         let lang_struct = LanguageStruct {
@@ -131,6 +130,8 @@ impl BackendItem for CppStruct {
             fields,
             methods,
             docs: self.docs.clone(),
+            annotations,
+            raw_attributes: Vec::new(),
         };
 
         ConversionResult::with_log(lang_struct, result_log)
@@ -205,6 +206,21 @@ impl BackendItem for CppStruct {
             result_log.add_warnings(visibility_result.log.warnings);
         }
 
+        let mut alignment = None;
+        for annotation in &input.annotations {
+            if let Annotation::Aligned(n) = annotation {
+                alignment = Some(*n);
+            }
+        }
+        for raw in &input.raw_attributes {
+            if raw.source != TargetLanguage::Cpp {
+                result_log.add_warning(ConversionWarning::UnsupportedFeature {
+                    feature: format!("opaque {:?} attribute `{}`", raw.source, raw.text),
+                    resolution: "cannot translate to C++; dropped".to_string(),
+                });
+            }
+        }
+
         let cpp_struct = CppStruct {
             struct_kind: match input.struct_kind {
                 LanguageStructKind::Struct => CppStructKind::Struct,
@@ -212,7 +228,7 @@ impl BackendItem for CppStruct {
                 LanguageStructKind::Union => CppStructKind::Union,
             },
             is_final: input.is_final,
-            alignment: None,
+            alignment,
             name: input.name.clone(),
             template_params,
             bases,
