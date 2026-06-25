@@ -102,7 +102,7 @@ impl BackendItem for CppFunction {
     type IrType = LanguageFunction;
     type ConversionOptions = CppFunctionConversionOptions;
 
-    fn to_ir(self, _options: Option<&Self::ConversionOptions>) -> ConversionResult<Self::IrType> {
+    fn to_ir(self, options: Option<&Self::ConversionOptions>) -> ConversionResult<Self::IrType> {
         let mut result_log = ConversionLog::new();
 
         // Convert parameters
@@ -154,7 +154,7 @@ impl BackendItem for CppFunction {
             }
         }
 
-        let lang_function = LanguageFunction {
+        let mut lang_function = LanguageFunction {
             name: self.name,
             visibility: visibility_result.value,
             parameters,
@@ -171,13 +171,19 @@ impl BackendItem for CppFunction {
             annotations: Vec::new(),
             raw_attributes: Vec::new(),
         };
+        if let Some(hooks) = options.and_then(|options| options.config.hooks.as_ref()) {
+            hooks.after_to_ir_function(&mut lang_function);
+        }
 
         ConversionResult::with_log(lang_function, result_log)
     }
 
-    fn from_ir(input: Self::IrType, options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
+    fn from_ir(mut input: Self::IrType, options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
         let mut result_log = ConversionLog::new();
         let config = options.map(|options| options.config.clone()).unwrap_or_default();
+        if let Some(hooks) = &config.hooks {
+            hooks.before_from_ir_function(&mut input);
+        }
 
         // Convert parameters
         let parameter_options = CppParameterConversionOptions { config: config.clone() };

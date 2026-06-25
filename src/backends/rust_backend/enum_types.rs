@@ -62,7 +62,7 @@ impl BackendItem for RustEnum {
     type IrType = LanguageEnum;
     type ConversionOptions = RustEnumConversionOptions;
 
-    fn to_ir(self, _options: Option<&Self::ConversionOptions>) -> ConversionResult<Self::IrType> {
+    fn to_ir(self, options: Option<&Self::ConversionOptions>) -> ConversionResult<Self::IrType> {
         let mut log = ConversionLog::new();
 
         let mut annotations = Vec::new();
@@ -107,23 +107,28 @@ impl BackendItem for RustEnum {
             })
             .collect();
 
-        ConversionResult::with_log(
-            LanguageEnum {
-                name: self.name,
-                visibility: visibility.value,
-                variants,
-                underlying_type,
-                docs: self.docs,
-                annotations,
-                raw_attributes,
-            },
-            log,
-        )
+        let mut ir = LanguageEnum {
+            name: self.name,
+            visibility: visibility.value,
+            variants,
+            underlying_type,
+            docs: self.docs,
+            annotations,
+            raw_attributes,
+        };
+        if let Some(hooks) = options.and_then(|options| options.config.hooks.as_ref()) {
+            hooks.after_to_ir_enum(&mut ir);
+        }
+
+        ConversionResult::with_log(ir, log)
     }
 
-    fn from_ir(input: Self::IrType, options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
+    fn from_ir(mut input: Self::IrType, options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
         let mut log = ConversionLog::new();
         let config = options.map(|options| options.config.clone()).unwrap_or_default();
+        if let Some(hooks) = &config.hooks {
+            hooks.before_from_ir_enum(&mut input);
+        }
 
         let visibility = RustVisibility::from_ir(input.visibility, None);
         log.add_warnings(visibility.log.warnings);

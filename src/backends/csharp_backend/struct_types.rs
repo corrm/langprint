@@ -98,7 +98,7 @@ impl BackendItem for CSharpType {
     type IrType = LanguageStruct;
     type ConversionOptions = CSharpTypeConversionOptions;
 
-    fn to_ir(self, _options: Option<&Self::ConversionOptions>) -> ConversionResult<Self::IrType> {
+    fn to_ir(self, options: Option<&Self::ConversionOptions>) -> ConversionResult<Self::IrType> {
         let mut log = ConversionLog::new();
 
         let struct_kind = match self.kind {
@@ -206,7 +206,7 @@ impl BackendItem for CSharpType {
             generic_args.push(result.value);
         }
 
-        let language_struct = LanguageStruct {
+        let mut language_struct = LanguageStruct {
             visibility: visibility.value,
             struct_kind,
             is_abstract: self.is_abstract,
@@ -220,12 +220,18 @@ impl BackendItem for CSharpType {
             annotations,
             raw_attributes,
         };
+        if let Some(hooks) = options.and_then(|options| options.config.hooks.as_ref()) {
+            hooks.after_to_ir_struct(&mut language_struct);
+        }
         ConversionResult::with_log(language_struct, log)
     }
 
-    fn from_ir(input: Self::IrType, options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
+    fn from_ir(mut input: Self::IrType, options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
         let mut log = ConversionLog::new();
         let config = options.map(|options| options.config.clone()).unwrap_or_default();
+        if let Some(hooks) = &config.hooks {
+            hooks.before_from_ir_struct(&mut input);
+        }
 
         let mut kind = match input.struct_kind {
             LanguageStructKind::Class => CSharpTypeKind::Class,

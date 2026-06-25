@@ -121,7 +121,7 @@ impl BackendItem for RustFunction {
     type IrType = LanguageFunction;
     type ConversionOptions = RustFunctionConversionOptions;
 
-    fn to_ir(self, _options: Option<&Self::ConversionOptions>) -> ConversionResult<Self::IrType> {
+    fn to_ir(self, options: Option<&Self::ConversionOptions>) -> ConversionResult<Self::IrType> {
         let mut log = ConversionLog::new();
 
         if self.is_unsafe {
@@ -187,30 +187,35 @@ impl BackendItem for RustFunction {
             generic_args.push(result.value);
         }
 
-        ConversionResult::with_log(
-            LanguageFunction {
-                name: self.name,
-                visibility: visibility.value,
-                parameters,
-                generic_args,
-                return_type: self.return_type,
-                is_static: self.self_kind == RustSelfKind::None,
-                is_abstract: false,
-                is_virtual: false,
-                is_override: false,
-                is_final: false,
-                body: self.body,
-                docs: self.docs,
-                annotations,
-                raw_attributes,
-            },
-            log,
-        )
+        let mut ir = LanguageFunction {
+            name: self.name,
+            visibility: visibility.value,
+            parameters,
+            generic_args,
+            return_type: self.return_type,
+            is_static: self.self_kind == RustSelfKind::None,
+            is_abstract: false,
+            is_virtual: false,
+            is_override: false,
+            is_final: false,
+            body: self.body,
+            docs: self.docs,
+            annotations,
+            raw_attributes,
+        };
+        if let Some(hooks) = options.and_then(|options| options.config.hooks.as_ref()) {
+            hooks.after_to_ir_function(&mut ir);
+        }
+
+        ConversionResult::with_log(ir, log)
     }
 
-    fn from_ir(input: Self::IrType, options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
+    fn from_ir(mut input: Self::IrType, options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
         let mut log = ConversionLog::new();
         let config = options.map(|options| options.config.clone()).unwrap_or_default();
+        if let Some(hooks) = &config.hooks {
+            hooks.before_from_ir_function(&mut input);
+        }
 
         if input.is_virtual {
             log.add_warning(ConversionWarning::UnsupportedFeature {

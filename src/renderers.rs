@@ -11,6 +11,26 @@ where
     Ok(String::from_utf8(output).expect("Rendered output is not valid UTF-8"))
 }
 
+/// Opt-in post-processing for rendered output.
+///
+/// Renderers return a `String` the caller owns; this applies an optional hook over that string,
+/// for cases the renderer itself does not model — e.g. prepending a `#pragma once` file preamble.
+/// With `None` the string is returned unchanged.
+///
+/// ```
+/// use langprint::renderers::post_process;
+///
+/// let wrap = |s: String| format!("#pragma once\n{s}");
+/// assert_eq!(post_process("body".to_string(), Some(&wrap)), "#pragma once\nbody");
+/// assert_eq!(post_process("body".to_string(), None), "body");
+/// ```
+pub fn post_process(rendered: String, hook: Option<&dyn Fn(String) -> String>) -> String {
+    match hook {
+        Some(hook) => hook(rendered),
+        None => rendered,
+    }
+}
+
 /// Trait for rendering defines.
 pub trait DefinitionRenderer: BackendMetadata {
     /// The type of define to render.

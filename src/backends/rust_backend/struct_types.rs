@@ -40,7 +40,7 @@ impl BackendItem for RustStruct {
     type IrType = LanguageStruct;
     type ConversionOptions = RustStructConversionOptions;
 
-    fn to_ir(self, _options: Option<&Self::ConversionOptions>) -> ConversionResult<Self::IrType> {
+    fn to_ir(self, options: Option<&Self::ConversionOptions>) -> ConversionResult<Self::IrType> {
         let mut log = ConversionLog::new();
 
         let mut annotations = Vec::new();
@@ -91,29 +91,34 @@ impl BackendItem for RustStruct {
             generic_args.push(result.value);
         }
 
-        ConversionResult::with_log(
-            LanguageStruct {
-                visibility: visibility.value,
-                struct_kind: LanguageStructKind::Struct,
-                is_abstract: false,
-                // A Rust struct cannot be subclassed, so it is final in the IR's inheritance model.
-                is_final: true,
-                name: self.name,
-                generic_args,
-                bases: Vec::new(),
-                fields,
-                methods,
-                docs: self.docs,
-                annotations,
-                raw_attributes,
-            },
-            log,
-        )
+        let mut ir = LanguageStruct {
+            visibility: visibility.value,
+            struct_kind: LanguageStructKind::Struct,
+            is_abstract: false,
+            // A Rust struct cannot be subclassed, so it is final in the IR's inheritance model.
+            is_final: true,
+            name: self.name,
+            generic_args,
+            bases: Vec::new(),
+            fields,
+            methods,
+            docs: self.docs,
+            annotations,
+            raw_attributes,
+        };
+        if let Some(hooks) = options.and_then(|options| options.config.hooks.as_ref()) {
+            hooks.after_to_ir_struct(&mut ir);
+        }
+
+        ConversionResult::with_log(ir, log)
     }
 
-    fn from_ir(input: Self::IrType, options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
+    fn from_ir(mut input: Self::IrType, options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
         let mut log = ConversionLog::new();
         let config = options.map(|options| options.config.clone()).unwrap_or_default();
+        if let Some(hooks) = &config.hooks {
+            hooks.before_from_ir_struct(&mut input);
+        }
 
         if input.struct_kind == LanguageStructKind::Union {
             log.add_warning(ConversionWarning::UnsupportedFeature {

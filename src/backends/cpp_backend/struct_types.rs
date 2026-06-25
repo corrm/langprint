@@ -55,7 +55,7 @@ impl BackendItem for CppStruct {
     type IrType = LanguageStruct;
     type ConversionOptions = CppStructConversionOptions;
 
-    fn to_ir(self, _options: Option<&Self::ConversionOptions>) -> ConversionResult<Self::IrType> {
+    fn to_ir(self, options: Option<&Self::ConversionOptions>) -> ConversionResult<Self::IrType> {
         let mut result_log = ConversionLog::new();
 
         // Convert fields using CppField's to_ir method
@@ -115,7 +115,7 @@ impl BackendItem for CppStruct {
             annotations.push(Annotation::Aligned(alignment));
         }
 
-        let lang_struct = LanguageStruct {
+        let mut lang_struct = LanguageStruct {
             visibility: Visibility::Default,
             struct_kind: match self.struct_kind {
                 CppStructKind::Struct => LanguageStructKind::Struct,
@@ -134,12 +134,19 @@ impl BackendItem for CppStruct {
             raw_attributes: Vec::new(),
         };
 
+        if let Some(hooks) = options.and_then(|options| options.config.hooks.as_ref()) {
+            hooks.after_to_ir_struct(&mut lang_struct);
+        }
+
         ConversionResult::with_log(lang_struct, result_log)
     }
 
-    fn from_ir(input: Self::IrType, options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
+    fn from_ir(mut input: Self::IrType, options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
         let mut result_log = ConversionLog::new();
         let config = options.map(|options| options.config.clone()).unwrap_or_default();
+        if let Some(hooks) = &config.hooks {
+            hooks.before_from_ir_struct(&mut input);
+        }
 
         // Convert fields using CppField's from_ir method
         let field_options = CppFieldConversionOptions { config: config.clone() };

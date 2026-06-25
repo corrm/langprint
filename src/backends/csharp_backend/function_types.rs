@@ -93,7 +93,7 @@ impl BackendItem for CSharpMethod {
     type IrType = LanguageFunction;
     type ConversionOptions = CSharpMethodConversionOptions;
 
-    fn to_ir(self, _options: Option<&Self::ConversionOptions>) -> ConversionResult<Self::IrType> {
+    fn to_ir(self, options: Option<&Self::ConversionOptions>) -> ConversionResult<Self::IrType> {
         let mut log = ConversionLog::new();
 
         if self.is_async {
@@ -137,7 +137,7 @@ impl BackendItem for CSharpMethod {
             generic_args.push(result.value);
         }
 
-        let function = LanguageFunction {
+        let mut function = LanguageFunction {
             name: self.name,
             visibility: visibility.value,
             parameters,
@@ -153,12 +153,18 @@ impl BackendItem for CSharpMethod {
             annotations,
             raw_attributes,
         };
+        if let Some(hooks) = options.and_then(|options| options.config.hooks.as_ref()) {
+            hooks.after_to_ir_function(&mut function);
+        }
         ConversionResult::with_log(function, log)
     }
 
-    fn from_ir(input: Self::IrType, options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
+    fn from_ir(mut input: Self::IrType, options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
         let mut log = ConversionLog::new();
         let config = options.map(|options| options.config.clone()).unwrap_or_default();
+        if let Some(hooks) = &config.hooks {
+            hooks.before_from_ir_function(&mut input);
+        }
 
         let name = rename_identifier(&config, &input.name, TargetLanguage::CSharp, IdentifierKind::Function);
         log.add_warnings(name.log.warnings);

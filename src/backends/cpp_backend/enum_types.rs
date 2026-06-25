@@ -120,7 +120,7 @@ impl BackendItem for CppEnum {
     type IrType = LanguageEnum;
     type ConversionOptions = CppEnumConversionOptions;
 
-    fn to_ir(self, _options: Option<&Self::ConversionOptions>) -> ConversionResult<Self::IrType> {
+    fn to_ir(self, options: Option<&Self::ConversionOptions>) -> ConversionResult<Self::IrType> {
         let mut result_log = ConversionLog::new();
 
         if !self.is_enum_class {
@@ -130,7 +130,7 @@ impl BackendItem for CppEnum {
             });
         }
 
-        let language_enum = LanguageEnum {
+        let mut language_enum = LanguageEnum {
             name: self.name,
             visibility: Visibility::Default,
             variants: self
@@ -143,14 +143,20 @@ impl BackendItem for CppEnum {
             annotations: Vec::new(),
             raw_attributes: Vec::new(),
         };
+        if let Some(hooks) = options.and_then(|options| options.config.hooks.as_ref()) {
+            hooks.after_to_ir_enum(&mut language_enum);
+        }
 
         ConversionResult::with_log(language_enum, result_log)
     }
 
-    fn from_ir(input: Self::IrType, options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
+    fn from_ir(mut input: Self::IrType, options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
         let default_options = CppEnumConversionOptions::default();
         let options: &CppEnumConversionOptions = options.unwrap_or(&default_options);
         let mut result_log = ConversionLog::new();
+        if let Some(hooks) = &options.config.hooks {
+            hooks.before_from_ir_enum(&mut input);
+        }
 
         let visibility: ConversionResult<CppVisibility> = CppVisibility::from_ir(input.visibility, None);
         if visibility.log.has_warnings() {

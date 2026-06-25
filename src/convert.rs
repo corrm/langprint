@@ -1,9 +1,11 @@
 //! Shared cross-language conversion configuration and the leaf helpers every backend's `from_ir`
 //! uses to re-spell types and apply idiomatic identifier renaming.
 
+use std::fmt;
 use std::sync::Arc;
 
 use crate::conversion::{ConversionResult, ConversionWarning};
+use crate::ir::{LanguageEnum, LanguageFunction, LanguageStruct};
 use crate::naming::{to_camel_case, to_pascal_case, to_snake_case};
 use crate::type_map::{TargetLanguage, TypeMap};
 
@@ -21,14 +23,52 @@ impl TargetLanguage {
     }
 }
 
+/// A custom type resolver consulted before the [`TypeMap`]: given a source spelling and the target
+/// language, it returns `Some(spelling)` to override the mapping or `None` to defer to the map.
+pub type TypeOverride = Arc<dyn Fn(&str, TargetLanguage) -> Option<String> + Send + Sync>;
+
+/// Opt-in lifecycle hooks invoked on the cross-language IR path. Every method is a no-op by
+/// default, so existing behavior is unchanged unless a hook is set. Hooks mutate the IR item in
+/// place: `after_to_ir_*` fires once the IR value is built, `before_from_ir_*` fires before the IR
+/// is lowered into a target backend type.
+pub trait ConversionHooks: Send + Sync {
+    /// Invoked after a struct/class has been raised into the IR.
+    fn after_to_ir_struct(&self, _s: &mut LanguageStruct) {}
+    /// Invoked after a function/method has been raised into the IR.
+    fn after_to_ir_function(&self, _f: &mut LanguageFunction) {}
+    /// Invoked after an enum has been raised into the IR.
+    fn after_to_ir_enum(&self, _e: &mut LanguageEnum) {}
+    /// Invoked before a struct/class is lowered out of the IR.
+    fn before_from_ir_struct(&self, _s: &mut LanguageStruct) {}
+    /// Invoked before a function/method is lowered out of the IR.
+    fn before_from_ir_function(&self, _f: &mut LanguageFunction) {}
+    /// Invoked before an enum is lowered out of the IR.
+    fn before_from_ir_enum(&self, _e: &mut LanguageEnum) {}
+}
+
 /// Configuration shared by every `from_ir` conversion: how primitive types are re-spelled and
 /// whether identifiers are renamed to the target language's convention.
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct ConversionConfig {
     /// The primitive type mapping applied at conversion boundaries.
     pub type_map: Arc<TypeMap>,
     /// Whether identifiers are renamed to the target language's naming convention.
     pub rename: bool,
+    /// A custom type resolver consulted before the [`TypeMap`].
+    pub type_override: Option<TypeOverride>,
+    /// Opt-in lifecycle hooks invoked on the cross-language IR path.
+    pub hooks: Option<Arc<dyn ConversionHooks>>,
+}
+
+impl fmt::Debug for ConversionConfig {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("ConversionConfig")
+            .field("type_map", &self.type_map)
+            .field("rename", &self.rename)
+            .field("type_override", &self.type_override.as_ref().map(|_| "<fn>"))
+            .field("hooks", &self.hooks.as_ref().map(|_| "<hooks>"))
+            .finish()
+    }
 }
 
 impl Default for ConversionConfig {
@@ -36,6 +76,8 @@ impl Default for ConversionConfig {
         Self {
             type_map: Arc::new(TypeMap::builtin()),
             rename: true,
+            type_override: None,
+            hooks: None,
         }
     }
 }
@@ -46,6 +88,8 @@ impl ConversionConfig {
         Self {
             type_map: Arc::new(type_map),
             rename,
+            type_override: None,
+            hooks: None,
         }
     }
 }
@@ -112,6 +156,12 @@ fn convention(language: TargetLanguage, kind: IdentifierKind) -> Option<CaseStyl
 /// The mapped spelling, or the original spelling plus an `UnsupportedFeature` warning when the
 /// type is not a recognized primitive.
 pub fn map_type(config: &ConversionConfig, spelling: &str, language: TargetLanguage) -> ConversionResult<String> {
+    if let Some(resolver) = &config.type_override
+        && let Some(mapped) = resolver(spelling, language)
+    {
+        return ConversionResult::new(mapped);
+    }
+
     match config.type_map.map(spelling, language) {
         Some(mapped) => ConversionResult::new(mapped),
         None => ConversionResult::with_warning(
