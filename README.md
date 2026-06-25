@@ -160,6 +160,27 @@ has no namespace-level free functions — it is dropped with a `ConversionWarnin
 
 `langprint::AVAILABLE_BACKENDS` is the live list.
 
+## Body-slot contract
+
+langprint emits source *declarations*. A function/method is a signature plus a body slot the
+consumer fills with raw strings — langprint never models statements or expressions. Every
+backend's function type carries `body: Option<Vec<String>>`:
+
+- `body: None` → a bare declaration terminated for the language (`;`).
+- `body: Some(lines)` → the signature, an open block, each `line` emitted **verbatim** one indent
+  deeper, then the close block. langprint adds only indentation and block punctuation.
+
+```rust
+RustFunction { name: "add".into(), body: Some(vec!["a + b".into()]), /* … */ }
+// pub fn add(a: i32, b: i32) -> i32 {
+//     a + b
+// }
+```
+
+C++ gates the body slot behind its `render_definition` render option (a header normally wants
+declarations only); set `render_definition: true` to emit the block. The contract is locked by
+`tests/body_slot_contract.rs`.
+
 ## Project generators
 
 Beyond single declarations, langprint can emit the surrounding build project for a generated SDK

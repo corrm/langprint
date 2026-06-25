@@ -170,6 +170,12 @@ pub trait ConstantRenderer: BackendMetadata {
 }
 
 /// Trait for rendering functions.
+///
+/// Implementors honor the body-slot contract: the function type carries
+/// `body: Option<Vec<String>>`. `None` renders a bare declaration terminated for the
+/// language; `Some(lines)` renders the signature followed by a block whose lines are the
+/// consumer's raw strings, emitted verbatim one indent deeper. langprint owns only the
+/// indentation and block punctuation and never models statements or expressions.
 pub trait FunctionRenderer: BackendMetadata {
     /// The function type for this renderer.
     type FunctionType: BackendItem;
