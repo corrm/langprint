@@ -1,8 +1,9 @@
 use crate::{
     backends::BackendItem,
-    conversion::{ConversionLog, ConversionResult},
-    convert::ConversionConfig,
+    conversion::{ConversionLog, ConversionResult, ConversionWarning},
+    convert::{rename_identifier, ConversionConfig, IdentifierKind},
     ir::{LanguageBase, LanguageField, LanguageStruct, LanguageStructKind, Visibility},
+    type_map::TargetLanguage,
 };
 
 use super::{JsFunction, JsFunctionConversionOptions};
@@ -97,17 +98,21 @@ impl BackendItem for JsClass {
         let mut log = ConversionLog::new();
         let config = options.map(|options| options.config.clone()).unwrap_or_default();
 
-        let fields = input
-            .fields
-            .into_iter()
-            .map(|field| JsField {
-                name: field.name,
+        let name = rename_identifier(&config, &input.name, TargetLanguage::Js, IdentifierKind::Type);
+        log.add_warnings(name.log.warnings);
+
+        let mut fields = Vec::with_capacity(input.fields.len());
+        for field in input.fields {
+            let field_name = rename_identifier(&config, &field.name, TargetLanguage::Js, IdentifierKind::Field);
+            log.add_warnings(field_name.log.warnings);
+            fields.push(JsField {
+                name: field_name.value,
                 value: "null".to_string(),
                 is_static: field.is_static,
-            })
-            .collect();
+            });
+        }
 
-        let function_options = JsFunctionConversionOptions { config };
+        let function_options = JsFunctionConversionOptions { config: config.clone() };
         let mut methods = Vec::with_capacity(input.methods.len());
         for method in input.methods {
             let result = JsFunction::from_ir(method, Some(&function_options));
@@ -115,11 +120,17 @@ impl BackendItem for JsClass {
             methods.push(result.value);
         }
 
+        if input.bases.len() > 1 {
+            log.add_warning(ConversionWarning::UnsupportedFeature {
+                feature: format!("{} base classes on `{}`", input.bases.len(), input.name),
+                resolution: "JavaScript has single inheritance; kept the first base, dropped the rest".to_string(),
+            });
+        }
         let extends = input.bases.into_iter().next().map(|base| base.name);
 
         ConversionResult::with_log(
             JsClass {
-                name: input.name,
+                name: name.value,
                 extends,
                 fields,
                 methods,

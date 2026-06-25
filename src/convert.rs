@@ -4,7 +4,7 @@
 use std::sync::Arc;
 
 use crate::conversion::{ConversionResult, ConversionWarning};
-use crate::naming::{to_pascal_case, to_snake_case};
+use crate::naming::{to_camel_case, to_pascal_case, to_snake_case};
 use crate::type_map::{TargetLanguage, TypeMap};
 
 impl TargetLanguage {
@@ -14,6 +14,9 @@ impl TargetLanguage {
             TargetLanguage::Cpp => "C++",
             TargetLanguage::Rust => "Rust",
             TargetLanguage::CSharp => "C#",
+            TargetLanguage::Python => "Python",
+            TargetLanguage::Lua => "Lua",
+            TargetLanguage::Js => "JS",
         }
     }
 }
@@ -67,6 +70,7 @@ pub enum IdentifierKind {
 enum CaseStyle {
     Snake,
     Pascal,
+    Camel,
 }
 
 /// The naming convention a language applies to an identifier kind, if any.
@@ -78,6 +82,20 @@ fn convention(language: TargetLanguage, kind: IdentifierKind) -> Option<CaseStyl
             IdentifierKind::Type | IdentifierKind::EnumMember => None,
         },
         TargetLanguage::CSharp => Some(CaseStyle::Pascal),
+        TargetLanguage::Python => match kind {
+            IdentifierKind::Function | IdentifierKind::Field | IdentifierKind::Namespace => Some(CaseStyle::Snake),
+            IdentifierKind::Type => Some(CaseStyle::Pascal),
+            IdentifierKind::EnumMember => None,
+        },
+        TargetLanguage::Lua => match kind {
+            IdentifierKind::Function | IdentifierKind::Field | IdentifierKind::Namespace => Some(CaseStyle::Snake),
+            IdentifierKind::Type | IdentifierKind::EnumMember => None,
+        },
+        TargetLanguage::Js => match kind {
+            IdentifierKind::Function | IdentifierKind::Field => Some(CaseStyle::Camel),
+            IdentifierKind::Type => Some(CaseStyle::Pascal),
+            IdentifierKind::Namespace | IdentifierKind::EnumMember => None,
+        },
     }
 }
 
@@ -136,6 +154,7 @@ pub fn rename_identifier(
     let converted = match style {
         CaseStyle::Snake => to_snake_case(name),
         CaseStyle::Pascal => to_pascal_case(name),
+        CaseStyle::Camel => to_camel_case(name),
     };
 
     if converted == name {

@@ -1,8 +1,9 @@
 use crate::{
     backends::BackendItem,
     conversion::{ConversionLog, ConversionResult},
-    convert::ConversionConfig,
+    convert::{map_type, rename_identifier, ConversionConfig, IdentifierKind},
     ir::{LanguageFunction, LanguageFunctionParameter, Visibility},
+    type_map::{PrimitiveType, TargetLanguage},
 };
 
 /// Represents a parameter of a JavaScript function.
@@ -33,17 +34,29 @@ impl BackendItem for JsParameter {
         })
     }
 
-    fn from_ir(input: Self::IrType, _options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
+    fn from_ir(input: Self::IrType, options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
+        let mut log = ConversionLog::new();
+        let config = options.map(|options| options.config.clone()).unwrap_or_default();
+
+        let name = rename_identifier(&config, &input.name, TargetLanguage::Js, IdentifierKind::Field);
+        log.add_warnings(name.log.warnings);
+
         let type_doc = if input.param_type.is_empty() {
             None
         } else {
-            Some(input.param_type)
+            let mapped = map_type(&config, &input.param_type, TargetLanguage::Js);
+            log.add_warnings(mapped.log.warnings);
+            Some(mapped.value)
         };
-        ConversionResult::new(JsParameter {
-            name: input.name,
-            default: input.default_value,
-            type_doc,
-        })
+
+        ConversionResult::with_log(
+            JsParameter {
+                name: name.value,
+                default: input.default_value,
+                type_doc,
+            },
+            log,
+        )
     }
 }
 
@@ -110,21 +123,37 @@ impl BackendItem for JsFunction {
         )
     }
 
-    fn from_ir(input: Self::IrType, _options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
+    fn from_ir(input: Self::IrType, options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
         let mut log = ConversionLog::new();
+        let config = options.map(|options| options.config.clone()).unwrap_or_default();
 
+        let name = rename_identifier(&config, &input.name, TargetLanguage::Js, IdentifierKind::Function);
+        log.add_warnings(name.log.warnings);
+
+        let parameter_options = JsParameterConversionOptions { config: config.clone() };
         let mut parameters = Vec::with_capacity(input.parameters.len());
         for parameter in input.parameters {
-            let result = JsParameter::from_ir(parameter, None);
+            let result = JsParameter::from_ir(parameter, Some(&parameter_options));
             log.add_warnings(result.log.warnings);
             parameters.push(result.value);
         }
 
+        // A `void` return carries no JSDoc `@returns`; idiomatic JS omits it.
+        let return_type = match input.return_type {
+            Some(return_type) if config.type_map.resolve(&return_type) == Some(PrimitiveType::Void) => None,
+            Some(return_type) => {
+                let mapped = map_type(&config, &return_type, TargetLanguage::Js);
+                log.add_warnings(mapped.log.warnings);
+                Some(mapped.value)
+            }
+            None => None,
+        };
+
         ConversionResult::with_log(
             JsFunction {
-                name: input.name,
+                name: name.value,
                 parameters,
-                return_type: input.return_type,
+                return_type,
                 doc: input.docs.map(|docs| docs.join("\n")),
                 is_static: input.is_static,
                 body: input.body,

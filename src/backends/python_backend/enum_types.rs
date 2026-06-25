@@ -1,8 +1,9 @@
 use crate::{
     backends::BackendItem,
-    conversion::ConversionResult,
-    convert::ConversionConfig,
+    conversion::{ConversionLog, ConversionResult},
+    convert::{rename_identifier, ConversionConfig, IdentifierKind},
     ir::{EnumVariant, EnumVariantValue, LanguageEnum, Visibility},
+    type_map::TargetLanguage,
 };
 
 /// A member of a Python `enum.IntEnum` (`MEMBER = <value>`).
@@ -55,7 +56,13 @@ impl BackendItem for PythonEnum {
         })
     }
 
-    fn from_ir(input: Self::IrType, _options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
+    fn from_ir(input: Self::IrType, options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
+        let mut log = ConversionLog::new();
+        let config = options.map(|options| options.config.clone()).unwrap_or_default();
+
+        let name = rename_identifier(&config, &input.name, TargetLanguage::Python, IdentifierKind::Type);
+        log.add_warnings(name.log.warnings);
+
         let mut members = Vec::with_capacity(input.variants.len());
         for (index, variant) in input.variants.into_iter().enumerate() {
             let value = match variant.value {
@@ -63,17 +70,22 @@ impl BackendItem for PythonEnum {
                 EnumVariantValue::NoValue => index.to_string(),
                 EnumVariantValue::Tuple(_) | EnumVariantValue::Struct(_) => index.to_string(),
             };
+            let member_name = rename_identifier(&config, &variant.name, TargetLanguage::Python, IdentifierKind::EnumMember);
+            log.add_warnings(member_name.log.warnings);
             members.push(PythonEnumMember {
-                name: variant.name,
+                name: member_name.value,
                 value,
             });
         }
 
-        ConversionResult::new(PythonEnum {
-            name: input.name,
-            members,
-            docstring: input.docs.map(|docs| docs.join("\n")),
-        })
+        ConversionResult::with_log(
+            PythonEnum {
+                name: name.value,
+                members,
+                docstring: input.docs.map(|docs| docs.join("\n")),
+            },
+            log,
+        )
     }
 }
 

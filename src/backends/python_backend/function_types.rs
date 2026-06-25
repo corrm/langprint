@@ -1,8 +1,9 @@
 use crate::{
     backends::BackendItem,
     conversion::{ConversionLog, ConversionResult},
-    convert::ConversionConfig,
+    convert::{map_type, rename_identifier, ConversionConfig, IdentifierKind},
     ir::{LanguageFunction, LanguageFunctionParameter, Visibility},
+    type_map::{PrimitiveType, TargetLanguage},
 };
 
 /// Represents a parameter of a Python function.
@@ -32,17 +33,29 @@ impl BackendItem for PythonParameter {
         })
     }
 
-    fn from_ir(input: Self::IrType, _options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
+    fn from_ir(input: Self::IrType, options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
+        let mut log = ConversionLog::new();
+        let config = options.map(|options| options.config.clone()).unwrap_or_default();
+
+        let name = rename_identifier(&config, &input.name, TargetLanguage::Python, IdentifierKind::Field);
+        log.add_warnings(name.log.warnings);
+
         let type_hint = if input.param_type.is_empty() {
             None
         } else {
-            Some(input.param_type)
+            let mapped = map_type(&config, &input.param_type, TargetLanguage::Python);
+            log.add_warnings(mapped.log.warnings);
+            Some(mapped.value)
         };
-        ConversionResult::new(PythonParameter {
-            name: input.name,
-            type_hint,
-            default: input.default_value,
-        })
+
+        ConversionResult::with_log(
+            PythonParameter {
+                name: name.value,
+                type_hint,
+                default: input.default_value,
+            },
+            log,
+        )
     }
 }
 
@@ -114,21 +127,37 @@ impl BackendItem for PythonFunction {
         )
     }
 
-    fn from_ir(input: Self::IrType, _options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
+    fn from_ir(input: Self::IrType, options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
         let mut log = ConversionLog::new();
+        let config = options.map(|options| options.config.clone()).unwrap_or_default();
 
+        let name = rename_identifier(&config, &input.name, TargetLanguage::Python, IdentifierKind::Function);
+        log.add_warnings(name.log.warnings);
+
+        let parameter_options = PythonParameterConversionOptions { config: config.clone() };
         let mut parameters = Vec::with_capacity(input.parameters.len());
         for parameter in input.parameters {
-            let result = PythonParameter::from_ir(parameter, None);
+            let result = PythonParameter::from_ir(parameter, Some(&parameter_options));
             log.add_warnings(result.log.warnings);
             parameters.push(result.value);
         }
 
+        // A `void` return carries no PEP-484 annotation; idiomatic Python omits it.
+        let return_type = match input.return_type {
+            Some(return_type) if config.type_map.resolve(&return_type) == Some(PrimitiveType::Void) => None,
+            Some(return_type) => {
+                let mapped = map_type(&config, &return_type, TargetLanguage::Python);
+                log.add_warnings(mapped.log.warnings);
+                Some(mapped.value)
+            }
+            None => None,
+        };
+
         ConversionResult::with_log(
             PythonFunction {
-                name: input.name,
+                name: name.value,
                 parameters,
-                return_type: input.return_type,
+                return_type,
                 docstring: input.docs.map(|docs| docs.join("\n")),
                 body: input.body,
             },

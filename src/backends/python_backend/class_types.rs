@@ -1,8 +1,9 @@
 use crate::{
     backends::BackendItem,
     conversion::{ConversionLog, ConversionResult},
-    convert::ConversionConfig,
+    convert::{rename_identifier, ConversionConfig, IdentifierKind},
     ir::{LanguageBase, LanguageField, LanguageStruct, LanguageStructKind, Visibility},
+    type_map::TargetLanguage,
 };
 
 use super::{PythonFunction, PythonFunctionConversionOptions};
@@ -95,16 +96,20 @@ impl BackendItem for PythonClass {
         let mut log = ConversionLog::new();
         let config = options.map(|options| options.config.clone()).unwrap_or_default();
 
-        let fields = input
-            .fields
-            .into_iter()
-            .map(|field| PythonClassField {
-                name: field.name,
-                value: "None".to_string(),
-            })
-            .collect();
+        let name = rename_identifier(&config, &input.name, TargetLanguage::Python, IdentifierKind::Type);
+        log.add_warnings(name.log.warnings);
 
-        let function_options = PythonFunctionConversionOptions { config };
+        let mut fields = Vec::with_capacity(input.fields.len());
+        for field in input.fields {
+            let field_name = rename_identifier(&config, &field.name, TargetLanguage::Python, IdentifierKind::Field);
+            log.add_warnings(field_name.log.warnings);
+            fields.push(PythonClassField {
+                name: field_name.value,
+                value: "None".to_string(),
+            });
+        }
+
+        let function_options = PythonFunctionConversionOptions { config: config.clone() };
         let mut methods = Vec::with_capacity(input.methods.len());
         for method in input.methods {
             let result = PythonFunction::from_ir(method, Some(&function_options));
@@ -116,7 +121,7 @@ impl BackendItem for PythonClass {
 
         ConversionResult::with_log(
             PythonClass {
-                name: input.name,
+                name: name.value,
                 bases,
                 fields,
                 methods,

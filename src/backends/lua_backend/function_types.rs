@@ -1,8 +1,9 @@
 use crate::{
     backends::BackendItem,
     conversion::{ConversionLog, ConversionResult, ConversionWarning},
-    convert::ConversionConfig,
+    convert::{rename_identifier, ConversionConfig, IdentifierKind},
     ir::{LanguageFunction, LanguageFunctionParameter, Visibility},
+    type_map::TargetLanguage,
 };
 
 /// Represents a Lua function.
@@ -63,8 +64,9 @@ impl BackendItem for LuaFunction {
         })
     }
 
-    fn from_ir(input: Self::IrType, _options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
+    fn from_ir(input: Self::IrType, options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
         let mut log = ConversionLog::new();
+        let config = options.map(|options| options.config.clone()).unwrap_or_default();
 
         if !input.generic_args.is_empty() {
             log.add_warning(ConversionWarning::Other(
@@ -77,11 +79,19 @@ impl BackendItem for LuaFunction {
             ));
         }
 
-        let parameters = input.parameters.into_iter().map(|parameter| parameter.name).collect();
+        let name = rename_identifier(&config, &input.name, TargetLanguage::Lua, IdentifierKind::Function);
+        log.add_warnings(name.log.warnings);
+
+        let mut parameters = Vec::with_capacity(input.parameters.len());
+        for parameter in input.parameters {
+            let renamed = rename_identifier(&config, &parameter.name, TargetLanguage::Lua, IdentifierKind::Field);
+            log.add_warnings(renamed.log.warnings);
+            parameters.push(renamed.value);
+        }
 
         ConversionResult::with_log(
             LuaFunction {
-                name: input.name,
+                name: name.value,
                 parameters,
                 doc: input.docs.map(|docs| docs.join("\n")),
                 body: input.body,

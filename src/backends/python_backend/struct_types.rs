@@ -1,8 +1,9 @@
 use crate::{
     backends::BackendItem,
-    conversion::ConversionResult,
-    convert::ConversionConfig,
+    conversion::{ConversionLog, ConversionResult},
+    convert::{rename_identifier, ConversionConfig, IdentifierKind},
     ir::{LanguageField, LanguageStruct, LanguageStructKind, Visibility},
+    type_map::TargetLanguage,
 };
 
 /// A field of a ctypes `Structure`: a name paired with a free-form ctype string.
@@ -65,21 +66,31 @@ impl BackendItem for PythonStruct {
         })
     }
 
-    fn from_ir(input: Self::IrType, _options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
-        let fields = input
-            .fields
-            .into_iter()
-            .map(|field| PythonStructField {
-                name: field.name,
-                ctype: field.field_type,
-            })
-            .collect();
+    fn from_ir(input: Self::IrType, options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
+        let mut log = ConversionLog::new();
+        let config = options.map(|options| options.config.clone()).unwrap_or_default();
 
-        ConversionResult::new(PythonStruct {
-            name: input.name,
-            fields,
-            docstring: input.docs.map(|docs| docs.join("\n")),
-        })
+        let name = rename_identifier(&config, &input.name, TargetLanguage::Python, IdentifierKind::Type);
+        log.add_warnings(name.log.warnings);
+
+        let mut fields = Vec::with_capacity(input.fields.len());
+        for field in input.fields {
+            let field_name = rename_identifier(&config, &field.name, TargetLanguage::Python, IdentifierKind::Field);
+            log.add_warnings(field_name.log.warnings);
+            fields.push(PythonStructField {
+                name: field_name.value,
+                ctype: field.field_type,
+            });
+        }
+
+        ConversionResult::with_log(
+            PythonStruct {
+                name: name.value,
+                fields,
+                docstring: input.docs.map(|docs| docs.join("\n")),
+            },
+            log,
+        )
     }
 }
 

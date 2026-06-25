@@ -8,6 +8,10 @@
 
 use std::collections::HashMap;
 
+/// One row of the built-in primitive table: the neutral primitive, its recognized spellings, then
+/// the output spelling per typed target (C++, Rust, C#, Python, JS). Lua is omitted — it is untyped.
+type BuiltinRow = (PrimitiveType, &'static [&'static str], &'static str, &'static str, &'static str, &'static str, &'static str);
+
 /// A neutral, language-independent primitive type identity.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum PrimitiveType {
@@ -58,6 +62,12 @@ pub enum TargetLanguage {
     Rust,
     /// C#.
     CSharp,
+    /// Python.
+    Python,
+    /// Lua.
+    Lua,
+    /// JavaScript.
+    Js,
 }
 
 /// Bidirectional mapping between primitive type spellings across languages.
@@ -76,7 +86,11 @@ impl TypeMap {
         Self::default()
     }
 
-    /// Create the built-in map covering the common C++/Rust/C# primitives.
+    /// Create the built-in map covering the common C++/Rust/C#/Python/JS primitives.
+    ///
+    /// Python columns are PEP-484 type-hint spellings and JS columns are JSDoc type spellings.
+    /// Lua is untyped and carries no output spelling: [`render`](TypeMap::render) returns `None`
+    /// for [`TargetLanguage::Lua`], and the Lua backend never asks for one.
     ///
     /// # Returns
     ///
@@ -85,35 +99,37 @@ impl TypeMap {
     pub fn builtin() -> Self {
         let mut map = Self::empty();
 
-        // (primitive, [recognized spellings], cpp, rust, csharp)
-        let table: &[(PrimitiveType, &[&str], &str, &str, &str)] = &[
-            (PrimitiveType::Bool, &["bool"], "bool", "bool", "bool"),
-            (PrimitiveType::I8, &["int8_t", "i8", "sbyte", "signed char"], "int8_t", "i8", "sbyte"),
-            (PrimitiveType::U8, &["uint8_t", "u8", "byte", "unsigned char"], "uint8_t", "u8", "byte"),
-            (PrimitiveType::I16, &["int16_t", "i16", "short"], "int16_t", "i16", "short"),
-            (PrimitiveType::U16, &["uint16_t", "u16", "ushort"], "uint16_t", "u16", "ushort"),
-            (PrimitiveType::I32, &["int32_t", "i32", "int"], "int32_t", "i32", "int"),
-            (PrimitiveType::U32, &["uint32_t", "u32", "uint", "unsigned int"], "uint32_t", "u32", "uint"),
-            (PrimitiveType::I64, &["int64_t", "i64", "long"], "int64_t", "i64", "long"),
-            (PrimitiveType::U64, &["uint64_t", "u64", "ulong"], "uint64_t", "u64", "ulong"),
-            (PrimitiveType::I128, &["__int128", "i128", "Int128"], "__int128", "i128", "Int128"),
-            (PrimitiveType::U128, &["unsigned __int128", "u128", "UInt128"], "unsigned __int128", "u128", "UInt128"),
-            (PrimitiveType::ISize, &["intptr_t", "isize", "nint"], "intptr_t", "isize", "nint"),
-            (PrimitiveType::USize, &["uintptr_t", "size_t", "usize", "nuint"], "uintptr_t", "usize", "nuint"),
-            (PrimitiveType::F32, &["float", "f32", "single"], "float", "f32", "float"),
-            (PrimitiveType::F64, &["double", "f64"], "double", "f64", "double"),
-            (PrimitiveType::Char, &["char"], "char", "char", "char"),
-            (PrimitiveType::Void, &["void", "()"], "void", "()", "void"),
-            (PrimitiveType::Str, &["string", "std::string", "String"], "std::string", "String", "string"),
+        // (primitive, [recognized spellings], cpp, rust, csharp, python, js)
+        let table: &[BuiltinRow] = &[
+            (PrimitiveType::Bool, &["bool"], "bool", "bool", "bool", "bool", "boolean"),
+            (PrimitiveType::I8, &["int8_t", "i8", "sbyte", "signed char"], "int8_t", "i8", "sbyte", "int", "number"),
+            (PrimitiveType::U8, &["uint8_t", "u8", "byte", "unsigned char"], "uint8_t", "u8", "byte", "int", "number"),
+            (PrimitiveType::I16, &["int16_t", "i16", "short"], "int16_t", "i16", "short", "int", "number"),
+            (PrimitiveType::U16, &["uint16_t", "u16", "ushort"], "uint16_t", "u16", "ushort", "int", "number"),
+            (PrimitiveType::I32, &["int32_t", "i32", "int"], "int32_t", "i32", "int", "int", "number"),
+            (PrimitiveType::U32, &["uint32_t", "u32", "uint", "unsigned int"], "uint32_t", "u32", "uint", "int", "number"),
+            (PrimitiveType::I64, &["int64_t", "i64", "long"], "int64_t", "i64", "long", "int", "number"),
+            (PrimitiveType::U64, &["uint64_t", "u64", "ulong"], "uint64_t", "u64", "ulong", "int", "number"),
+            (PrimitiveType::I128, &["__int128", "i128", "Int128"], "__int128", "i128", "Int128", "int", "number"),
+            (PrimitiveType::U128, &["unsigned __int128", "u128", "UInt128"], "unsigned __int128", "u128", "UInt128", "int", "number"),
+            (PrimitiveType::ISize, &["intptr_t", "isize", "nint"], "intptr_t", "isize", "nint", "int", "number"),
+            (PrimitiveType::USize, &["uintptr_t", "size_t", "usize", "nuint"], "uintptr_t", "usize", "nuint", "int", "number"),
+            (PrimitiveType::F32, &["float", "f32", "single"], "float", "f32", "float", "float", "number"),
+            (PrimitiveType::F64, &["double", "f64"], "double", "f64", "double", "float", "number"),
+            (PrimitiveType::Char, &["char"], "char", "char", "char", "str", "string"),
+            (PrimitiveType::Void, &["void", "()"], "void", "()", "void", "None", "void"),
+            (PrimitiveType::Str, &["string", "std::string", "String"], "std::string", "String", "string", "str", "string"),
         ];
 
-        for (primitive, spellings, cpp, rust, csharp) in table {
+        for (primitive, spellings, cpp, rust, csharp, python, js) in table {
             for spelling in *spellings {
                 map.insert_spelling(*spelling, *primitive);
             }
             map.set_output(*primitive, TargetLanguage::Cpp, *cpp);
             map.set_output(*primitive, TargetLanguage::Rust, *rust);
             map.set_output(*primitive, TargetLanguage::CSharp, *csharp);
+            map.set_output(*primitive, TargetLanguage::Python, *python);
+            map.set_output(*primitive, TargetLanguage::Js, *js);
         }
 
         map

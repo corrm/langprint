@@ -1,8 +1,9 @@
 use crate::{
     backends::BackendItem,
     conversion::{ConversionLog, ConversionResult, ConversionWarning},
-    convert::ConversionConfig,
+    convert::{rename_identifier, ConversionConfig, IdentifierKind},
     ir::{LanguageNamespace, Visibility},
+    type_map::TargetLanguage,
 };
 
 use super::{LuaFunction, LuaFunctionConversionOptions};
@@ -74,7 +75,10 @@ impl BackendItem for LuaModule {
     fn from_ir(input: Self::IrType, options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
         let mut log = ConversionLog::new();
         let config = options.map(|options| options.config.clone()).unwrap_or_default();
-        let function_options = LuaFunctionConversionOptions { config };
+        let function_options = LuaFunctionConversionOptions { config: config.clone() };
+
+        let table_name = rename_identifier(&config, &input.name, TargetLanguage::Lua, IdentifierKind::Namespace);
+        log.add_warnings(table_name.log.warnings);
 
         let mut functions = Vec::new();
         if let Some(input_functions) = input.functions {
@@ -88,7 +92,7 @@ impl BackendItem for LuaModule {
 
         ConversionResult::with_log(
             LuaModule {
-                table_name: input.name,
+                table_name: table_name.value,
                 fields: Vec::new(),
                 functions,
                 doc: input.docs.map(|docs| docs.join("\n")),
