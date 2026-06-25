@@ -26,6 +26,25 @@ pub enum ConversionWarning {
     Other(String),
 }
 
+/// Build the warning reporting that an untyped backend dropped an item's annotations.
+///
+/// Untyped backends (Python ctypes, Lua, JS) have no native attribute model, so IR
+/// [`Annotation`](crate::ir::Annotation)s and [`RawAttribute`](crate::ir::RawAttribute)s cannot
+/// cross. One concise warning per item — not per annotation — keeps the report honest without spam.
+///
+/// # Arguments
+///
+/// * `count` - Total number of annotations plus raw attributes dropped.
+/// * `kind` - The item kind (e.g. `"struct"`, `"function"`, `"class"`).
+/// * `name` - The item's source name.
+/// * `language` - The target language with no attribute model.
+pub fn dropped_annotations_warning(count: usize, kind: &str, name: &str, language: &str) -> ConversionWarning {
+    ConversionWarning::UnsupportedFeature {
+        feature: format!("{count} annotation(s) on {kind} `{name}`"),
+        resolution: format!("{language} has no native attribute model; dropped"),
+    }
+}
+
 /// Log of conversion warnings.
 #[derive(Debug, Clone, Default)]
 pub struct ConversionLog {

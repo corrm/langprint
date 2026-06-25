@@ -1,6 +1,6 @@
 use crate::{
     backends::BackendItem,
-    conversion::{ConversionLog, ConversionResult},
+    conversion::{dropped_annotations_warning, ConversionLog, ConversionResult},
     convert::{rename_identifier, ConversionConfig, IdentifierKind},
     ir::{LanguageBase, LanguageField, LanguageStruct, LanguageStructKind, Visibility},
     type_map::TargetLanguage,
@@ -98,6 +98,15 @@ impl BackendItem for PythonClass {
 
         let name = rename_identifier(&config, &input.name, TargetLanguage::Python, IdentifierKind::Type);
         log.add_warnings(name.log.warnings);
+
+        if !input.annotations.is_empty() || !input.raw_attributes.is_empty() {
+            log.add_warning(dropped_annotations_warning(
+                input.annotations.len() + input.raw_attributes.len(),
+                "class",
+                &input.name,
+                "Python",
+            ));
+        }
 
         let mut fields = Vec::with_capacity(input.fields.len());
         for field in input.fields {

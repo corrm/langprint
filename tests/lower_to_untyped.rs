@@ -5,13 +5,15 @@
 
 use langprint::backends::js_backend::{JsClass, JsFunction};
 use langprint::backends::lua_backend::{LuaBackend, LuaFunction};
-use langprint::backends::python_backend::{PythonClass, PythonFunction};
+use langprint::backends::python_backend::{PythonBackend, PythonClass, PythonFunction, PythonStruct};
 use langprint::backends::BackendItem;
+use langprint::conversion::ConversionWarning;
 use langprint::ir::{
-    LanguageBase, LanguageField, LanguageFunction, LanguageFunctionParameter, LanguageStruct, LanguageStructKind,
-    Visibility,
+    Annotation, LanguageBase, LanguageField, LanguageFunction, LanguageFunctionParameter, LanguageStruct,
+    LanguageStructKind, RawAttribute, Visibility,
 };
-use langprint::renderers::FunctionRenderer;
+use langprint::renderers::{FunctionRenderer, StructRenderer};
+use langprint::type_map::TargetLanguage;
 
 /// A neutral function as if projected from a typed backend: PascalCase name, `i32`/`f64` params,
 /// an `f64` return. Lowering must rename to the target convention and re-spell the types.
@@ -132,6 +134,116 @@ fn lowers_class_to_js_single_extends_with_warning() {
         .warnings
         .iter()
         .any(|warning| matches!(warning, langprint::conversion::ConversionWarning::UnsupportedFeature { .. })));
+}
+
+/// A neutral struct (not a class) with primitive fields, as if destined for a ctypes `Structure`.
+fn neutral_ctypes_struct(fields: Vec<LanguageField>) -> LanguageStruct {
+    LanguageStruct {
+        visibility: Visibility::Public,
+        struct_kind: LanguageStructKind::Struct,
+        is_abstract: false,
+        is_final: false,
+        name: "Vec2".to_string(),
+        generic_args: Vec::new(),
+        bases: Vec::new(),
+        fields,
+        methods: Vec::new(),
+        docs: None,
+        annotations: Vec::new(),
+        raw_attributes: Vec::new(),
+    }
+}
+
+fn primitive_field(name: &str, field_type: &str) -> LanguageField {
+    LanguageField {
+        name: name.to_string(),
+        field_type: field_type.to_string(),
+        visibility: Visibility::Public,
+        is_static: false,
+        is_const: false,
+        docs: None,
+        annotations: Vec::new(),
+        raw_attributes: Vec::new(),
+    }
+}
+
+fn render_python_struct(value: &PythonStruct) -> String {
+    let backend = PythonBackend::default();
+    let mut level = 0;
+    backend
+        .render_struct(value, None::<&str>, None::<&str>, None, &mut level)
+        .unwrap()
+}
+
+#[test]
+fn python_struct_from_ir_maps_primitives_to_ctypes() {
+    let input = neutral_ctypes_struct(vec![
+        primitive_field("X", "f64"),
+        primitive_field("Count", "i32"),
+    ]);
+    let result = PythonStruct::from_ir(input, None);
+    let rendered = render_python_struct(&result.value);
+
+    assert!(rendered.contains("ctypes.c_double"), "rendered: {rendered}");
+    assert!(rendered.contains("ctypes.c_int32"), "rendered: {rendered}");
+    assert!(!rendered.contains("f64"), "literal IR spelling leaked: {rendered}");
+    assert!(!rendered.contains("i32"), "literal IR spelling leaked: {rendered}");
+}
+
+#[test]
+fn python_struct_from_ir_passes_unknown_ctype_verbatim() {
+    let input = neutral_ctypes_struct(vec![
+        primitive_field("Handle", "ctypes.c_void_p"),
+        primitive_field("Nested", "SomeStructure"),
+    ]);
+    let result = PythonStruct::from_ir(input, None);
+    let rendered = render_python_struct(&result.value);
+
+    assert!(rendered.contains("ctypes.c_void_p"), "rendered: {rendered}");
+    assert!(rendered.contains("SomeStructure"), "rendered: {rendered}");
+    // Verbatim pass-through of a non-primitive ctype is legitimate — it must not
+    // raise an UnsupportedFeature warning (rename warnings are unrelated).
+    assert!(
+        !result
+            .log
+            .warnings
+            .iter()
+            .any(|warning| matches!(warning, ConversionWarning::UnsupportedFeature { .. })),
+        "verbatim pass-through must not warn: {:?}",
+        result.log.warnings
+    );
+}
+
+fn mentions_drop(warnings: &[ConversionWarning]) -> bool {
+    warnings.iter().any(|warning| {
+        matches!(
+            warning,
+            ConversionWarning::UnsupportedFeature { resolution, .. }
+                if resolution.contains("no native attribute model")
+        )
+    })
+}
+
+#[test]
+fn untyped_from_ir_warns_on_dropped_annotations() {
+    let mut annotated_struct = neutral_struct();
+    annotated_struct.annotations = vec![Annotation::ReprC];
+
+    let mut annotated_function = neutral_function();
+    annotated_function.raw_attributes = vec![RawAttribute {
+        source: TargetLanguage::Rust,
+        text: "inline".to_string(),
+    }];
+
+    assert!(mentions_drop(&PythonClass::from_ir(annotated_struct.clone(), None).log.warnings));
+    assert!(mentions_drop(&PythonFunction::from_ir(annotated_function.clone(), None).log.warnings));
+    assert!(mentions_drop(&JsClass::from_ir(annotated_struct.clone(), None).log.warnings));
+    assert!(mentions_drop(&JsFunction::from_ir(annotated_function.clone(), None).log.warnings));
+    assert!(mentions_drop(&LuaFunction::from_ir(annotated_function, None).log.warnings));
+
+    // An item with no annotations produces no such warning.
+    assert!(!mentions_drop(&PythonClass::from_ir(neutral_struct(), None).log.warnings));
+    assert!(!mentions_drop(&LuaFunction::from_ir(neutral_function(), None).log.warnings));
 }
 
 #[test]

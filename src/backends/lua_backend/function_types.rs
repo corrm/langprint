@@ -1,6 +1,6 @@
 use crate::{
     backends::BackendItem,
-    conversion::{ConversionLog, ConversionResult, ConversionWarning},
+    conversion::{dropped_annotations_warning, ConversionLog, ConversionResult, ConversionWarning},
     convert::{rename_identifier, ConversionConfig, IdentifierKind},
     ir::{LanguageFunction, LanguageFunctionParameter, Visibility},
     type_map::TargetLanguage,
@@ -76,6 +76,14 @@ impl BackendItem for LuaFunction {
         if input.return_type.is_some() {
             log.add_warning(ConversionWarning::Other(
                 "Lua functions are untyped; dropping return type".to_string(),
+            ));
+        }
+        if !input.annotations.is_empty() || !input.raw_attributes.is_empty() {
+            log.add_warning(dropped_annotations_warning(
+                input.annotations.len() + input.raw_attributes.len(),
+                "function",
+                &input.name,
+                "Lua",
             ));
         }
 

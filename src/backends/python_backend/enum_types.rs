@@ -1,6 +1,6 @@
 use crate::{
     backends::BackendItem,
-    conversion::{ConversionLog, ConversionResult},
+    conversion::{dropped_annotations_warning, ConversionLog, ConversionResult},
     convert::{rename_identifier, ConversionConfig, IdentifierKind},
     ir::{EnumVariant, EnumVariantValue, LanguageEnum, Visibility},
     type_map::TargetLanguage,
@@ -62,6 +62,15 @@ impl BackendItem for PythonEnum {
 
         let name = rename_identifier(&config, &input.name, TargetLanguage::Python, IdentifierKind::Type);
         log.add_warnings(name.log.warnings);
+
+        if !input.annotations.is_empty() || !input.raw_attributes.is_empty() {
+            log.add_warning(dropped_annotations_warning(
+                input.annotations.len() + input.raw_attributes.len(),
+                "enum",
+                &input.name,
+                "Python",
+            ));
+        }
 
         let mut members = Vec::with_capacity(input.variants.len());
         for (index, variant) in input.variants.into_iter().enumerate() {

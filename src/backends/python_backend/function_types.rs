@@ -1,6 +1,6 @@
 use crate::{
     backends::BackendItem,
-    conversion::{ConversionLog, ConversionResult},
+    conversion::{dropped_annotations_warning, ConversionLog, ConversionResult},
     convert::{map_type, rename_identifier, ConversionConfig, IdentifierKind},
     ir::{LanguageFunction, LanguageFunctionParameter, Visibility},
     type_map::{PrimitiveType, TargetLanguage},
@@ -133,6 +133,15 @@ impl BackendItem for PythonFunction {
 
         let name = rename_identifier(&config, &input.name, TargetLanguage::Python, IdentifierKind::Function);
         log.add_warnings(name.log.warnings);
+
+        if !input.annotations.is_empty() || !input.raw_attributes.is_empty() {
+            log.add_warning(dropped_annotations_warning(
+                input.annotations.len() + input.raw_attributes.len(),
+                "function",
+                &input.name,
+                "Python",
+            ));
+        }
 
         let parameter_options = PythonParameterConversionOptions { config: config.clone() };
         let mut parameters = Vec::with_capacity(input.parameters.len());
