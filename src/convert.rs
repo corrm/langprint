@@ -1,6 +1,7 @@
 //! Shared cross-language conversion configuration and the leaf helpers every backend's `from_ir`
 //! uses to re-spell types and apply idiomatic identifier renaming.
 
+use std::collections::{HashMap, HashSet};
 use std::fmt;
 use std::sync::Arc;
 
@@ -56,6 +57,10 @@ pub struct ConversionConfig {
     pub rename: bool,
     /// A custom type resolver consulted before the [`TypeMap`].
     pub type_override: Option<TypeOverride>,
+    /// The per-`(language, kind)` case convention applied when renaming.
+    pub naming_map: NamingMap,
+    /// The per-language reserved words an identifier is escaped against.
+    pub keyword_map: KeywordMap,
     /// Opt-in lifecycle hooks invoked on the cross-language IR path.
     pub hooks: Option<Arc<dyn ConversionHooks>>,
 }
@@ -66,6 +71,8 @@ impl fmt::Debug for ConversionConfig {
             .field("type_map", &self.type_map)
             .field("rename", &self.rename)
             .field("type_override", &self.type_override.as_ref().map(|_| "<fn>"))
+            .field("naming_map", &self.naming_map)
+            .field("keyword_map", &self.keyword_map)
             .field("hooks", &self.hooks.as_ref().map(|_| "<hooks>"))
             .finish()
     }
@@ -77,6 +84,8 @@ impl Default for ConversionConfig {
             type_map: Arc::new(TypeMap::builtin()),
             rename: true,
             type_override: None,
+            naming_map: NamingMap::builtin(),
+            keyword_map: KeywordMap::builtin(),
             hooks: None,
         }
     }
@@ -89,13 +98,15 @@ impl ConversionConfig {
             type_map: Arc::new(type_map),
             rename,
             type_override: None,
+            naming_map: NamingMap::builtin(),
+            keyword_map: KeywordMap::builtin(),
             hooks: None,
         }
     }
 }
 
 /// The kind of identifier being renamed; selects the target convention.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum IdentifierKind {
     /// A type name (struct/class/enum).
     Type,
@@ -111,35 +122,207 @@ pub enum IdentifierKind {
 
 /// The case style an identifier is rewritten into.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum CaseStyle {
+pub enum CaseStyle {
+    /// `snake_case`.
     Snake,
+    /// `PascalCase`.
     Pascal,
+    /// `camelCase`.
     Camel,
 }
 
-/// The naming convention a language applies to an identifier kind, if any.
-fn convention(language: TargetLanguage, kind: IdentifierKind) -> Option<CaseStyle> {
-    match language {
-        TargetLanguage::Cpp => None,
-        TargetLanguage::Rust => match kind {
-            IdentifierKind::Function | IdentifierKind::Field | IdentifierKind::Namespace => Some(CaseStyle::Snake),
-            IdentifierKind::Type | IdentifierKind::EnumMember => None,
-        },
-        TargetLanguage::CSharp => Some(CaseStyle::Pascal),
-        TargetLanguage::Python => match kind {
-            IdentifierKind::Function | IdentifierKind::Field | IdentifierKind::Namespace => Some(CaseStyle::Snake),
-            IdentifierKind::Type => Some(CaseStyle::Pascal),
-            IdentifierKind::EnumMember => None,
-        },
-        TargetLanguage::Lua => match kind {
-            IdentifierKind::Function | IdentifierKind::Field | IdentifierKind::Namespace => Some(CaseStyle::Snake),
-            IdentifierKind::Type | IdentifierKind::EnumMember => None,
-        },
-        TargetLanguage::Js => match kind {
-            IdentifierKind::Function | IdentifierKind::Field => Some(CaseStyle::Camel),
-            IdentifierKind::Type => Some(CaseStyle::Pascal),
-            IdentifierKind::Namespace | IdentifierKind::EnumMember => None,
-        },
+/// The per-`(language, kind)` case convention applied when renaming identifiers.
+///
+/// A cross-language mapping table mirroring [`TypeMap`]: a [`builtin`](NamingMap::builtin) table
+/// encodes each language's idiomatic case per [`IdentifierKind`], and callers can override, extend,
+/// or clear it. A pair with no entry leaves the identifier verbatim.
+#[derive(Clone, Debug, Default)]
+pub struct NamingMap {
+    styles: HashMap<(TargetLanguage, IdentifierKind), CaseStyle>,
+}
+
+impl NamingMap {
+    /// Create an empty map; every identifier is left verbatim.
+    pub fn empty() -> Self {
+        Self::default()
+    }
+
+    /// Create the built-in table of idiomatic case conventions per language and identifier kind.
+    pub fn builtin() -> Self {
+        use CaseStyle::{Camel, Pascal, Snake};
+        use IdentifierKind::{Field, Function, Namespace, Type};
+        use TargetLanguage::{CSharp, Js, Lua, Python, Rust};
+
+        let mut map = Self::empty();
+
+        for kind in [Function, Field, Namespace] {
+            map.insert(Rust, kind, Snake);
+            map.insert(Python, kind, Snake);
+            map.insert(Lua, kind, Snake);
+        }
+        map.insert(Python, Type, Pascal);
+
+        for kind in [Type, Function, Field, Namespace, IdentifierKind::EnumMember] {
+            map.insert(CSharp, kind, Pascal);
+        }
+
+        map.insert(Js, Function, Camel);
+        map.insert(Js, Field, Camel);
+        map.insert(Js, Type, Pascal);
+
+        map
+    }
+
+    /// Set the case style for a `(language, kind)` pair (extends or overrides).
+    pub fn insert(&mut self, language: TargetLanguage, kind: IdentifierKind, style: CaseStyle) {
+        self.styles.insert((language, kind), style);
+    }
+
+    /// Merge another map into this one; entries from `other` take precedence.
+    pub fn extend(&mut self, other: NamingMap) {
+        self.styles.extend(other.styles);
+    }
+
+    /// Remove every entry.
+    pub fn clear(&mut self) {
+        self.styles.clear();
+    }
+
+    /// Resolve the case style for a `(language, kind)` pair, or `None` if none is configured.
+    pub fn resolve(&self, language: TargetLanguage, kind: IdentifierKind) -> Option<CaseStyle> {
+        self.styles.get(&(language, kind)).copied()
+    }
+}
+
+/// The per-language reserved words an identifier is escaped against when it would otherwise collide.
+///
+/// A cross-language mapping table mirroring [`TypeMap`]: a [`builtin`](KeywordMap::builtin) set of
+/// reserved words per language drives [`escape`](KeywordMap::escape), and callers can extend or clear
+/// it. Escaping is per-language idiom (Rust `r#ident`, C# `@ident`, others `ident_`).
+#[derive(Clone, Debug, Default)]
+pub struct KeywordMap {
+    reserved: HashMap<TargetLanguage, HashSet<String>>,
+}
+
+impl KeywordMap {
+    /// Create an empty map that reserves nothing.
+    pub fn empty() -> Self {
+        Self::default()
+    }
+
+    /// Create the built-in reserved-word set per language.
+    pub fn builtin() -> Self {
+        let mut map = Self::empty();
+
+        let python = [
+            "False", "None", "True", "and", "as", "assert", "async", "await", "break", "class",
+            "continue", "def", "del", "elif", "else", "except", "finally", "for", "from", "global",
+            "if", "import", "in", "is", "lambda", "nonlocal", "not", "or", "pass", "raise",
+            "return", "try", "while", "with", "yield", "match", "case", "type",
+        ];
+        let rust = [
+            "as", "break", "const", "continue", "crate", "dyn", "else", "enum", "extern", "false",
+            "fn", "for", "if", "impl", "in", "let", "loop", "match", "mod", "move", "mut", "pub",
+            "ref", "return", "self", "Self", "static", "struct", "super", "trait", "true", "type",
+            "unsafe", "use", "where", "while", "async", "await", "abstract", "become", "box", "do",
+            "final", "macro", "override", "priv", "typeof", "unsized", "virtual", "yield", "try",
+            "union",
+        ];
+        let csharp = [
+            "abstract", "as", "base", "bool", "break", "byte", "case", "catch", "char", "checked",
+            "class", "const", "continue", "decimal", "default", "delegate", "do", "double", "else",
+            "enum", "event", "explicit", "extern", "false", "finally", "fixed", "float", "for",
+            "foreach", "goto", "if", "implicit", "in", "int", "interface", "internal", "is", "lock",
+            "long", "namespace", "new", "null", "object", "operator", "out", "override", "params",
+            "private", "protected", "public", "readonly", "ref", "return", "sbyte", "sealed",
+            "short", "sizeof", "stackalloc", "static", "string", "struct", "switch", "this",
+            "throw", "true", "try", "typeof", "uint", "ulong", "unchecked", "unsafe", "ushort",
+            "using", "virtual", "void", "volatile", "while",
+        ];
+        let cpp = [
+            "alignas", "alignof", "and", "asm", "auto", "bool", "break", "case", "catch", "char",
+            "class", "const", "constexpr", "continue", "decltype", "default", "delete", "do",
+            "double", "else", "enum", "explicit", "export", "extern", "false", "float", "for",
+            "friend", "goto", "if", "inline", "int", "long", "mutable", "namespace", "new",
+            "noexcept", "nullptr", "operator", "or", "private", "protected", "public", "register",
+            "return", "short", "signed", "sizeof", "static", "struct", "switch", "template", "this",
+            "throw", "true", "try", "typedef", "typeid", "typename", "union", "unsigned", "using",
+            "virtual", "void", "volatile", "while", "xor",
+        ];
+        let js = [
+            "await", "break", "case", "catch", "class", "const", "continue", "debugger", "default",
+            "delete", "do", "else", "enum", "export", "extends", "false", "finally", "for",
+            "function", "if", "import", "in", "instanceof", "new", "null", "return", "super",
+            "switch", "this", "throw", "true", "try", "typeof", "var", "void", "while", "with",
+            "yield", "let", "static",
+        ];
+        let lua = [
+            "and", "break", "do", "else", "elseif", "end", "false", "for", "function", "goto", "if",
+            "in", "local", "nil", "not", "or", "repeat", "return", "then", "true", "until", "while",
+        ];
+
+        for word in python {
+            map.insert(TargetLanguage::Python, word);
+        }
+        for word in rust {
+            map.insert(TargetLanguage::Rust, word);
+        }
+        for word in csharp {
+            map.insert(TargetLanguage::CSharp, word);
+        }
+        for word in cpp {
+            map.insert(TargetLanguage::Cpp, word);
+        }
+        for word in js {
+            map.insert(TargetLanguage::Js, word);
+        }
+        for word in lua {
+            map.insert(TargetLanguage::Lua, word);
+        }
+
+        map
+    }
+
+    /// Reserve a word in a language (extends or overrides).
+    pub fn insert(&mut self, language: TargetLanguage, word: impl Into<String>) {
+        self.reserved.entry(language).or_default().insert(word.into());
+    }
+
+    /// Whether a word is reserved in a language.
+    pub fn contains(&self, language: TargetLanguage, word: &str) -> bool {
+        self.reserved.get(&language).is_some_and(|set| set.contains(word))
+    }
+
+    /// Merge another map into this one.
+    pub fn extend(&mut self, other: KeywordMap) {
+        for (language, words) in other.reserved {
+            self.reserved.entry(language).or_default().extend(words);
+        }
+    }
+
+    /// Remove every reserved word.
+    pub fn clear(&mut self) {
+        self.reserved.clear();
+    }
+
+    /// Escape an identifier that collides with a reserved word, per the target language's idiom.
+    ///
+    /// Rust uses raw identifiers (`r#ident`) except for the non-rawable keywords `crate`, `self`,
+    /// `Self`, and `super`, which fall back to `ident_`. C# prefixes `@`. Every other language
+    /// suffixes `_`. A non-reserved identifier is returned unchanged.
+    pub fn escape(&self, language: TargetLanguage, ident: &str) -> String {
+        if !self.contains(language, ident) {
+            return ident.to_string();
+        }
+
+        match language {
+            TargetLanguage::Rust => match ident {
+                "crate" | "self" | "Self" | "super" => format!("{ident}_"),
+                _ => format!("r#{ident}"),
+            },
+            TargetLanguage::CSharp => format!("@{ident}"),
+            _ => format!("{ident}_"),
+        }
     }
 }
 
@@ -185,37 +368,39 @@ pub fn map_type(config: &ConversionConfig, spelling: &str, language: TargetLangu
 ///
 /// # Returns
 ///
-/// The renamed identifier, or the original; a `NamingConventionChanged` warning is attached only
-/// when the identifier actually changes.
+/// The renamed identifier, or the original; a `NamingConventionChanged` warning is attached when the
+/// identifier changes — either from case conversion or from escaping a collision with a target
+/// reserved word. Keyword escaping applies even when renaming is off, since a collision is a
+/// correctness issue regardless of case style.
 pub fn rename_identifier(
     config: &ConversionConfig,
     name: &str,
     language: TargetLanguage,
     kind: IdentifierKind,
 ) -> ConversionResult<String> {
-    if !config.rename {
-        return ConversionResult::new(name.to_string());
-    }
-
-    let Some(style) = convention(language, kind) else {
-        return ConversionResult::new(name.to_string());
+    let candidate = if config.rename {
+        match config.naming_map.resolve(language, kind) {
+            Some(CaseStyle::Snake) => to_snake_case(name),
+            Some(CaseStyle::Pascal) => to_pascal_case(name),
+            Some(CaseStyle::Camel) => to_camel_case(name),
+            None => name.to_string(),
+        }
+    } else {
+        name.to_string()
     };
 
-    let converted = match style {
-        CaseStyle::Snake => to_snake_case(name),
-        CaseStyle::Pascal => to_pascal_case(name),
-        CaseStyle::Camel => to_camel_case(name),
-    };
+    let escaped = config.keyword_map.escape(language, &candidate);
+    let final_name = if escaped != candidate { escaped } else { candidate };
 
-    if converted == name {
-        return ConversionResult::new(converted);
+    if final_name == name {
+        return ConversionResult::new(final_name);
     }
 
     ConversionResult::with_warning(
-        converted.clone(),
+        final_name.clone(),
         ConversionWarning::NamingConventionChanged {
             original: name.to_string(),
-            converted,
+            converted: final_name,
         },
     )
 }

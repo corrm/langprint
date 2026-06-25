@@ -167,6 +167,31 @@ language's convention (Rust `snake_case` fns/fields; C# `PascalCase` types/metho
 members; C++ left verbatim) and reports each change as `ConversionWarning::NamingConventionChanged`.
 Set `rename: false` to keep identifiers exactly as written.
 
+**NamingMap** drives those conventions as a clone-and-override table like `TypeMap`, keyed by
+`(TargetLanguage, IdentifierKind)`. Override a single entry — e.g. make Python functions
+`PascalCase`:
+
+```rust
+use langprint::{CaseStyle, ConversionConfig, NamingMap, TargetLanguage};
+use langprint::convert::IdentifierKind;
+
+let mut naming_map = NamingMap::builtin();
+naming_map.insert(TargetLanguage::Python, IdentifierKind::Function, CaseStyle::Pascal);
+let config = ConversionConfig { naming_map, ..ConversionConfig::default() };
+```
+
+**KeywordMap** escapes identifiers that collide with a target reserved word (Rust `r#ident`, C#
+`@ident`, others `ident_`) — applied even with `rename` off, since a collision is a correctness
+issue. A field named `class` becomes `class_` in Python; extend the set for your own reserved words:
+
+```rust
+use langprint::{ConversionConfig, KeywordMap, TargetLanguage};
+
+let mut keyword_map = KeywordMap::builtin();
+keyword_map.insert(TargetLanguage::Python, "mykw");   // also escape `mykw` → `mykw_`
+let config = ConversionConfig { keyword_map, ..ConversionConfig::default() };
+```
+
 ## Namespaces
 
 Namespaces/modules are first-class and render across every backend — C++ `namespace X { … }`,
