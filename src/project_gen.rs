@@ -629,7 +629,7 @@ fn is_allowed_name_char(c: char) -> bool {
 ///
 /// Every character outside `[A-Za-z0-9_.+-]` is replaced with `_`. An input
 /// that is empty (or becomes empty) yields `"Project"`, so the result always
-/// satisfies [`validate_spec`]'s non-empty and charset invariants.
+/// satisfies `validate_spec`'s non-empty and charset invariants.
 ///
 /// # Arguments
 ///

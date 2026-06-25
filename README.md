@@ -3,9 +3,14 @@
 A multi-language source-declaration code-generation library for Rust.
 
 langprint builds and renders **declarations** — types, fields, enums, function signatures,
-visibility, namespaces, and docs — for **C++, Rust, and C#**, and can convert a declaration from
-one language into another. It is the engine behind generated SDKs: it does not parse or execute
-code, it emits the *shape* of an API.
+visibility, namespaces, and docs — for **C++, Rust, C#, Python, Lua, and JavaScript**, and can
+convert a declaration from one language into another. It is the engine behind generated SDKs: it
+does not parse or execute code, it emits the *shape* of an API.
+
+The three typed languages (C++, Rust, C#) have rich, full-power native models and participate in
+conversion both ways. The three near-untyped languages (Python, Lua, JS) are deliberately thin and
+are **render targets only** — you lower the IR *to* them; you never transpile *from* them. No fake
+type system is bolted onto a language that does not have one.
 
 ## Installation
 
@@ -47,7 +52,8 @@ languages, and every feature that cannot cross is **reported, never silently dro
 - A C# class with a base and an interface → Rust: both are reported as dropped (Rust has no
   inheritance), while the fields cross cleanly.
 
-You always know exactly what a conversion gave up.
+You always know exactly what a conversion gave up. Attributes are **no longer dropped wholesale** —
+see *Annotations* below.
 
 ## Quick start
 
@@ -152,13 +158,24 @@ has no namespace-level free functions — it is dropped with a `ConversionWarnin
 
 ## Backends
 
-| Language | Native model prefix | Notable features modelled |
-| -------- | ------------------- | ------------------------- |
-| C++      | `Cpp*`              | structs/classes/unions, bit-fields, `alignas`, enum classes, templates |
-| Rust     | `Rust*`             | structs + inherent `impl` blocks, derives, tuple structs, enums with data |
-| C#       | `CSharp*`           | classes/structs/records, properties, interfaces, `[Flags]` enums, sealing rules |
+| Language | Native model prefix | Role | Notable features modelled |
+| -------- | ------------------- | ---- | ------------------------- |
+| C++      | `Cpp*`              | typed (to/from IR) | structs/classes/unions, bit-fields, `alignas`, enum classes, templates, `extern "C"` |
+| Rust     | `Rust*`             | typed (to/from IR) | structs + inherent `impl` blocks, derives, tuple structs, enums with data, `unsafe`, `extern "C"` ABI |
+| C#       | `CSharp*`           | typed (to/from IR) | classes/structs/records, properties, interfaces, `[Flags]` enums, sealing rules, `unsafe` modifier (methods/classes, never structs) |
+| Python   | `Python*`           | thin, render target (from IR only) | `ctypes.Structure`, `enum.IntEnum`, `class`/`def` with body slot, PEP-484 hints where real |
+| Lua      | `Lua*`              | thin, render target (from IR only) | module tables (`local M = {}` … `return M`), functions, field assignment; no types/visibility |
+| JS       | `Js*`               | thin, render target (from IR only) | `class`/`extends`, functions, fields, optional JSDoc (signatures stay untyped) |
 
 `langprint::AVAILABLE_BACKENDS` is the live list.
+
+### Native FFI qualifiers
+
+Declaration-level FFI qualifiers are modelled natively, not via hooks: Rust `abi: Option<String>`
+renders `pub unsafe extern "C" fn …`; C++ `is_extern_c` renders the `extern "C"` linkage specifier;
+C# `is_unsafe` renders the `unsafe` modifier on methods and classes. C# **structs are kept safe by
+construction** — `CSharpTypeKind::can_be_unsafe()` returns `false` for `Struct`, so a struct can
+never render `unsafe`.
 
 ## Body-slot contract
 
@@ -180,6 +197,48 @@ RustFunction { name: "add".into(), body: Some(vec!["a + b".into()]), /* … */ }
 C++ gates the body slot behind its `render_definition` render option (a header normally wants
 declarations only); set `render_definition: true` to emit the block. The contract is locked by
 `tests/body_slot_contract.rs`.
+
+## Annotations
+
+Native attributes, derives, `repr`, and layout no longer vanish when a declaration crosses the IR.
+They are preserved in two tiers (`langprint::ir::{Annotation, RawAttribute}`):
+
+- **Tier 1 — curated layout vocabulary.** A small, closed `Annotation` enum of source-neutral
+  facts — `ReprC`, `Packed`, `Aligned(n)` — that **translates** across languages. A concept is
+  admitted only when at least two backends each map it to native syntax, so Rust `#[repr(C)]`
+  becomes C# `[StructLayout(LayoutKind.Sequential)]`, and Rust `#[repr(align(8))]` becomes C++
+  `alignas(8)`. The IR stays target-blind: a variant names a fact, not a target's spelling.
+- **Tier 2 — opaque carry.** Everything else (`derive(Clone)`, `[DllImport]`, …) is carried verbatim
+  as a `RawAttribute { source, text }`. It round-trips **losslessly within its own language** and is
+  dropped — with a warning — only when projected to a *different* target.
+
+## Imports
+
+Each backend can track and render its own imports — deduplicated and deterministically ordered — in
+native syntax: C++ `#include`, C# `using`, Rust `use`, Python `import`/`from … import`, Lua
+`require`, JS `import`. An `ImportSet` collects entries; an `ImportMap` (built-in + extensible, like
+`TypeMap`) resolves a referenced type to its import so it appears automatically:
+
+```rust
+use langprint::{ImportMap, ImportSet, TargetLanguage};
+
+let map = ImportMap::builtin(TargetLanguage::Cpp);
+let mut imports = ImportSet::new(TargetLanguage::Cpp);
+imports.add_type_ref("uint32_t", &map); // -> #include <cstdint>
+let header = imports.render();
+```
+
+Import rendering is additive: a backend that registers nothing renders exactly as before.
+
+## Extension hooks
+
+Single-language native generation is lossless and needs no hooks. For the cross-language IR path,
+`ConversionConfig` carries three **opt-in, no-op-by-default** extension points (`langprint::convert`):
+
+- `type_override` — a closure consulted before the `TypeMap` for custom type resolution.
+- `hooks: Option<Arc<dyn ConversionHooks>>` — `after_to_ir_*` / `before_from_ir_*` callbacks (struct,
+  function, enum) to re-apply or remap what the IR cannot carry.
+- `renderers::post_process` — wrap or prepend rendered output (e.g. a `#pragma once` preamble).
 
 ## Project generators
 
