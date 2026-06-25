@@ -1,7 +1,4 @@
-use std::{
-    io::{self},
-    sync::LazyLock,
-};
+use std::io;
 
 use crate::backends::{BackendItem, BackendMetadata};
 
@@ -15,15 +12,13 @@ where
 }
 
 /// Trait for rendering defines.
-#[allow(clippy::declare_interior_mutable_const)]
 pub trait DefinitionRenderer: BackendMetadata {
     /// The type of define to render.
     type DefineType: BackendItem;
     /// The render options type for this renderer.
     type RenderOptions: Default;
 
-    /// The default render options for this renderer.
-    const DEFAULT_RENDER_OPTIONS: LazyLock<Self::RenderOptions> = LazyLock::new(Self::RenderOptions::default);
+    fn default_options() -> Self::RenderOptions { Self::RenderOptions::default() }
 
     /// Render a language-specific define to a writer.
     ///
@@ -72,15 +67,13 @@ pub trait DefinitionRenderer: BackendMetadata {
 }
 
 // Trait for rendering namespaces.
-#[allow(clippy::declare_interior_mutable_const)]
 pub trait NamespaceRenderer: BackendMetadata {
     /// The namespace type for this renderer.
     type NamespaceType: BackendItem;
     /// The render options type for this renderer.
     type RenderOptions: Default;
 
-    /// The default render options for this renderer.
-    const DEFAULT_RENDER_OPTIONS: LazyLock<Self::RenderOptions> = LazyLock::new(Self::RenderOptions::default);
+    fn default_options() -> Self::RenderOptions { Self::RenderOptions::default() }
 
     /// Render a language-specific namespace to a writer.
     ///
@@ -125,7 +118,6 @@ pub trait NamespaceRenderer: BackendMetadata {
     }
 }
 
-#[allow(clippy::declare_interior_mutable_const)]
 /// Trait for rendering constants.
 pub trait ConstantRenderer: BackendMetadata {
     /// The constant type for this renderer.
@@ -133,8 +125,7 @@ pub trait ConstantRenderer: BackendMetadata {
     /// The render options type for this renderer.
     type RenderOptions: Default;
 
-    /// The default render options for this renderer.
-    const DEFAULT_RENDER_OPTIONS: LazyLock<Self::RenderOptions> = LazyLock::new(Self::RenderOptions::default);
+    fn default_options() -> Self::RenderOptions { Self::RenderOptions::default() }
 
     /// Render a language-specific constant to a writer.
     ///
@@ -178,7 +169,6 @@ pub trait ConstantRenderer: BackendMetadata {
     }
 }
 
-#[allow(clippy::declare_interior_mutable_const)]
 /// Trait for rendering functions.
 pub trait FunctionRenderer: BackendMetadata {
     /// The function type for this renderer.
@@ -186,8 +176,7 @@ pub trait FunctionRenderer: BackendMetadata {
     /// The render options type for this renderer.
     type RenderOptions: Default;
 
-    /// The default render options for this renderer.
-    const DEFAULT_RENDER_OPTIONS: LazyLock<Self::RenderOptions> = LazyLock::new(Self::RenderOptions::default);
+    fn default_options() -> Self::RenderOptions { Self::RenderOptions::default() }
 
     /// Render a language-specific function to a writer.
     ///
@@ -231,7 +220,6 @@ pub trait FunctionRenderer: BackendMetadata {
     }
 }
 
-#[allow(clippy::declare_interior_mutable_const)]
 /// Trait for rendering enums.
 pub trait EnumRenderer: BackendMetadata {
     /// The enum type for this renderer.
@@ -241,12 +229,8 @@ pub trait EnumRenderer: BackendMetadata {
     /// The render options type for this renderer.
     type RenderOptions: Default;
 
-    /// The default render options for this renderer.
-    const DEFAULT_RENDER_OPTIONS: LazyLock<Self::RenderOptions> = LazyLock::new(Self::RenderOptions::default);
-
-    /// The default variant render options for this renderer.
-    const DEFAULT_ENUM_VARIANT_RENDER_OPTIONS: LazyLock<Self::EnumVariantRenderOptions> =
-        LazyLock::new(Self::EnumVariantRenderOptions::default);
+    fn default_options() -> Self::RenderOptions { Self::RenderOptions::default() }
+    fn default_variant_options() -> Self::EnumVariantRenderOptions { Self::EnumVariantRenderOptions::default() }
 
     /// Render a language-specific enum to a writer.
     ///
@@ -295,7 +279,6 @@ pub trait EnumRenderer: BackendMetadata {
     }
 }
 
-#[allow(clippy::declare_interior_mutable_const)]
 /// Trait for rendering structs.
 pub trait StructRenderer: BackendMetadata {
     /// The struct type for this renderer.
@@ -303,8 +286,7 @@ pub trait StructRenderer: BackendMetadata {
     /// The render options type for this renderer.
     type RenderOptions: Default;
 
-    /// The default render options for this renderer.
-    const DEFAULT_RENDER_OPTIONS: LazyLock<Self::RenderOptions> = LazyLock::new(Self::RenderOptions::default);
+    fn default_options() -> Self::RenderOptions { Self::RenderOptions::default() }
 
     /// Render a language-specific struct to a writer.
     ///
@@ -349,7 +331,6 @@ pub trait StructRenderer: BackendMetadata {
     }
 }
 
-#[allow(clippy::declare_interior_mutable_const)]
 /// Trait for rendering interfaces.
 pub trait InterfaceRenderer: BackendMetadata {
     /// The interface type for this renderer.
@@ -357,8 +338,7 @@ pub trait InterfaceRenderer: BackendMetadata {
     /// The render options type for this renderer.
     type RenderOptions: Default;
 
-    /// The default render options for this renderer.
-    const DEFAULT_RENDER_OPTIONS: LazyLock<Self::RenderOptions> = LazyLock::new(Self::RenderOptions::default);
+    fn default_options() -> Self::RenderOptions { Self::RenderOptions::default() }
 
     /// Render a language-specific interface to a writer.
     ///

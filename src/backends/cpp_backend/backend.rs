@@ -67,7 +67,7 @@ impl DefinitionRenderer for CppBackend {
         indent_level: &mut i32,
         out: &mut impl Write,
     ) -> Result<(), io::Error> {
-        let binding = <CppBackend as DefinitionRenderer>::DEFAULT_RENDER_OPTIONS;
+        let binding = <CppBackend as DefinitionRenderer>::default_options();
         let options: &CppDefinitionRenderOptions = options.unwrap_or(&binding);
 
         if let Some(before) = before {
@@ -113,7 +113,7 @@ impl ConstantRenderer for CppBackend {
         indent_level: &mut i32,
         out: &mut impl Write,
     ) -> Result<(), io::Error> {
-        let binding = <CppBackend as ConstantRenderer>::DEFAULT_RENDER_OPTIONS;
+        let binding = <CppBackend as ConstantRenderer>::default_options();
         let options: &CppConstantRenderOptions = options.unwrap_or(&binding);
 
         // Add documentation if available and render_docs is enabled
@@ -166,10 +166,10 @@ impl EnumRenderer for CppBackend {
         indent_level: &mut i32,
         out: &mut impl Write,
     ) -> Result<(), io::Error> {
-        let binding = <CppBackend as EnumRenderer>::DEFAULT_RENDER_OPTIONS;
+        let binding = <CppBackend as EnumRenderer>::default_options();
         let options: &CppEnumRenderOptions = options.unwrap_or(&binding);
 
-        let variant_binding = <CppBackend as EnumRenderer>::DEFAULT_ENUM_VARIANT_RENDER_OPTIONS;
+        let variant_binding = <CppBackend as EnumRenderer>::default_variant_options();
         let variant_options: &CppEnumVariantRenderOptions = variant_options.unwrap_or(&variant_binding);
 
         // Add documentation if available and render_docs is enabled
@@ -300,7 +300,7 @@ impl NamespaceRenderer for CppBackend {
         indent_level: &mut i32,
         out: &mut impl Write,
     ) -> Result<(), io::Error> {
-        let binding = <CppBackend as NamespaceRenderer>::DEFAULT_RENDER_OPTIONS;
+        let binding = <CppBackend as NamespaceRenderer>::default_options();
         let options: &CppNamespaceRenderOptions = options.unwrap_or(&binding);
 
         if let Some(before) = before {
@@ -420,7 +420,7 @@ impl FunctionRenderer for CppBackend {
         indent_level: &mut i32,
         out: &mut impl io::Write,
     ) -> Result<(), io::Error> {
-        let binding = <CppBackend as FunctionRenderer>::DEFAULT_RENDER_OPTIONS;
+        let binding = <CppBackend as FunctionRenderer>::default_options();
         let options: &CppFunctionRenderOptions = options.unwrap_or(&binding);
 
         // Write 'before' content if provided
@@ -638,7 +638,7 @@ impl StructRenderer for CppBackend {
         indent_level: &mut i32,
         out: &mut impl Write,
     ) -> Result<(), io::Error> {
-        let binding = <CppBackend as StructRenderer>::DEFAULT_RENDER_OPTIONS;
+        let binding = <CppBackend as StructRenderer>::default_options();
         let options: &CppStructRenderOptions = options.unwrap_or(&binding);
 
         // Write before string if provided

@@ -301,7 +301,7 @@ impl DefinitionRenderer for CSharpBackend {
         indent_level: &mut i32,
         out: &mut impl Write,
     ) -> Result<(), io::Error> {
-        let binding = <CSharpBackend as DefinitionRenderer>::DEFAULT_RENDER_OPTIONS;
+        let binding = <CSharpBackend as DefinitionRenderer>::default_options();
         let options: &CSharpDefinitionRenderOptions = options.unwrap_or(&binding);
 
         if let Some(before) = before {
@@ -350,7 +350,7 @@ impl ConstantRenderer for CSharpBackend {
         indent_level: &mut i32,
         out: &mut impl Write,
     ) -> Result<(), io::Error> {
-        let binding = <CSharpBackend as ConstantRenderer>::DEFAULT_RENDER_OPTIONS;
+        let binding = <CSharpBackend as ConstantRenderer>::default_options();
         let options: &CSharpConstantRenderOptions = options.unwrap_or(&binding);
 
         if let Some(before) = before {
@@ -393,9 +393,9 @@ impl EnumRenderer for CSharpBackend {
         indent_level: &mut i32,
         out: &mut impl Write,
     ) -> Result<(), io::Error> {
-        let binding = <CSharpBackend as EnumRenderer>::DEFAULT_RENDER_OPTIONS;
+        let binding = <CSharpBackend as EnumRenderer>::default_options();
         let options: &CSharpEnumRenderOptions = options.unwrap_or(&binding);
-        let variant_binding = <CSharpBackend as EnumRenderer>::DEFAULT_ENUM_VARIANT_RENDER_OPTIONS;
+        let variant_binding = <CSharpBackend as EnumRenderer>::default_variant_options();
         let variant_options: &CSharpEnumVariantRenderOptions = variant_options.unwrap_or(&variant_binding);
 
         if let Some(before) = before {
@@ -465,7 +465,7 @@ impl FunctionRenderer for CSharpBackend {
         indent_level: &mut i32,
         out: &mut impl Write,
     ) -> Result<(), io::Error> {
-        let binding = <CSharpBackend as FunctionRenderer>::DEFAULT_RENDER_OPTIONS;
+        let binding = <CSharpBackend as FunctionRenderer>::default_options();
         let options: &CSharpMethodRenderOptions = options.unwrap_or(&binding);
 
         if let Some(before) = before {
@@ -492,7 +492,7 @@ impl NamespaceRenderer for CSharpBackend {
         indent_level: &mut i32,
         out: &mut impl Write,
     ) -> Result<(), io::Error> {
-        let binding = <CSharpBackend as NamespaceRenderer>::DEFAULT_RENDER_OPTIONS;
+        let binding = <CSharpBackend as NamespaceRenderer>::default_options();
         let options: &CSharpNamespaceRenderOptions = options.unwrap_or(&binding);
 
         if let Some(before) = before {
@@ -602,7 +602,7 @@ impl StructRenderer for CSharpBackend {
         indent_level: &mut i32,
         out: &mut impl Write,
     ) -> Result<(), io::Error> {
-        let binding = <CSharpBackend as StructRenderer>::DEFAULT_RENDER_OPTIONS;
+        let binding = <CSharpBackend as StructRenderer>::default_options();
         let options: &CSharpTypeRenderOptions = options.unwrap_or(&binding);
 
         if let Some(before) = before {

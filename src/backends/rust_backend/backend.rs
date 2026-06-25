@@ -182,7 +182,7 @@ impl DefinitionRenderer for RustBackend {
         indent_level: &mut i32,
         out: &mut impl Write,
     ) -> Result<(), io::Error> {
-        let binding = <RustBackend as DefinitionRenderer>::DEFAULT_RENDER_OPTIONS;
+        let binding = <RustBackend as DefinitionRenderer>::default_options();
         let options: &RustDefinitionRenderOptions = options.unwrap_or(&binding);
 
         if let Some(before) = before {
@@ -233,7 +233,7 @@ impl ConstantRenderer for RustBackend {
         indent_level: &mut i32,
         out: &mut impl Write,
     ) -> Result<(), io::Error> {
-        let binding = <RustBackend as ConstantRenderer>::DEFAULT_RENDER_OPTIONS;
+        let binding = <RustBackend as ConstantRenderer>::default_options();
         let options: &RustConstantRenderOptions = options.unwrap_or(&binding);
 
         if let Some(before) = before {
@@ -280,9 +280,9 @@ impl EnumRenderer for RustBackend {
         indent_level: &mut i32,
         out: &mut impl Write,
     ) -> Result<(), io::Error> {
-        let binding = <RustBackend as EnumRenderer>::DEFAULT_RENDER_OPTIONS;
+        let binding = <RustBackend as EnumRenderer>::default_options();
         let options: &RustEnumRenderOptions = options.unwrap_or(&binding);
-        let variant_binding = <RustBackend as EnumRenderer>::DEFAULT_ENUM_VARIANT_RENDER_OPTIONS;
+        let variant_binding = <RustBackend as EnumRenderer>::default_variant_options();
         let variant_options: &RustEnumVariantRenderOptions = variant_options.unwrap_or(&variant_binding);
 
         if let Some(before) = before {
@@ -362,7 +362,7 @@ impl FunctionRenderer for RustBackend {
         indent_level: &mut i32,
         out: &mut impl Write,
     ) -> Result<(), io::Error> {
-        let binding = <RustBackend as FunctionRenderer>::DEFAULT_RENDER_OPTIONS;
+        let binding = <RustBackend as FunctionRenderer>::default_options();
         let options: &RustFunctionRenderOptions = options.unwrap_or(&binding);
 
         if let Some(before) = before {
@@ -389,7 +389,7 @@ impl NamespaceRenderer for RustBackend {
         indent_level: &mut i32,
         out: &mut impl Write,
     ) -> Result<(), io::Error> {
-        let binding = <RustBackend as NamespaceRenderer>::DEFAULT_RENDER_OPTIONS;
+        let binding = <RustBackend as NamespaceRenderer>::default_options();
         let options: &RustModuleRenderOptions = options.unwrap_or(&binding);
 
         if let Some(before) = before {
@@ -508,7 +508,7 @@ impl StructRenderer for RustBackend {
         indent_level: &mut i32,
         out: &mut impl Write,
     ) -> Result<(), io::Error> {
-        let binding = <RustBackend as StructRenderer>::DEFAULT_RENDER_OPTIONS;
+        let binding = <RustBackend as StructRenderer>::default_options();
         let options: &RustStructRenderOptions = options.unwrap_or(&binding);
 
         if let Some(before) = before {
