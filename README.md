@@ -142,6 +142,20 @@ type_map.set_output(PrimitiveType::Str, TargetLanguage::CSharp, "string"); // ov
 let config = ConversionConfig::new(type_map, /* rename = */ false);
 ```
 
+**CtypeMap** (Python-only) re-spells neutral primitives into ctypes (`f64`→`ctypes.c_double`, …)
+when lowering a struct to a `ctypes.Structure`. The built-in table covers what ctypes has native
+types for; `i128`/`u128` are absent and emitted verbatim with a `ConversionWarning`. It is carried on
+`PythonStructConversionOptions` (defaulting to `CtypeMap::builtin()`) and follows the same clone-and-
+override pattern as `TypeMap` — a primitive you map yourself is rendered with no warning:
+
+```rust
+use langprint::{CtypeMap, PrimitiveType};
+
+let mut ctypes = CtypeMap::builtin();
+ctypes.insert(PrimitiveType::I128, "ctypes.c_int128"); // add
+ctypes.insert(PrimitiveType::F64, "MyDouble");          // override
+```
+
 **Renaming.** With `rename` on (the default), `from_ir` rewrites identifiers to the target
 language's convention (Rust `snake_case` fns/fields; C# `PascalCase` types/methods/fields/enum
 members; C++ left verbatim) and reports each change as `ConversionWarning::NamingConventionChanged`.

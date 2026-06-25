@@ -7,11 +7,13 @@
 
 pub mod backend;
 pub mod class_types;
+pub mod ctype_map;
 pub mod enum_types;
 pub mod function_types;
 pub mod struct_types;
 
 pub use backend::PythonBackend;
+pub use ctype_map::CtypeMap;
 pub use class_types::{
     PythonClass, PythonClassConversionOptions, PythonClassField, PythonClassRenderOptions,
 };

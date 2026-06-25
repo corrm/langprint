@@ -1,38 +1,10 @@
 use crate::{
-    backends::BackendItem,
+    backends::{python_backend::CtypeMap, BackendItem},
     conversion::{dropped_annotations_warning, ConversionLog, ConversionResult, ConversionWarning},
     convert::{rename_identifier, ConversionConfig, IdentifierKind},
     ir::{LanguageField, LanguageStruct, LanguageStructKind, Visibility},
-    type_map::{PrimitiveType, TargetLanguage},
+    type_map::TargetLanguage,
 };
-
-/// Map a neutral [`PrimitiveType`] to its ctypes spelling.
-///
-/// `ctypes` is not a [`TargetLanguage`] — it is a Python-local FFI vocabulary, so this mapping
-/// lives here rather than in the shared [`TypeMap`](crate::type_map::TypeMap) output table. Returns
-/// `None` for primitives ctypes has no native spelling for ([`PrimitiveType::I128`]/[`U128`](PrimitiveType::U128))
-/// and for [`PrimitiveType::Void`], which is not a field type.
-fn ctype_for(primitive: PrimitiveType) -> Option<&'static str> {
-    use PrimitiveType::*;
-    Some(match primitive {
-        Bool => "ctypes.c_bool",
-        I8 => "ctypes.c_int8",
-        U8 => "ctypes.c_uint8",
-        I16 => "ctypes.c_int16",
-        U16 => "ctypes.c_uint16",
-        I32 => "ctypes.c_int32",
-        U32 => "ctypes.c_uint32",
-        I64 => "ctypes.c_int64",
-        U64 => "ctypes.c_uint64",
-        ISize => "ctypes.c_ssize_t",
-        USize => "ctypes.c_size_t",
-        F32 => "ctypes.c_float",
-        F64 => "ctypes.c_double",
-        Char => "ctypes.c_char",
-        Str => "ctypes.c_char_p",
-        I128 | U128 | Void => return None,
-    })
-}
 
 /// A field of a ctypes `Structure`: a name paired with a free-form ctype string.
 ///
@@ -96,9 +68,11 @@ impl BackendItem for PythonStruct {
 
     fn from_ir(input: Self::IrType, options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
         let mut log = ConversionLog::new();
-        let config = options.map(|options| options.config.clone()).unwrap_or_default();
+        let default_options = PythonStructConversionOptions::default();
+        let options = options.unwrap_or(&default_options);
+        let config = &options.config;
 
-        let name = rename_identifier(&config, &input.name, TargetLanguage::Python, IdentifierKind::Type);
+        let name = rename_identifier(config, &input.name, TargetLanguage::Python, IdentifierKind::Type);
         log.add_warnings(name.log.warnings);
 
         if !input.annotations.is_empty() || !input.raw_attributes.is_empty() {
@@ -112,11 +86,11 @@ impl BackendItem for PythonStruct {
 
         let mut fields = Vec::with_capacity(input.fields.len());
         for field in input.fields {
-            let field_name = rename_identifier(&config, &field.name, TargetLanguage::Python, IdentifierKind::Field);
+            let field_name = rename_identifier(config, &field.name, TargetLanguage::Python, IdentifierKind::Field);
             log.add_warnings(field_name.log.warnings);
 
             let ctype = match config.type_map.resolve(&field.field_type) {
-                Some(primitive) => match ctype_for(primitive) {
+                Some(primitive) => match options.ctype_map.resolve(primitive) {
                     Some(ctype) => ctype.to_string(),
                     None => {
                         log.add_warning(ConversionWarning::UnsupportedFeature {
@@ -147,10 +121,21 @@ impl BackendItem for PythonStruct {
 }
 
 /// Conversion options for Python ctypes structures.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct PythonStructConversionOptions {
     /// Cross-language conversion configuration.
     pub config: ConversionConfig,
+    /// Maps neutral primitives to their ctypes spellings; defaults to [`CtypeMap::builtin`].
+    pub ctype_map: CtypeMap,
+}
+
+impl Default for PythonStructConversionOptions {
+    fn default() -> Self {
+        Self {
+            config: ConversionConfig::default(),
+            ctype_map: CtypeMap::builtin(),
+        }
+    }
 }
 
 /// Render options for Python ctypes structures.

@@ -5,9 +5,12 @@
 
 use langprint::backends::js_backend::{JsClass, JsFunction};
 use langprint::backends::lua_backend::{LuaBackend, LuaFunction};
-use langprint::backends::python_backend::{PythonBackend, PythonClass, PythonFunction, PythonStruct};
+use langprint::backends::python_backend::{
+    CtypeMap, PythonBackend, PythonClass, PythonFunction, PythonStruct, PythonStructConversionOptions,
+};
 use langprint::backends::BackendItem;
 use langprint::conversion::ConversionWarning;
+use langprint::type_map::PrimitiveType;
 use langprint::ir::{
     Annotation, LanguageBase, LanguageField, LanguageFunction, LanguageFunctionParameter, LanguageStruct,
     LanguageStructKind, RawAttribute, Visibility,
@@ -188,6 +191,65 @@ fn python_struct_from_ir_maps_primitives_to_ctypes() {
     assert!(rendered.contains("ctypes.c_int32"), "rendered: {rendered}");
     assert!(!rendered.contains("f64"), "literal IR spelling leaked: {rendered}");
     assert!(!rendered.contains("i32"), "literal IR spelling leaked: {rendered}");
+}
+
+#[test]
+fn ctype_map_builtin_maps_primitives() {
+    let map = CtypeMap::builtin();
+    assert_eq!(map.resolve(PrimitiveType::F64), Some("ctypes.c_double"));
+    assert_eq!(map.resolve(PrimitiveType::I32), Some("ctypes.c_int32"));
+    assert_eq!(map.resolve(PrimitiveType::I128), None);
+}
+
+#[test]
+fn ctype_map_clone_and_override() {
+    let mut map = CtypeMap::builtin();
+    map.insert(PrimitiveType::F64, "MyDouble");
+    assert_eq!(map.resolve(PrimitiveType::F64), Some("MyDouble"));
+    assert_eq!(map.resolve(PrimitiveType::I32), Some("ctypes.c_int32"));
+}
+
+#[test]
+fn python_struct_from_ir_uses_supplied_ctype_map() {
+    let mut ctype_map = CtypeMap::builtin();
+    ctype_map.insert(PrimitiveType::F64, "MyDouble");
+    ctype_map.insert(PrimitiveType::I128, "ctypes.c_int128");
+    let options = PythonStructConversionOptions {
+        ctype_map,
+        ..Default::default()
+    };
+
+    let input = neutral_ctypes_struct(vec![
+        primitive_field("X", "f64"),
+        primitive_field("Big", "i128"),
+    ]);
+    let result = PythonStruct::from_ir(input, Some(&options));
+    let rendered = render_python_struct(&result.value);
+
+    assert!(rendered.contains("MyDouble"), "rendered: {rendered}");
+    assert!(rendered.contains("ctypes.c_int128"), "rendered: {rendered}");
+    assert!(
+        !result
+            .log
+            .warnings
+            .iter()
+            .any(|warning| matches!(warning, ConversionWarning::UnsupportedFeature { .. })),
+        "supplied i128 mapping must not warn: {:?}",
+        result.log.warnings
+    );
+}
+
+#[test]
+fn python_struct_from_ir_default_options_unchanged() {
+    let input = neutral_ctypes_struct(vec![
+        primitive_field("X", "f64"),
+        primitive_field("Count", "i32"),
+    ]);
+    let result = PythonStruct::from_ir(input, Some(&PythonStructConversionOptions::default()));
+    let rendered = render_python_struct(&result.value);
+
+    assert!(rendered.contains("ctypes.c_double"), "rendered: {rendered}");
+    assert!(rendered.contains("ctypes.c_int32"), "rendered: {rendered}");
 }
 
 #[test]
