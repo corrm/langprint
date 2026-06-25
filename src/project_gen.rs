@@ -307,6 +307,40 @@ impl ProjectSpec {
             precompiled_header: None,
         }
     }
+    /// Populate sources and headers from a list of rendered files.
+    ///
+    /// Files are classified by extension: `.h`/`.hpp`/`.hxx` → headers,
+    /// everything else → sources. Include directories are inferred from
+    /// the parent directories of all files.
+    ///
+    /// This is a convenience helper — callers may still populate fields
+    /// manually for full control.
+    ///
+    /// # Arguments
+    ///
+    /// * `files` - Pairs of (relative path, file content). Content is
+    ///   discarded; only paths are used to populate the spec.
+    #[must_use]
+    pub fn populate_from_files(mut self, files: &[(PathBuf, String)]) -> Self {
+        let mut include_dirs_set: Vec<PathBuf> = Vec::new();
+        for (path, _) in files {
+            match path.extension().and_then(|e| e.to_str()) {
+                Some("h") | Some("hpp") | Some("hxx") => {
+                    self.headers.push(path.clone());
+                }
+                _ => {
+                    self.sources.push(path.clone());
+                }
+            }
+            if let Some(parent) = path.parent() {
+                if !parent.as_os_str().is_empty() && !include_dirs_set.iter().any(|p| p.as_path() == parent) {
+                    include_dirs_set.push(parent.to_path_buf());
+                }
+            }
+        }
+        self.include_dirs = include_dirs_set;
+        self
+    }
 }
 
 /// An error produced while generating project files.
@@ -499,6 +533,43 @@ pub(crate) fn xml_escape(input: &str) -> String {
 pub(crate) fn path_to_forward_slashes(path: &Path) -> String {
     path.to_string_lossy().replace('\\', "/")
 }
+/// Write rendered source files to disk, creating parent directories as needed.
+///
+/// A convenience helper for the common workflow: render declarations to strings,
+/// write them to files, then generate build files. Callers retain full control
+/// over rendering (backend choice, options) and spec construction.
+///
+/// # Arguments
+///
+/// * `files` - Pairs of (relative path, file content).
+/// * `output_dir` - The base directory to write into.
+///
+/// # Returns
+///
+/// `Ok(())` if all files were written successfully.
+///
+/// # Errors
+///
+/// Returns [`ProjectGenError::Io`] if any file write fails.
+pub fn write_files(
+    files: &[(PathBuf, String)],
+    output_dir: &Path,
+) -> Result<(), ProjectGenError> {
+    for (path, content) in files {
+        let full_path = output_dir.join(path);
+        if let Some(parent) = full_path.parent() {
+            fs::create_dir_all(parent).map_err(|e| ProjectGenError::Io {
+                path: parent.to_path_buf(),
+                source: e,
+            })?;
+        }
+        fs::write(&full_path, content).map_err(|e| ProjectGenError::Io {
+            path: full_path.clone(),
+            source: e,
+        })?;
+    }
+    Ok(())
+}
 
 /// Render a relative path as a `\`-separated string for MSBuild project files.
 pub(crate) fn path_to_back_slashes(path: &Path) -> String {
@@ -671,5 +742,46 @@ mod tests {
         });
         let err = validate_spec(&spec).unwrap_err();
         assert!(matches!(err, ProjectGenError::InvalidPath { .. }));
+    }
+    #[test]
+    fn populate_from_files_classifies_headers_and_sources() {
+        let spec = ProjectSpec::new("test", LanguageStandard::Cpp17, OutputKind::StaticLib)
+            .populate_from_files(&[
+                (PathBuf::from("src/main.cpp"), "int main()".into()),
+                (PathBuf::from("src/utils.h"), "int foo()".into()),
+                (PathBuf::from("include/types.hpp"), "struct S".into()),
+                (PathBuf::from("src/types.cpp"), "S s".into()),
+            ]);
+        assert_eq!(spec.sources.len(), 2);
+        assert!(spec.sources.contains(&PathBuf::from("src/main.cpp")));
+        assert!(spec.sources.contains(&PathBuf::from("src/types.cpp")));
+        assert_eq!(spec.headers.len(), 2);
+        assert!(spec.headers.contains(&PathBuf::from("src/utils.h")));
+        assert!(spec.headers.contains(&PathBuf::from("include/types.hpp")));
+        assert_eq!(spec.include_dirs.len(), 2);
+        assert!(spec.include_dirs.contains(&PathBuf::from("src")));
+        assert!(spec.include_dirs.contains(&PathBuf::from("include")));
+    }
+
+    #[test]
+    fn populate_from_files_skips_root_parent() {
+        let spec = ProjectSpec::new("test", LanguageStandard::Cpp17, OutputKind::StaticLib)
+            .populate_from_files(&[(PathBuf::from("main.cpp"), "x".into())]);
+        assert!(spec.include_dirs.is_empty());
+    }
+
+    #[test]
+    fn write_files_creates_dirs_and_writes_content() {
+        let dir = tempfile::tempdir().unwrap();
+        let files = [(PathBuf::from("src/main.cpp"), "int main()".into())];
+        assert!(write_files(&files, dir.path()).is_ok());
+        assert!(dir.path().join("src/main.cpp").exists());
+        assert_eq!(fs::read_to_string(dir.path().join("src/main.cpp")).unwrap(), "int main()");
+    }
+
+    #[test]
+    fn write_files_empty_list_is_noop() {
+        let dir = tempfile::tempdir().unwrap();
+        assert!(write_files(&[], dir.path()).is_ok());
     }
 }
