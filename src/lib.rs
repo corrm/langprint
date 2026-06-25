@@ -20,7 +20,6 @@ pub mod renderers;
 pub mod text;
 pub mod type_map;
 
-pub use backends::python_backend::CtypeMap;
 pub use convert::ConversionConfig;
 pub use imports::{ImportEntry, ImportMap, ImportSet};
 pub use type_map::{PrimitiveType, TargetLanguage, TypeMap};

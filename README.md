@@ -149,12 +149,18 @@ types for; `i128`/`u128` are absent and emitted verbatim with a `ConversionWarni
 override pattern as `TypeMap` — a primitive you map yourself is rendered with no warning:
 
 ```rust
-use langprint::{CtypeMap, PrimitiveType};
+use langprint::PrimitiveType;
+use langprint::backends::python_backend::CtypeMap;
 
 let mut ctypes = CtypeMap::builtin();
-ctypes.insert(PrimitiveType::I128, "ctypes.c_int128"); // add
-ctypes.insert(PrimitiveType::F64, "MyDouble");          // override
+ctypes.insert(PrimitiveType::I128, "ctypes.c_int128");   // add a primitive
+ctypes.insert(PrimitiveType::F64, "MyDouble");            // override a primitive
+ctypes.insert_type("MyHandle", "ctypes.c_void_p");        // map a custom (non-primitive) type
 ```
+
+The built-in primitive table is the compile-time `BUILTIN_CTYPES` constant, so `CtypeMap::builtin()`
+allocates nothing until you add an override. `CtypeMap` lives under `langprint::backends::python_backend`
+because ctypes is Python-specific (unlike the cross-language `TypeMap`).
 
 **Renaming.** With `rename` on (the default), `from_ir` rewrites identifiers to the target
 language's convention (Rust `snake_case` fns/fields; C# `PascalCase` types/methods/fields/enum

@@ -253,6 +253,42 @@ fn python_struct_from_ir_default_options_unchanged() {
 }
 
 #[test]
+fn ctype_map_empty_resolves_nothing() {
+    let map = CtypeMap::empty();
+    assert_eq!(map.resolve(PrimitiveType::F64), None);
+    assert_eq!(map.resolve(PrimitiveType::I32), None);
+}
+
+#[test]
+fn ctype_map_custom_type_maps_non_primitive() {
+    let mut ctype_map = CtypeMap::builtin();
+    ctype_map.insert_type("MyHandle", "ctypes.c_void_p");
+    let options = PythonStructConversionOptions {
+        ctype_map,
+        ..Default::default()
+    };
+
+    let input = neutral_ctypes_struct(vec![primitive_field("Handle", "MyHandle")]);
+    let result = PythonStruct::from_ir(input, Some(&options));
+    let rendered = render_python_struct(&result.value);
+
+    assert!(rendered.contains("ctypes.c_void_p"), "rendered: {rendered}");
+    assert!(
+        !rendered.contains("MyHandle"),
+        "custom type must be mapped, not passed verbatim: {rendered}"
+    );
+    assert!(
+        !result
+            .log
+            .warnings
+            .iter()
+            .any(|warning| matches!(warning, ConversionWarning::UnsupportedFeature { .. })),
+        "a mapped custom type must not warn as unsupported: {:?}",
+        result.log.warnings
+    );
+}
+
+#[test]
 fn python_struct_from_ir_passes_unknown_ctype_verbatim() {
     let input = neutral_ctypes_struct(vec![
         primitive_field("Handle", "ctypes.c_void_p"),

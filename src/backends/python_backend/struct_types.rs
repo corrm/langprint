@@ -89,8 +89,10 @@ impl BackendItem for PythonStruct {
             let field_name = rename_identifier(config, &field.name, TargetLanguage::Python, IdentifierKind::Field);
             log.add_warnings(field_name.log.warnings);
 
-            let ctype = match config.type_map.resolve(&field.field_type) {
-                Some(primitive) => match options.ctype_map.resolve(primitive) {
+            let ctype = if let Some(custom) = options.ctype_map.resolve_type(&field.field_type) {
+                custom.to_string()
+            } else if let Some(primitive) = config.type_map.resolve(&field.field_type) {
+                match options.ctype_map.resolve(primitive) {
                     Some(ctype) => ctype.to_string(),
                     None => {
                         log.add_warning(ConversionWarning::UnsupportedFeature {
@@ -99,8 +101,9 @@ impl BackendItem for PythonStruct {
                         });
                         field.field_type
                     }
-                },
-                None => field.field_type,
+                }
+            } else {
+                field.field_type
             };
 
             fields.push(PythonStructField {
