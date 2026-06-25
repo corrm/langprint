@@ -196,6 +196,35 @@ CmakeGenerator.generate(&spec, &output_dir)?;
 `populate_from_files` classifies `.h`/`.hpp`/`.hxx` as headers, everything else as sources, and
 infers `include_dirs` from parent directories. Both helpers are optional — you retain full control
 over rendering and spec construction.
+### ProjectBuilder
+
+For fluent, chainable spec construction, use `ProjectBuilder`:
+
+```rust
+use langprint::project_gen::{ProjectBuilder, LanguageStandard, OutputKind, Platform, Arch};
+
+let spec = ProjectBuilder::new("my_lib", LanguageStandard::Cpp17, OutputKind::StaticLib)
+    .sources(["src/main.cpp", "src/types.cpp"])
+    .headers(["include/types.h"])
+    .include_dirs(["include"])
+    .define("DEBUG", Some("1"))
+    .platform(Platform::Linux)
+    .build()
+    .unwrap();
+```
+
+The builder supports all `ProjectSpec` fields across every language (C, C++, C#, Rust). It also
+carries `populate_from_files` so you can chain file classification directly:
+
+```rust
+let spec = ProjectBuilder::new("my_lib", LanguageStandard::Rust2021, OutputKind::SharedLib)
+    .populate_from_files(&files)
+    .build()
+    .unwrap();
+```
+
+`build()` validates the spec (non-empty name, at least one source file, consistent PCH config)
+and returns `Result<ProjectSpec, ProjectGenError>`.
 ## Scope
 
 langprint models declarations and their layout, not arbitrary source code or runtime behavior. If

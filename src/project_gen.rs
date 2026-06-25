@@ -246,6 +246,195 @@ pub struct PrecompiledHeader {
     pub create_source: PathBuf,
 }
 
+/// Fluent builder for [`ProjectSpec`].
+///
+/// Provides a chainable API for constructing project descriptions. All fields
+/// have sensible defaults; only `name`, `language_standard`, and `output_kind`
+/// are required before calling [`build`](Self::build).
+///
+/// ```
+/// use langprint::project_gen::{ProjectBuilder, LanguageStandard, OutputKind};
+///
+/// let spec = ProjectBuilder::new("my_lib", LanguageStandard::Cpp17, OutputKind::StaticLib)
+///     .source("src/main.cpp")
+///     .header("include/types.h")
+///     .define("DEBUG", Some("1"))
+///     .build()
+///     .unwrap();
+/// ```
+#[derive(Debug, Clone)]
+pub struct ProjectBuilder {
+    name: String,
+    language_standard: LanguageStandard,
+    output_kind: OutputKind,
+    sources: Vec<PathBuf>,
+    headers: Vec<PathBuf>,
+    include_dirs: Vec<PathBuf>,
+    defines: Vec<(String, Option<String>)>,
+    platform: Platform,
+    arch: Arch,
+    exception_handling: Option<ExceptionHandling>,
+    precompiled_header: Option<PrecompiledHeader>,
+}
+
+impl ProjectBuilder {
+    /// Create a new builder with the required fields.
+    #[must_use]
+    pub fn new(
+        name: impl Into<String>,
+        language_standard: LanguageStandard,
+        output_kind: OutputKind,
+    ) -> Self {
+        Self {
+            name: name.into(),
+            language_standard,
+            output_kind,
+            sources: Vec::new(),
+            headers: Vec::new(),
+            include_dirs: Vec::new(),
+            defines: Vec::new(),
+            platform: Platform::Any,
+            arch: Arch::X64,
+            exception_handling: None,
+            precompiled_header: None,
+        }
+    }
+
+    /// Add a source file (relative path).
+    #[must_use]
+    pub fn source(mut self, path: impl Into<PathBuf>) -> Self {
+        self.sources.push(path.into());
+        self
+    }
+
+    /// Add multiple source files.
+    #[must_use]
+    pub fn sources(mut self, paths: impl IntoIterator<Item = impl Into<PathBuf>>) -> Self {
+        self.sources.extend(paths.into_iter().map(Into::into));
+        self
+    }
+
+    /// Add a header file (relative path).
+    #[must_use]
+    pub fn header(mut self, path: impl Into<PathBuf>) -> Self {
+        self.headers.push(path.into());
+        self
+    }
+
+    /// Add multiple header files.
+    #[must_use]
+    pub fn headers(mut self, paths: impl IntoIterator<Item = impl Into<PathBuf>>) -> Self {
+        self.headers.extend(paths.into_iter().map(Into::into));
+        self
+    }
+
+    /// Add an include directory (relative path).
+    #[must_use]
+    pub fn include_dir(mut self, path: impl Into<PathBuf>) -> Self {
+        self.include_dirs.push(path.into());
+        self
+    }
+
+    /// Add multiple include directories.
+    #[must_use]
+    pub fn include_dirs(mut self, paths: impl IntoIterator<Item = impl Into<PathBuf>>) -> Self {
+        self.include_dirs.extend(paths.into_iter().map(Into::into));
+        self
+    }
+
+    /// Add a preprocessor define with an optional value.
+    #[must_use]
+    pub fn define(mut self, name: impl Into<String>, value: Option<impl Into<String>>) -> Self {
+        self.defines.push((
+            name.into(),
+            value.map(|v| v.into()),
+        ));
+        self
+    }
+
+    /// Add multiple preprocessor defines.
+    #[must_use]
+    pub fn defines(mut self, defs: impl IntoIterator<Item = (impl Into<String>, Option<impl Into<String>>)>) -> Self {
+        self.defines.extend(
+            defs.into_iter().map(|(n, v)| (n.into(), v.map(|x| x.into())))
+        );
+        self
+    }
+
+    /// Set the target platform.
+    #[must_use]
+    pub fn platform(mut self, platform: Platform) -> Self {
+        self.platform = platform;
+        self
+    }
+
+    /// Set the target CPU architecture.
+    #[must_use]
+    pub fn arch(mut self, arch: Arch) -> Self {
+        self.arch = arch;
+        self
+    }
+
+    /// Set the C++ exception-handling model.
+    #[must_use]
+    pub fn exception_handling(mut self, eh: ExceptionHandling) -> Self {
+        self.exception_handling = Some(eh);
+        self
+    }
+
+    /// Set the precompiled header configuration.
+    #[must_use]
+    pub fn precompiled_header(mut self, pch: PrecompiledHeader) -> Self {
+        self.precompiled_header = Some(pch);
+        self
+    }
+
+    /// Populate sources and headers from rendered file pairs, classifying by
+    /// extension (`.h`/`.hpp`/`.hxx` → headers; everything else → sources)
+    /// and inferring `include_dirs` from parent directories.
+    #[must_use]
+    pub fn populate_from_files(mut self, files: &[(PathBuf, String)]) -> Self {
+        let mut include_dirs_set: Vec<PathBuf> = Vec::new();
+        for (path, _) in files {
+            match path.extension().and_then(|e| e.to_str()) {
+                Some("h") | Some("hpp") | Some("hxx") => {
+                    self.headers.push(path.clone());
+                }
+                _ => {
+                    self.sources.push(path.clone());
+                }
+            }
+            if let Some(parent) = path.parent() {
+                if !parent.as_os_str().is_empty()
+                    && !include_dirs_set.iter().any(|p| p.as_path() == parent)
+                {
+                    include_dirs_set.push(parent.to_path_buf());
+                }
+            }
+        }
+        self.include_dirs = include_dirs_set;
+        self
+    }
+
+    /// Consume the builder and produce a validated [`ProjectSpec`].
+    pub fn build(self) -> Result<ProjectSpec, ProjectGenError> {
+        let spec = ProjectSpec {
+            name: self.name,
+            language_standard: self.language_standard,
+            sources: self.sources,
+            headers: self.headers,
+            include_dirs: self.include_dirs,
+            defines: self.defines,
+            platform: self.platform,
+            arch: self.arch,
+            output_kind: self.output_kind,
+            exception_handling: self.exception_handling,
+            precompiled_header: self.precompiled_header,
+        };
+        validate_spec(&spec)?;
+        Ok(spec)
+    }
+}
 /// Engine-neutral description of a generated SDK as a buildable project.
 ///
 /// All paths in [`sources`](Self::sources), [`headers`](Self::headers), and
@@ -511,6 +700,9 @@ pub(crate) fn validate_spec(spec: &ProjectSpec) -> Result<(), ProjectGenError> {
                 reason: "header must be one of the spec's headers",
             });
         }
+    }
+    if spec.sources.is_empty() {
+        return Err(ProjectGenError::NoSources(spec.name.clone()));
     }
     Ok(())
 }
@@ -808,5 +1000,90 @@ mod tests {
         let files = [(PathBuf::from("a/b/c/d.cpp"), "x".into())];
         assert!(write_files(&files, dir.path()).is_ok());
         assert!(dir.path().join("a/b/c/d.cpp").exists());
+    }
+    #[test]
+    fn builder_basic_build() {
+        let spec = ProjectBuilder::new("my_lib", LanguageStandard::Cpp17, OutputKind::StaticLib)
+            .source("src/main.cpp")
+            .header("include/types.h")
+            .define("DEBUG", Some("1"))
+            .build()
+            .unwrap();
+        assert_eq!(spec.name, "my_lib");
+        assert_eq!(spec.sources.len(), 1);
+        assert_eq!(spec.headers.len(), 1);
+        assert_eq!(spec.defines.len(), 1);
+        assert_eq!(spec.language_standard, LanguageStandard::Cpp17);
+    }
+
+    #[test]
+    fn builder_with_all_fields() {
+        let spec = ProjectBuilder::new("full", LanguageStandard::Cpp20, OutputKind::SharedLib)
+            .sources(["src/a.cpp", "src/b.cpp"])
+            .headers(["inc/a.h", "inc/b.hpp"])
+            .include_dirs(["inc"])
+            .defines([("A", Some("1")), ("B", None::<&str>)])
+            .platform(Platform::Windows)
+            .arch(Arch::X86)
+            .exception_handling(ExceptionHandling::Standard)
+            .build()
+            .unwrap();
+        assert_eq!(spec.sources.len(), 2);
+        assert_eq!(spec.headers.len(), 2);
+        assert_eq!(spec.include_dirs.len(), 1);
+        assert_eq!(spec.defines.len(), 2);
+        assert_eq!(spec.platform, Platform::Windows);
+        assert_eq!(spec.arch, Arch::X86);
+        assert_eq!(spec.exception_handling, Some(ExceptionHandling::Standard));
+    }
+
+    #[test]
+    fn builder_populate_from_files() {
+        let spec = ProjectBuilder::new("test", LanguageStandard::Cpp17, OutputKind::StaticLib)
+            .populate_from_files(&[
+                (PathBuf::from("src/main.cpp"), "x".into()),
+                (PathBuf::from("src/types.h"), "x".into()),
+            ])
+            .build()
+            .unwrap();
+        assert_eq!(spec.sources.len(), 1);
+        assert_eq!(spec.headers.len(), 1);
+        assert_eq!(spec.include_dirs.len(), 1);
+    }
+
+    #[test]
+    fn builder_rust_project() {
+        let spec = ProjectBuilder::new("my_crate", LanguageStandard::Rust2021, OutputKind::SharedLib)
+            .source("src/lib.rs")
+            .build()
+            .unwrap();
+        assert_eq!(spec.name, "my_crate");
+        assert_eq!(spec.language_standard, LanguageStandard::Rust2021);
+    }
+
+    #[test]
+    fn builder_csharp_project() {
+        let spec = ProjectBuilder::new("MyLib", LanguageStandard::CSharp12, OutputKind::SharedLib)
+            .source("Program.cs")
+            .build()
+            .unwrap();
+        assert_eq!(spec.language_standard, LanguageStandard::CSharp12);
+    }
+
+    #[test]
+    fn builder_rejects_empty_name() {
+        let err = ProjectBuilder::new("", LanguageStandard::Cpp17, OutputKind::StaticLib)
+            .source("main.cpp")
+            .build()
+            .unwrap_err();
+        assert!(matches!(err, ProjectGenError::InvalidName { .. }));
+    }
+
+    #[test]
+    fn builder_rejects_no_sources() {
+        let err = ProjectBuilder::new("test", LanguageStandard::Cpp17, OutputKind::StaticLib)
+            .build()
+            .unwrap_err();
+        assert!(matches!(err, ProjectGenError::NoSources(_)));
     }
 }
