@@ -10,6 +10,7 @@ pub mod backends;
 pub mod conversion;
 pub mod convert;
 mod helper;
+pub mod imports;
 pub mod ir;
 pub mod naming;
 pub mod project_gen;
@@ -18,6 +19,7 @@ pub mod text;
 pub mod type_map;
 
 pub use convert::ConversionConfig;
+pub use imports::{ImportEntry, ImportMap, ImportSet};
 pub use type_map::{PrimitiveType, TargetLanguage, TypeMap};
 
 /// Available backend names.
