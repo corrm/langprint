@@ -3,7 +3,7 @@ use crate::conversion::{ConversionLog, ConversionResult, ConversionWarning};
 use crate::ir::LanguageGenericArgument;
 
 /// Represents a C++ template parameter.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct CppGenericArgument {
     /// The name of the template parameter.
     pub name: String,

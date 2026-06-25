@@ -51,7 +51,7 @@ impl CSharpTypeKind {
 }
 
 /// Represents a C# type declaration (class / struct / interface / record).
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct CSharpType {
     /// The kind of the type.
     pub kind: CSharpTypeKind,

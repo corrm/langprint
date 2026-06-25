@@ -9,7 +9,7 @@ use crate::{
 use super::CppVisibility;
 
 /// Represents a variant in a C++ enum.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct CppEnumVariant {
     /// The name of the variant.
     pub name: String,
@@ -102,7 +102,7 @@ impl CppEnumVariantConversionOptions {
 }
 
 /// Represents a C++ enum definition.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct CppEnum {
     /// The name of the enum.
     pub name: String,

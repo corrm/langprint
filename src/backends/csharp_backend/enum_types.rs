@@ -9,7 +9,7 @@ use crate::{
 use super::CSharpVisibility;
 
 /// Represents a single member of a C# enum.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct CSharpEnumMember {
     /// The name of the member.
     pub name: String,
@@ -20,7 +20,7 @@ pub struct CSharpEnumMember {
 }
 
 /// Represents a C# enum.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct CSharpEnum {
     /// The name of the enum.
     pub name: String,

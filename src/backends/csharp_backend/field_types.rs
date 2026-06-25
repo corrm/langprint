@@ -9,7 +9,7 @@ use crate::{
 use super::CSharpVisibility;
 
 /// Represents a C# field.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct CSharpField {
     /// The name of the field.
     pub name: String,

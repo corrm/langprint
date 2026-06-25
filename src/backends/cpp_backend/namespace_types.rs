@@ -50,7 +50,7 @@ fn namespace_items_from_ir<T: BackendItem>(
 }
 
 /// Represents a C++ namespace definition.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct CppNamespace {
     /// The name of the namespace.
     pub name: String,

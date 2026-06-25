@@ -7,7 +7,7 @@ use crate::{
 use super::CppVisibility;
 
 /// Represents a C++ constant.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct CppConstant {
     /// The name of the constant.
     pub name: String,

@@ -5,7 +5,7 @@ use crate::{backends::BackendItem, conversion::ConversionResult, ir::LanguageDef
 /// Rust has no preprocessor, so a C/C++ `#define` is lowered to a module-level constant.
 /// A define with no value becomes a unit constant (`pub const NAME: () = ();`), preserving the
 /// "is defined" marker.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct RustDefinition {
     /// The name of the define.
     pub name: String,

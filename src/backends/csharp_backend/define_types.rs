@@ -42,7 +42,7 @@ pub fn infer_const_type(value: &str) -> Option<&'static str> {
 ///
 /// C# has no value-carrying `#define`, so a define is rendered as a `public const`
 /// (see [`CSharpDefinitionRenderOptions::const_type`]).
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct CSharpDefinition {
     /// The name of the define.
     pub name: String,

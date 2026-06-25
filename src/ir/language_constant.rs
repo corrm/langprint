@@ -1,7 +1,7 @@
 use super::Visibility;
 
 /// Represents a constant in a language-agnostic way.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct LanguageConstant {
     /// The name of the constant.
     pub name: String,

@@ -480,3 +480,188 @@ fn enum_round_trips_across_all_three_backends() {
         .unwrap();
     assert_eq!(out, "private enum Color : byte\n{\n    Red = 0,\n    Green = 1,\n}\n");
 }
+// ── Cross-language constants ─────────────────────────────────────────────────
+
+/// C++ constant → IR → Rust. Proves constants cross cleanly with type names
+/// carried verbatim.
+#[test]
+fn cpp_constant_to_rust() {
+    use langprint::backends::cpp_backend::CppConstant;
+    use langprint::backends::rust_backend::{RustConstant, RustVisibility};
+    use langprint::renderers::ConstantRenderer;
+
+    let constant = CppConstant {
+        name: "MAX".into(),
+        visibility: CppVisibility::Public,
+        data_type: "int32_t".into(),
+        value: "100".into(),
+        docs: None,
+    };
+
+    let ir = constant.clone().to_ir(None);
+    assert!(!ir.log.has_warnings());
+
+    let rust = RustConstant::from_ir(ir.value, None).value;
+    assert_eq!(rust.name, "MAX");
+    assert_eq!(rust.visibility, RustVisibility::Pub);
+    assert_eq!(rust.data_type, "int32_t");
+
+    let out = RustBackend::default()
+        .render_constant::<&str>(&rust, None, None, None, &mut 0)
+        .unwrap();
+    assert_eq!(out, "pub const MAX: int32_t = 100;\n");
+}
+
+/// C++ constant → IR → C#. Proves the constant crosses with visibility mapped.
+#[test]
+fn cpp_constant_to_csharp() {
+    use langprint::backends::cpp_backend::CppConstant;
+    use langprint::backends::csharp_backend::{CSharpConstant, CSharpVisibility};
+    use langprint::renderers::ConstantRenderer;
+
+    let constant = CppConstant {
+        name: "MAX".into(),
+        visibility: CppVisibility::Public,
+        data_type: "int".into(),
+        value: "100".into(),
+        docs: None,
+    };
+
+    let ir = constant.clone().to_ir(None);
+    assert!(!ir.log.has_warnings());
+
+    let csharp = CSharpConstant::from_ir(ir.value, None).value;
+    assert_eq!(csharp.name, "MAX");
+    assert_eq!(csharp.visibility, CSharpVisibility::Public);
+
+    let out = CSharpBackend::default()
+        .render_constant::<&str>(&csharp, None, None, None, &mut 0)
+        .unwrap();
+    assert_eq!(out, "public const int MAX = 100;\n");
+}
+
+// ── Cross-language defines ──────────────────────────────────────────────────
+
+/// C++ define → IR → Rust. Defines carry through the IR as-is; Rust lowers
+/// them to unit constants.
+#[test]
+fn cpp_define_to_rust() {
+    use langprint::backends::cpp_backend::CppDefinition;
+    use langprint::backends::rust_backend::RustDefinition;
+
+    let define = CppDefinition {
+        name: "DEBUG".into(),
+        value: Some("1".into()),
+        docs: None,
+    };
+
+    let ir = define.clone().to_ir(None);
+    assert!(!ir.log.has_warnings());
+
+    let rust = RustDefinition::from_ir(ir.value, None).value;
+    assert_eq!(rust.name, "DEBUG");
+    assert_eq!(rust.value, Some("1".to_string()));
+}
+
+/// C++ define → IR → C#. C# defines become `const` fields.
+#[test]
+fn cpp_define_to_csharp() {
+    use langprint::backends::cpp_backend::CppDefinition;
+    use langprint::backends::csharp_backend::CSharpDefinition;
+
+    let define = CppDefinition {
+        name: "VERSION".into(),
+        value: Some("\"2.0\"".into()),
+        docs: None,
+    };
+
+    let ir = define.clone().to_ir(None);
+    assert!(!ir.log.has_warnings());
+
+    let csharp = CSharpDefinition::from_ir(ir.value, None).value;
+    assert_eq!(csharp.name, "VERSION");
+    assert_eq!(csharp.value, Some("\"2.0\"".to_string()));
+}
+
+// ── C# properties (render-only — no IR round-trip) ─────────────────────────
+
+/// C# properties are render-only and have no IR counterpart. Verify they
+/// render correctly with auto-accessors.
+#[test]
+fn csharp_property_renders_auto_accessor() {
+    use langprint::backends::csharp_backend::{CSharpProperty, CSharpType, CSharpTypeKind};
+
+    let ty = CSharpType {
+        kind: CSharpTypeKind::Class,
+        name: "Config".into(),
+        visibility: CSharpVisibility::Public,
+        is_abstract: false,
+        is_sealed: false,
+        is_static: false,
+        is_partial: false,
+        generic_args: vec![],
+        base_class: None,
+        interfaces: vec![],
+        fields: vec![],
+        properties: vec![CSharpProperty {
+            name: "Name".into(),
+            prop_type: "string".into(),
+            visibility: CSharpVisibility::Public,
+            is_static: false,
+            has_getter: true,
+            has_setter: true,
+            getter_body: None,
+            setter_body: None,
+            docs: None,
+        }],
+        methods: vec![],
+        attributes: vec![],
+        docs: None,
+    };
+
+    let out = CSharpBackend::default()
+        .render_struct::<&str>(&ty, None, None, None, &mut 0)
+        .unwrap();
+    assert!(out.contains("public string Name { get; set; }"));
+}
+
+/// C# property with a body renders the body instead of auto-accessor.
+#[test]
+fn csharp_property_renders_custom_getter() {
+    use langprint::backends::csharp_backend::{CSharpProperty, CSharpType, CSharpTypeKind};
+
+    let ty = CSharpType {
+        kind: CSharpTypeKind::Class,
+        name: "Config".into(),
+        visibility: CSharpVisibility::Public,
+        is_abstract: false,
+        is_sealed: false,
+        is_static: false,
+        is_partial: false,
+        generic_args: vec![],
+        base_class: None,
+        interfaces: vec![],
+        fields: vec![],
+        properties: vec![CSharpProperty {
+            name: "Name".into(),
+            prop_type: "string".into(),
+            visibility: CSharpVisibility::Public,
+            is_static: false,
+            has_getter: true,
+            has_setter: false,
+            getter_body: Some(vec!["_name.ToString()".into()]),
+            setter_body: None,
+            docs: None,
+        }],
+        methods: vec![],
+        attributes: vec![],
+        docs: None,
+    };
+
+    let out = CSharpBackend::default()
+        .render_struct::<&str>(&ty, None, None, None, &mut 0)
+        .unwrap();
+    assert!(out.contains("get"));
+    assert!(out.contains("_name.ToString()"));
+    assert!(!out.contains("set"));
+}

@@ -1,7 +1,7 @@
 use crate::{backends::BackendItem, conversion::ConversionResult, ir::LanguageDefinition};
 
 /// Represents a C++ define.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct CppDefinition {
     /// The name of the define.
     pub name: String,

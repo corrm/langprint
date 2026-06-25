@@ -11,7 +11,7 @@ use crate::{
 };
 
 /// Represents a base/super with its visibility in C++.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct CppBase {
     /// The name of the base/super.
     pub name: String,
@@ -28,7 +28,7 @@ pub enum CppStructKind {
 }
 
 /// Represents a C++ struct definition.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct CppStruct {
     /// Struct kind.
     pub struct_kind: CppStructKind,

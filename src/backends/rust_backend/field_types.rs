@@ -9,7 +9,7 @@ use crate::{
 use super::RustVisibility;
 
 /// Represents a field of a Rust struct.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct RustField {
     /// The name of the field.
     pub name: String,

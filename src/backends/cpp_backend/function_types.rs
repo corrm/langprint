@@ -9,7 +9,7 @@ use crate::{
 use super::{CppGenericArgument, CppVisibility};
 
 /// Represents a C++ function parameter.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct CppParameter {
     /// The name of the parameter.
     pub name: String,
@@ -54,7 +54,7 @@ pub struct CppParameterConversionOptions {
 }
 
 /// Represents a C++ function definition.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct CppFunction {
     /// The name of the function.
     pub name: String,

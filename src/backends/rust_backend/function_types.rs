@@ -34,7 +34,7 @@ impl RustSelfKind {
 }
 
 /// Represents a parameter of a Rust function.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct RustParameter {
     /// The name of the parameter.
     pub name: String,
@@ -86,7 +86,7 @@ pub struct RustParameterConversionOptions {
 }
 
 /// Represents a Rust function or method.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct RustFunction {
     /// The name of the function.
     pub name: String,

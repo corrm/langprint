@@ -9,7 +9,7 @@ use crate::{
 use super::CppVisibility;
 
 /// Represents a field in a C++ struct.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct CppField {
     /// The name of the field.
     pub name: String,

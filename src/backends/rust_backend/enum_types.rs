@@ -30,7 +30,7 @@ pub enum RustEnumVariantValue {
 }
 
 /// A variant of a Rust enum.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct RustEnumVariant {
     /// The name of the variant.
     pub name: String,
@@ -41,7 +41,7 @@ pub struct RustEnumVariant {
 }
 
 /// Represents a Rust enum.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct RustEnum {
     /// The name of the enum.
     pub name: String,

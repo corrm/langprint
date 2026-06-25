@@ -11,7 +11,7 @@ use super::{
 };
 
 /// Represents a Rust struct, together with the methods rendered in its `impl` block.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct RustStruct {
     /// The name of the struct.
     pub name: String,

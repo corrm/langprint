@@ -1,7 +1,7 @@
 use super::Visibility;
 
 /// Represents different kinds of enum variants.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct EnumVariant {
     pub name: String,
     pub value: EnumVariantValue,
@@ -22,7 +22,7 @@ pub enum EnumVariantValue {
 }
 
 /// Represents an enum in a language-agnostic way.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct LanguageEnum {
     /// The name of the enum.
     pub name: String,

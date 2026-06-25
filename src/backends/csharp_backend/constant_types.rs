@@ -3,7 +3,7 @@ use crate::{backends::BackendItem, conversion::ConversionResult, ir::LanguageCon
 use super::CSharpVisibility;
 
 /// Represents a C# constant (`const` field).
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct CSharpConstant {
     /// The name of the constant.
     pub name: String,

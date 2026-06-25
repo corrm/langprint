@@ -7,7 +7,7 @@ use super::CSharpVisibility;
 /// fields (with a [`ConversionWarning`](crate::conversion::ConversionWarning)). `from_ir`
 /// never produces a property — it produces fields — so [`CSharpProperty`] is render-only and
 /// is constructed directly by callers who want idiomatic C# properties.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct CSharpProperty {
     /// The name of the property.
     pub name: String,

@@ -46,7 +46,7 @@ fn items_from_ir<T: BackendItem>(
 }
 
 /// Represents a C# namespace.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct CSharpNamespace {
     /// The name of the namespace.
     pub name: String,

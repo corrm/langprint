@@ -9,7 +9,7 @@ use crate::{
 use super::{CSharpGenericArgument, CSharpVisibility};
 
 /// Represents a C# method parameter.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct CSharpParameter {
     /// The name of the parameter.
     pub name: String,
@@ -54,7 +54,7 @@ pub struct CSharpParameterConversionOptions {
 }
 
 /// Represents a C# method.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct CSharpMethod {
     /// The name of the method.
     pub name: String,

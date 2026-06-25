@@ -7,7 +7,7 @@ use crate::{
 use super::RustVisibility;
 
 /// Represents a Rust constant (`const`) or `static` item.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct RustConstant {
     /// The name of the constant.
     pub name: String,

@@ -47,7 +47,7 @@ fn module_items_from_ir<T: BackendItem>(
 }
 
 /// Represents a Rust module (`mod`).
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct RustModule {
     /// The name of the module.
     pub name: String,
