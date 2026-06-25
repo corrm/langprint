@@ -192,6 +192,21 @@ keyword_map.insert(TargetLanguage::Python, "mykw");   // also escape `mykw` → 
 let config = ConversionConfig { keyword_map, ..ConversionConfig::default() };
 ```
 
+**AnnotationMap** controls the native spelling a Tier-1 `Annotation` lowers to per language, for
+the textual backends (Rust, C#). It is a clone-and-override table like `TypeMap`, keyed by
+`(TargetLanguage, AnnotationKind)`; the template's `{n}` placeholder is filled with the alignment
+value for `Aligned`. A `(language, kind)` with no entry emits nothing (this is how C# `Aligned`
+stays absent). C++ alignment is numeric (`alignas(n)`) and is not part of this textual map.
+
+```rust
+use langprint::{AnnotationKind, AnnotationMap, ConversionConfig, TargetLanguage};
+
+let mut annotation_map = AnnotationMap::builtin();
+annotation_map.insert(TargetLanguage::Rust, AnnotationKind::ReprC, "repr(C, packed)"); // override
+annotation_map.insert(TargetLanguage::CSharp, AnnotationKind::Aligned, "StructLayout(LayoutKind.Sequential, Size = {n})"); // add
+let config = ConversionConfig { annotation_map, ..ConversionConfig::default() };
+```
+
 ## Namespaces
 
 Namespaces/modules are first-class and render across every backend — C++ `namespace X { … }`,

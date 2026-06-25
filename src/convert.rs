@@ -6,7 +6,7 @@ use std::fmt;
 use std::sync::Arc;
 
 use crate::conversion::{ConversionResult, ConversionWarning};
-use crate::ir::{LanguageEnum, LanguageFunction, LanguageStruct};
+use crate::ir::{Annotation, AnnotationKind, LanguageEnum, LanguageFunction, LanguageStruct};
 use crate::naming::{to_camel_case, to_pascal_case, to_snake_case};
 use crate::type_map::{TargetLanguage, TypeMap};
 
@@ -61,6 +61,8 @@ pub struct ConversionConfig {
     pub naming_map: NamingMap,
     /// The per-language reserved words an identifier is escaped against.
     pub keyword_map: KeywordMap,
+    /// The per-`(language, kind)` native spelling Tier-1 annotations lower to.
+    pub annotation_map: AnnotationMap,
     /// Opt-in lifecycle hooks invoked on the cross-language IR path.
     pub hooks: Option<Arc<dyn ConversionHooks>>,
 }
@@ -73,6 +75,7 @@ impl fmt::Debug for ConversionConfig {
             .field("type_override", &self.type_override.as_ref().map(|_| "<fn>"))
             .field("naming_map", &self.naming_map)
             .field("keyword_map", &self.keyword_map)
+            .field("annotation_map", &self.annotation_map)
             .field("hooks", &self.hooks.as_ref().map(|_| "<hooks>"))
             .finish()
     }
@@ -86,6 +89,7 @@ impl Default for ConversionConfig {
             type_override: None,
             naming_map: NamingMap::builtin(),
             keyword_map: KeywordMap::builtin(),
+            annotation_map: AnnotationMap::builtin(),
             hooks: None,
         }
     }
@@ -100,6 +104,7 @@ impl ConversionConfig {
             type_override: None,
             naming_map: NamingMap::builtin(),
             keyword_map: KeywordMap::builtin(),
+            annotation_map: AnnotationMap::builtin(),
             hooks: None,
         }
     }
@@ -322,6 +327,71 @@ impl KeywordMap {
             },
             TargetLanguage::CSharp => format!("@{ident}"),
             _ => format!("{ident}_"),
+        }
+    }
+}
+
+/// The native attribute spelling each Tier-1 [`Annotation`] lowers to, per target language.
+///
+/// A cross-language mapping table mirroring [`TypeMap`]: a [`builtin`](AnnotationMap::builtin) table
+/// holds the idiomatic spelling per `(language, kind)`, and callers can override, extend, or clear
+/// it. The stored string is a template — for [`Annotation::Aligned`] the literal `{n}` is replaced
+/// with the alignment value. A pair with no entry emits nothing for that annotation.
+///
+/// This governs only the languages that render annotations as text (Rust, C#). C++ lowers alignment
+/// to a numeric field rendered as `alignas(n)` by the C++ renderer and is not part of this map.
+#[derive(Clone, Debug, Default)]
+pub struct AnnotationMap {
+    spellings: HashMap<(TargetLanguage, AnnotationKind), String>,
+}
+
+impl AnnotationMap {
+    /// Create an empty map; every annotation emits nothing.
+    pub fn empty() -> Self {
+        Self::default()
+    }
+
+    /// Create the built-in table of native attribute spellings per language and annotation kind.
+    pub fn builtin() -> Self {
+        use AnnotationKind::{Aligned, Packed, ReprC};
+        use TargetLanguage::{CSharp, Rust};
+
+        let mut map = Self::empty();
+
+        map.insert(Rust, ReprC, "repr(C)");
+        map.insert(Rust, Packed, "repr(packed)");
+        map.insert(Rust, Aligned, "repr(align({n}))");
+
+        map.insert(CSharp, ReprC, "StructLayout(LayoutKind.Sequential)");
+        map.insert(CSharp, Packed, "StructLayout(LayoutKind.Sequential, Pack = 1)");
+
+        map
+    }
+
+    /// Set the native spelling template for a `(language, kind)` pair (extends or overrides).
+    pub fn insert(&mut self, language: TargetLanguage, kind: AnnotationKind, template: impl Into<String>) {
+        self.spellings.insert((language, kind), template.into());
+    }
+
+    /// Merge another map into this one; entries from `other` take precedence.
+    pub fn extend(&mut self, other: AnnotationMap) {
+        self.spellings.extend(other.spellings);
+    }
+
+    /// Remove every entry.
+    pub fn clear(&mut self) {
+        self.spellings.clear();
+    }
+
+    /// Render an annotation as its native attribute spelling in a target language.
+    ///
+    /// For [`Annotation::Aligned`] the `{n}` placeholder in the template is replaced with the
+    /// alignment value. Returns `None` when the `(language, kind)` pair has no entry.
+    pub fn resolve(&self, language: TargetLanguage, annotation: &Annotation) -> Option<String> {
+        let template = self.spellings.get(&(language, annotation.kind()))?;
+        match annotation {
+            Annotation::Aligned(n) => Some(template.replace("{n}", &n.to_string())),
+            _ => Some(template.clone()),
         }
     }
 }

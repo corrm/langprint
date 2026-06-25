@@ -37,6 +37,31 @@ pub enum Annotation {
     Aligned(u32),
 }
 
+/// The discriminant of an [`Annotation`], without its payload.
+///
+/// Keys the per-language forward lowering table ([`crate::convert::AnnotationMap`]): the alignment
+/// value lives in the [`Annotation`], not the kind.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum AnnotationKind {
+    /// See [`Annotation::ReprC`].
+    ReprC,
+    /// See [`Annotation::Packed`].
+    Packed,
+    /// See [`Annotation::Aligned`].
+    Aligned,
+}
+
+impl Annotation {
+    /// The [`AnnotationKind`] of this annotation, dropping any payload.
+    pub fn kind(&self) -> AnnotationKind {
+        match self {
+            Annotation::ReprC => AnnotationKind::ReprC,
+            Annotation::Packed => AnnotationKind::Packed,
+            Annotation::Aligned(_) => AnnotationKind::Aligned,
+        }
+    }
+}
+
 /// Tier 2 — an opaque attribute carried verbatim, tagged with its source language.
 ///
 /// `text` is the attribute body in its source syntax, without the language's wrapping punctuation

@@ -7,7 +7,7 @@ use crate::{
 };
 
 use super::CSharpVisibility;
-use super::attributes::{annotation_to_csharp_attribute, csharp_attribute_to_annotation};
+use super::attributes::csharp_attribute_to_annotation;
 
 /// Represents a C# field.
 #[derive(Debug, Clone, PartialEq)]
@@ -94,7 +94,7 @@ impl BackendItem for CSharpField {
 
         let mut attributes = Vec::new();
         for annotation in &input.annotations {
-            if let Some(rendered) = annotation_to_csharp_attribute(annotation) {
+            if let Some(rendered) = config.annotation_map.resolve(TargetLanguage::CSharp, annotation) {
                 attributes.push(rendered);
             }
         }

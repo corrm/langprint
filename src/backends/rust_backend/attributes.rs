@@ -14,15 +14,6 @@ pub fn rust_attribute_to_annotation(attribute: &str) -> Option<Annotation> {
     }
 }
 
-/// Render a Tier-1 [`Annotation`] as the Rust attribute body it maps to (without the leading `#[`).
-pub fn annotation_to_rust_attribute(annotation: &Annotation) -> String {
-    match annotation {
-        Annotation::ReprC => "repr(C)".to_string(),
-        Annotation::Packed => "repr(packed)".to_string(),
-        Annotation::Aligned(n) => format!("repr(align({n}))"),
-    }
-}
-
 /// Parse `repr(align(N))` into `N`.
 fn parse_repr_align(attribute: &str) -> Option<u32> {
     let inner = attribute.strip_prefix("repr(align(")?.strip_suffix("))")?;

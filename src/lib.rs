@@ -20,7 +20,8 @@ pub mod renderers;
 pub mod text;
 pub mod type_map;
 
-pub use convert::{CaseStyle, ConversionConfig, KeywordMap, NamingMap};
+pub use convert::{AnnotationMap, CaseStyle, ConversionConfig, KeywordMap, NamingMap};
+pub use ir::{Annotation, AnnotationKind};
 pub use imports::{ImportEntry, ImportMap, ImportSet};
 pub use type_map::{PrimitiveType, TargetLanguage, TypeMap};
 

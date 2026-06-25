@@ -6,7 +6,7 @@ use crate::{
     type_map::TargetLanguage,
 };
 
-use super::attributes::{annotation_to_rust_attribute, rust_attribute_to_annotation};
+use super::attributes::rust_attribute_to_annotation;
 
 use super::{
     RustField, RustFieldConversionOptions, RustFunction, RustFunctionConversionOptions, RustGenericArgument,
@@ -145,7 +145,9 @@ impl BackendItem for RustStruct {
         let mut derives = Vec::new();
         let mut attributes = Vec::new();
         for annotation in &input.annotations {
-            attributes.push(annotation_to_rust_attribute(annotation));
+            if let Some(rendered) = config.annotation_map.resolve(TargetLanguage::Rust, annotation) {
+                attributes.push(rendered);
+            }
         }
         for raw in &input.raw_attributes {
             if raw.source != TargetLanguage::Rust {

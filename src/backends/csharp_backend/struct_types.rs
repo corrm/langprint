@@ -6,7 +6,7 @@ use crate::{
     type_map::TargetLanguage,
 };
 
-use super::attributes::{annotation_to_csharp_attribute, csharp_attribute_to_annotation};
+use super::attributes::csharp_attribute_to_annotation;
 use super::{
     CSharpField, CSharpFieldConversionOptions, CSharpGenericArgument, CSharpMethod, CSharpMethodConversionOptions,
     CSharpProperty, CSharpVisibility,
@@ -262,7 +262,7 @@ impl BackendItem for CSharpType {
 
         let mut attributes = Vec::new();
         for annotation in &input.annotations {
-            if let Some(rendered) = annotation_to_csharp_attribute(annotation) {
+            if let Some(rendered) = config.annotation_map.resolve(TargetLanguage::CSharp, annotation) {
                 attributes.push(rendered);
             }
         }
