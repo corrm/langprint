@@ -170,38 +170,12 @@ via `langprint::project_gen`:
 - `CargoGenerator` (Rust)
 - `CSharpProjectGenerator` (.NET SDK-style `.csproj`)
 
-### Convenience helpers
+### ProjectBuilder (recommended)
 
-For the common workflow of rendering declarations to files then generating build files, two helpers
-eliminate boilerplate:
-
-```rust
-use langprint::project_gen::{ProjectSpec, write_files, OutputKind, LanguageStandard};
-use std::path::PathBuf;
-
-// Render your declarations to strings, collect as (path, content) pairs.
-let files: Vec<(PathBuf, String)> = /* ... */;
-
-// Write rendered files to disk (creates parent dirs).
-write_files(&files, &output_dir)?;
-
-// Build a spec, auto-classifying sources/headers from the file list.
-let spec = ProjectSpec::new("my_project", LanguageStandard::Cpp17, OutputKind::StaticLib)
-    .populate_from_files(&files);
-
-// Generate the build files.
-CmakeGenerator.generate(&spec, &output_dir)?;
-```
-
-`populate_from_files` classifies `.h`/`.hpp`/`.hxx` as headers, everything else as sources, and
-infers `include_dirs` from parent directories. Both helpers are optional — you retain full control
-over rendering and spec construction.
-### ProjectBuilder
-
-For fluent, chainable spec construction, use `ProjectBuilder`:
+The easiest way to construct a spec is the fluent builder:
 
 ```rust
-use langprint::project_gen::{ProjectBuilder, LanguageStandard, OutputKind, Platform, Arch};
+use langprint::project_gen::{ProjectBuilder, LanguageStandard, OutputKind, Platform};
 
 let spec = ProjectBuilder::new("my_lib", LanguageStandard::Cpp17, OutputKind::StaticLib)
     .sources(["src/main.cpp", "src/types.cpp"])
@@ -213,18 +187,57 @@ let spec = ProjectBuilder::new("my_lib", LanguageStandard::Cpp17, OutputKind::St
     .unwrap();
 ```
 
-The builder supports all `ProjectSpec` fields across every language (C, C++, C#, Rust). It also
-carries `populate_from_files` so you can chain file classification directly:
+It covers every `ProjectSpec` field and works across all supported languages:
 
 ```rust
-let spec = ProjectBuilder::new("my_lib", LanguageStandard::Rust2021, OutputKind::SharedLib)
-    .populate_from_files(&files)
+// Rust crate
+let spec = ProjectBuilder::new("my_crate", LanguageStandard::Rust2021, OutputKind::SharedLib)
+    .source("src/lib.rs")
+    .build()
+    .unwrap();
+
+// C# project
+let spec = ProjectBuilder::new("MyLib", LanguageStandard::CSharp12, OutputKind::SharedLib)
+    .source("Program.cs")
     .build()
     .unwrap();
 ```
 
 `build()` validates the spec (non-empty name, at least one source file, consistent PCH config)
 and returns `Result<ProjectSpec, ProjectGenError>`.
+
+#### Populate from rendered files
+
+Chain `populate_from_files` to auto-classify sources/headers from your rendered output:
+
+```rust
+let files: Vec<(PathBuf, String)> = /* rendered declarations */;
+
+let spec = ProjectBuilder::new("my_lib", LanguageStandard::Cpp17, OutputKind::StaticLib)
+    .populate_from_files(&files)
+    .build()
+    .unwrap();
+```
+
+This classifies `.h`/`.hpp`/`.hxx` as headers, everything else as sources, and infers
+`include_dirs` from parent directories.
+
+### Convenience helpers
+
+For direct file I/O without the builder, two standalone helpers are available:
+
+```rust
+use langprint::project_gen::{ProjectSpec, write_files, OutputKind, LanguageStandard};
+
+// Write rendered files to disk (creates parent dirs).
+write_files(&files, &output_dir)?;
+
+// Build a spec, auto-classifying sources/headers from the file list.
+let spec = ProjectSpec::new("my_project", LanguageStandard::Cpp17, OutputKind::StaticLib)
+    .populate_from_files(&files);
+```
+
+Both helpers are optional — you retain full control over rendering and spec construction.
 ## Scope
 
 langprint models declarations and their layout, not arbitrary source code or runtime behavior. If
