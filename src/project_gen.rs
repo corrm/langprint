@@ -784,4 +784,29 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         assert!(write_files(&[], dir.path()).is_ok());
     }
+    #[test]
+    fn populate_from_files_classifies_hxx_as_header() {
+        let spec = ProjectSpec::new("test", LanguageStandard::Cpp17, OutputKind::StaticLib)
+            .populate_from_files(&[(PathBuf::from("foo.hxx"), "x".into())]);
+        assert_eq!(spec.headers.len(), 1);
+        assert!(spec.sources.is_empty());
+    }
+
+    #[test]
+    fn populate_from_files_deduplicates_include_dirs() {
+        let spec = ProjectSpec::new("test", LanguageStandard::Cpp17, OutputKind::StaticLib)
+            .populate_from_files(&[
+                (PathBuf::from("src/a.cpp"), "x".into()),
+                (PathBuf::from("src/b.cpp"), "x".into()),
+            ]);
+        assert_eq!(spec.include_dirs.len(), 1);
+    }
+
+    #[test]
+    fn write_files_creates_deeply_nested_dirs() {
+        let dir = tempfile::tempdir().unwrap();
+        let files = [(PathBuf::from("a/b/c/d.cpp"), "x".into())];
+        assert!(write_files(&files, dir.path()).is_ok());
+        assert!(dir.path().join("a/b/c/d.cpp").exists());
+    }
 }

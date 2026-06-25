@@ -170,6 +170,32 @@ via `langprint::project_gen`:
 - `CargoGenerator` (Rust)
 - `CSharpProjectGenerator` (.NET SDK-style `.csproj`)
 
+### Convenience helpers
+
+For the common workflow of rendering declarations to files then generating build files, two helpers
+eliminate boilerplate:
+
+```rust
+use langprint::project_gen::{ProjectSpec, write_files, OutputKind, LanguageStandard};
+use std::path::PathBuf;
+
+// Render your declarations to strings, collect as (path, content) pairs.
+let files: Vec<(PathBuf, String)> = /* ... */;
+
+// Write rendered files to disk (creates parent dirs).
+write_files(&files, &output_dir)?;
+
+// Build a spec, auto-classifying sources/headers from the file list.
+let spec = ProjectSpec::new("my_project", LanguageStandard::Cpp17, OutputKind::StaticLib)
+    .populate_from_files(&files);
+
+// Generate the build files.
+CmakeGenerator.generate(&spec, &output_dir)?;
+```
+
+`populate_from_files` classifies `.h`/`.hpp`/`.hxx` as headers, everything else as sources, and
+infers `include_dirs` from parent directories. Both helpers are optional — you retain full control
+over rendering and spec construction.
 ## Scope
 
 langprint models declarations and their layout, not arbitrary source code or runtime behavior. If
