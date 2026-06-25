@@ -21,4 +21,4 @@ pub use convert::ConversionConfig;
 pub use type_map::{PrimitiveType, TargetLanguage, TypeMap};
 
 /// Available backend names.
-pub const AVAILABLE_BACKENDS: &[&str] = &["C++", "Rust", "C#"];
+pub const AVAILABLE_BACKENDS: &[&str] = &["C++", "Rust", "C#", "Python"];

@@ -3,6 +3,7 @@ pub mod backend_item;
 pub mod backend_metadata;
 pub mod cpp_backend;
 pub mod csharp_backend;
+pub mod python_backend;
 pub mod rust_backend;
 
 pub use backend_feature::BackendFeature;
