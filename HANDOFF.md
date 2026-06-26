@@ -12,19 +12,11 @@
 ## API note from f86fa77 (flag for owner before release)
 `f86fa77` **removed `builtin()` from `TypeMap`/`NamingMap`/`KeywordMap`/`AnnotationMap`** and relies on `Default` (Default now yields the populated table; `empty()` for an empty one). `ImportMap::builtin(language)` is the only `builtin()` left. `TypeMap::builtin()` existed in published **0.1.1**, so this is a breaking change — confirm it's intended for the next release.
 
-## Remaining work (continue after compaction)
-1. **Test-coverage pass** (from the tests/docs reviewer — none of these landed yet):
-   - FFI qualifiers round-trip with NON-default values (`abi: Some("C")`, `is_extern_c: true`, `is_unsafe: true`) — `tests/roundtrip.rs` only covers defaults.
-   - Hooks `no_hooks_is_noop` + fire-tests for the 4 uncovered hook points (`after_to_ir_function`/`_enum`, `before_from_ir_struct`/`_enum`) AND for the newly-wired Python/Lua/JS hooks.
-   - `KeywordMap` Rust non-rawable fallback (`crate/self/Self/super` → `_`-suffix) — untested.
-   - Tier-1 `Packed` & `Aligned` cross-language render (only `ReprC` is tested).
-   - Tier-2 opaque-drop warning in a direction other than Rust→C#.
-   - `ctypes_type_map()` extend/override + custom-type-via-`type_override` tests.
-   - Direct Rust-backend `body: None` test; untyped-lowering `body: Some(...)` test.
-   - Fix weak test: `tests/lower_to_untyped.rs` `mentions_drop()` matches warning TEXT — match the `ConversionWarning` variant instead.
-2. **`examples/thin_backends.rs`** — runnable Python/Lua/JS rendering + a custom map (mirrors the new README content; only `cross_language.rs` exists today).
-3. **Deferred design notes** (documented as scope boundaries, build only if a consumer needs them): per-field/per-parameter `annotations` (add `LanguageFunctionParameter.annotations`); IR field initializers; docstring-style config; `ConversionConfig` builder; auto-wiring `ImportSet` into render paths. Do NOT add a shared `Map` trait (reviewer + owner: convention over trait here).
-4. **Held actions:** merge `feat/langprint-emitter` → `main` (task #12); release/publish (version still `0.1.1`; bump + CHANGELOG then STOP before `cargo publish`).
+## Remaining work
+1. **Test-coverage pass — DONE** (commit `8049bc7`, 276 tests): FFI non-default round-trip, all 6 hook points + untyped-path hook, KeywordMap Rust non-rawable fallback, Tier-1 Packed/Aligned cross-language, Tier-2 C#→Rust opaque drop, Rust `body: None`, untyped `body: Some`, robust warning-variant matching.
+2. **`examples/thin_backends.rs` — DONE** (commit `8049bc7`): renders Python/Lua/JS + ctypes via `type_override`.
+3. **Deferred design notes** (documented scope boundaries, build only if a consumer needs them): per-field/per-parameter `annotations` (add `LanguageFunctionParameter.annotations`); IR field initializers; docstring-style config; `ConversionConfig` builder; auto-wiring `ImportSet` into render paths. Do NOT add a shared `Map` trait (reviewer + owner: convention over trait here).
+4. **Held actions (await explicit owner go):** merge `feat/langprint-emitter` → `main`; release/publish (version still `0.1.1`; bump + CHANGELOG then STOP before `cargo publish`). Confirm the `f86fa77` removal of `TypeMap::builtin()` is intended (breaking vs 0.1.1).
 
 ## Conventions in force
 Maps follow the configurable-table pattern (Default/clone/insert/extend/clear/resolve — see memory `mapping-tables-user-configurable`). No hardcoded mapping matches. Owner reviews/approves merges and all publishes.
