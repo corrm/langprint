@@ -1,15 +1,29 @@
-# Enforces the full green gate before code leaves the machine.
-# No `cargo fmt` step — this repo is deliberately not rustfmt-formatted.
+# Git hooks. No `cargo fmt` — this repo is deliberately not rustfmt-formatted.
+
+# Commit time: fast lint + compile, only when Rust sources change.
+# clippy --all-targets compiles every target, so a separate build step is redundant.
+pre-commit:
+  commands:
+    clippy:
+      glob: "*.rs"
+      run: cargo clippy --all-targets -- -D warnings
+
+# Push time: the expensive full validation before code is shared.
 pre-push:
   parallel: true
   commands:
-    build:
-      run: cargo build --all-targets
     test:
       run: cargo test
-    clippy:
-      run: cargo clippy --all-targets -- -D warnings
     doc:
       run: cargo doc --no-deps
       env:
         RUSTDOCFLAGS: "-D warnings"
+
+commit-msg:
+  commands:
+    check-message:
+      run: |
+        if ! grep -qE '^(feat|fix|docs|style|refactor|test|chore)(\(.+\))?: .+' {1}; then
+          echo "Commit message must follow conventional commits format"
+          exit 1
+        fi
