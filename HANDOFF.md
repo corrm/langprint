@@ -26,7 +26,7 @@ Reviewer's two by-design notes (C++ `ReprC` emits nothing; C# `Aligned` no nativ
 1. **Test-coverage pass — DONE** (commit `8049bc7`, 276 tests): FFI non-default round-trip, all 6 hook points + untyped-path hook, KeywordMap Rust non-rawable fallback, Tier-1 Packed/Aligned cross-language, Tier-2 C#→Rust opaque drop, Rust `body: None`, untyped `body: Some`, robust warning-variant matching.
 2. **`examples/thin_backends.rs` — DONE** (commit `8049bc7`): renders Python/Lua/JS + ctypes via `type_override`.
 3. **Deferred design notes** (documented scope boundaries, build only if a consumer needs them): per-field/per-parameter `annotations` (add `LanguageFunctionParameter.annotations`); IR field initializers; docstring-style config; `ConversionConfig` builder; auto-wiring `ImportSet` into render paths. Do NOT add a shared `Map` trait (reviewer + owner: convention over trait here).
-4. **Held actions (await explicit owner go):** merge `feat/langprint-emitter` → `main`; release/publish (version still `0.1.1`; bump + CHANGELOG then STOP before `cargo publish`). Confirm the `f86fa77` removal of `TypeMap::builtin()` is intended (breaking vs 0.1.1).
+4. **Release prep — DONE:** bumped to `0.2.0` in `Cargo.toml` and wrote `CHANGELOG.md` (the emitter release; breaking changes vs 0.1.1 documented: `builtin()` removed, `EnumRenderer` variant-options nested, `CtypeMap`→`ctypes_type_map()`, ctypes i128/u128 now warn). **STOP before `cargo publish`** — `cargo publish` / tagging `v0.2.0` await explicit owner go.
 
 ## Conventions in force
 Maps follow the configurable-table pattern (Default/clone/insert/extend/clear/resolve — see memory `mapping-tables-user-configurable`). No hardcoded mapping matches. Owner reviews/approves merges and all publishes.
