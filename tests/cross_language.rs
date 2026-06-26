@@ -108,6 +108,7 @@ fn cpp_struct_to_rust() {
         struct_kind: CppStructKind::Class,
         is_final: false,
         alignment: None,
+        is_packed: false,
         name: "Player".to_string(),
         template_params: vec![],
         bases: vec![],
@@ -138,6 +139,7 @@ fn cpp_struct_with_base_to_csharp() {
         struct_kind: CppStructKind::Class,
         is_final: false,
         alignment: None,
+        is_packed: false,
         name: "Player".to_string(),
         template_params: vec![],
         bases: vec![CppBase {

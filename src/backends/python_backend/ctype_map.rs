@@ -1,6 +1,6 @@
 //! Python ctypes type map.
 //!
-//! Returns a [`TypeMap`](crate::type_map::TypeMap) with ctypes spellings for Python output.
+//! Returns a [`TypeMap`] with ctypes spellings for Python output.
 //! Use it directly as the type map in [`ConversionConfig`](crate::convert::ConversionConfig):
 //!
 //! ```
@@ -16,9 +16,10 @@ use crate::type_map::{PrimitiveType, TargetLanguage, TypeMap};
 
 /// Build a [`TypeMap`] with ctypes spellings for Python output.
 ///
-/// The built-in table covers what ctypes has native types for.
-/// [`PrimitiveType::I128`], [`U128`](PrimitiveType::U128), and [`Void`](PrimitiveType::Void) are
-/// absent — ctypes has no native type for them.
+/// The table covers what ctypes has native types for. [`PrimitiveType::I128`] and
+/// [`U128`](PrimitiveType::U128) have no ctypes equivalent, so their Python output is removed: they
+/// resolve to nothing and surface as an unmapped-type warning, leaving the consumer to supply a
+/// `type_override`. [`PrimitiveType::Void`] maps to `None`, which is correct for a void return.
 ///
 /// Use this as the `type_map` in [`ConversionConfig`](crate::convert::ConversionConfig).
 pub fn ctypes_type_map() -> TypeMap {
@@ -43,6 +44,9 @@ pub fn ctypes_type_map() -> TypeMap {
     ] {
         map.set_output(primitive, TargetLanguage::Python, spelling);
     }
+
+    map.clear_output(PrimitiveType::I128, TargetLanguage::Python);
+    map.clear_output(PrimitiveType::U128, TargetLanguage::Python);
 
     map
 }

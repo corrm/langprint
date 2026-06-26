@@ -1,7 +1,7 @@
 use crate::{
     backends::BackendItem,
     conversion::{ConversionLog, ConversionResult, ConversionWarning},
-    convert::ConversionConfig,
+    convert::{ConversionConfig, IdentifierKind, rename_identifier},
     ir::{LanguageStruct, LanguageStructKind, RawAttribute},
     type_map::TargetLanguage,
 };
@@ -139,6 +139,9 @@ impl BackendItem for RustStruct {
             });
         }
 
+        let name = rename_identifier(&config, &input.name, TargetLanguage::Rust, IdentifierKind::Type);
+        log.add_warnings(name.log.warnings);
+
         let visibility = RustVisibility::from_ir(input.visibility, None);
         log.add_warnings(visibility.log.warnings);
 
@@ -188,7 +191,7 @@ impl BackendItem for RustStruct {
 
         ConversionResult::with_log(
             RustStruct {
-                name: input.name,
+                name: name.value,
                 visibility: visibility.value,
                 generic_args,
                 fields,

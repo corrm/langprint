@@ -104,6 +104,7 @@ fn cpp_class_default_base_is_private() {
         struct_kind: CppStructKind::Class,
         is_final: false,
         alignment: None,
+        is_packed: false,
         name: "D".to_string(),
         template_params: vec![],
         bases: vec![CppBase {
@@ -125,6 +126,7 @@ fn cpp_struct_default_base_is_public() {
         struct_kind: CppStructKind::Struct,
         is_final: false,
         alignment: None,
+        is_packed: false,
         name: "D".to_string(),
         template_params: vec![],
         bases: vec![CppBase {

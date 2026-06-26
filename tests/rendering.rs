@@ -191,6 +191,7 @@ fn renders_struct_with_base_field_and_method() {
         struct_kind: CppStructKind::Class,
         is_final: false,
         alignment: None,
+        is_packed: false,
         name: "Player".to_string(),
         template_params: Vec::new(),
         bases: vec![CppBase {

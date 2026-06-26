@@ -1,7 +1,7 @@
 use crate::{
     backends::BackendItem,
     conversion::{ConversionLog, ConversionResult, ConversionWarning},
-    convert::{ConversionConfig, map_type},
+    convert::{ConversionConfig, IdentifierKind, map_type, rename_identifier},
     ir::{EnumVariant, EnumVariantValue, LanguageEnum, Visibility},
     type_map::TargetLanguage,
 };
@@ -39,8 +39,9 @@ impl BackendItem for CppEnumVariant {
         })
     }
 
-    fn from_ir(input: Self::IrType, _options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
+    fn from_ir(input: Self::IrType, options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
         let mut log = ConversionLog::new();
+        let config = options.map(|options| options.config.clone()).unwrap_or_default();
 
         let value = match input.value {
             EnumVariantValue::NoValue => None,
@@ -54,9 +55,12 @@ impl BackendItem for CppEnumVariant {
             }
         };
 
+        let name = rename_identifier(&config, &input.name, TargetLanguage::Cpp, IdentifierKind::EnumMember);
+        log.add_warnings(name.log.warnings);
+
         ConversionResult::with_log(
             CppEnumVariant {
-                name: input.name,
+                name: name.value,
                 value,
                 docs: input.docs,
             },
@@ -88,17 +92,10 @@ impl CppEnumVariantRenderOptions {
 }
 
 /// Conversion options for C++ enum variants.
-#[derive(Debug, Clone)]
-pub struct CppEnumVariantConversionOptions {}
-
-impl Default for CppEnumVariantConversionOptions {
-    fn default() -> Self {
-        Self::DEFAULT.clone()
-    }
-}
-
-impl CppEnumVariantConversionOptions {
-    pub const DEFAULT: Self = Self {};
+#[derive(Debug, Clone, Default)]
+pub struct CppEnumVariantConversionOptions {
+    /// Cross-language conversion configuration (type mapping + renaming).
+    pub config: ConversionConfig,
 }
 
 /// Represents a C++ enum definition.
@@ -172,9 +169,13 @@ impl BackendItem for CppEnum {
             None => None,
         };
 
+        let variant_options = CppEnumVariantConversionOptions {
+            config: options.config.clone(),
+        };
         let mut variants = Vec::with_capacity(input.variants.len());
         for variant in input.variants {
-            let converted: ConversionResult<CppEnumVariant> = CppEnumVariant::from_ir(variant, None);
+            let converted: ConversionResult<CppEnumVariant> =
+                CppEnumVariant::from_ir(variant, Some(&variant_options));
             if converted.log.has_warnings() {
                 result_log.add_warnings(converted.log.warnings);
             }
@@ -190,9 +191,12 @@ impl BackendItem for CppEnum {
             }
         }
 
+        let name = rename_identifier(&options.config, &input.name, TargetLanguage::Cpp, IdentifierKind::Type);
+        result_log.add_warnings(name.log.warnings);
+
         ConversionResult::with_log(
             CppEnum {
-                name: input.name,
+                name: name.value,
                 variants,
                 underlying_type,
                 is_enum_class: options.is_enum_class,

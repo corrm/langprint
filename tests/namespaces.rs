@@ -60,6 +60,7 @@ fn cpp_struct(name: &str, field_type: &str) -> CppStruct {
         struct_kind: CppStructKind::Struct,
         is_final: false,
         alignment: None,
+        is_packed: false,
         name: name.to_string(),
         template_params: vec![],
         bases: vec![],

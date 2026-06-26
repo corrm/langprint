@@ -335,6 +335,7 @@ fn clean_cpp_struct() -> CppStruct {
         struct_kind: CppStructKind::Struct,
         is_final: false,
         alignment: None,
+        is_packed: false,
         name: "Point".into(),
         template_params: vec![],
         bases: vec![],

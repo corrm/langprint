@@ -138,7 +138,7 @@ pub enum CaseStyle {
 
 /// The per-`(language, kind)` case convention applied when renaming identifiers.
 ///
-/// A cross-language mapping table mirroring [`TypeMap`]: a [`builtin`](NamingMap::builtin) table
+/// A cross-language mapping table mirroring [`TypeMap`]: the [`default`](NamingMap::default) table
 /// encodes each language's idiomatic case per [`IdentifierKind`], and callers can override, extend,
 /// or clear it. A pair with no entry leaves the identifier verbatim.
 #[derive(Clone, Debug)]
@@ -197,7 +197,7 @@ impl NamingMap {
 
 /// The per-language reserved words an identifier is escaped against when it would otherwise collide.
 ///
-/// A cross-language mapping table mirroring [`TypeMap`]: a [`builtin`](KeywordMap::builtin) set of
+/// A cross-language mapping table mirroring [`TypeMap`]: the [`default`](KeywordMap::default) set of
 /// reserved words per language drives [`escape`](KeywordMap::escape), and callers can extend or clear
 /// it. Escaping is per-language idiom (Rust `r#ident`, C# `@ident`, others `ident_`).
 ///
@@ -333,7 +333,7 @@ impl KeywordMap {
 
 /// The native attribute spelling each Tier-1 [`Annotation`] lowers to, per target language.
 ///
-/// A cross-language mapping table mirroring [`TypeMap`]: a [`builtin`](AnnotationMap::builtin) table
+/// A cross-language mapping table mirroring [`TypeMap`]: the [`default`](AnnotationMap::default) table
 /// holds the idiomatic spelling per `(language, kind)`, and callers can override, extend, or clear
 /// it. The stored string is a template — for [`Annotation::Aligned`] the literal `{n}` is replaced
 /// with the alignment value. A pair with no entry emits nothing for that annotation.
@@ -344,6 +344,8 @@ impl KeywordMap {
 /// emitted verbatim, and any `{n}` in them is left literal.
 ///
 /// This governs only the languages that render annotations as text (Rust, C#). C++ lowers alignment
+/// through dedicated `CppStruct` fields (`alignas(N)`, `#pragma pack`) rather than this map, so it
+/// has no entries here.
 #[derive(Clone, Debug)]
 pub struct AnnotationMap {
     spellings: HashMap<(TargetLanguage, AnnotationKind), String>,

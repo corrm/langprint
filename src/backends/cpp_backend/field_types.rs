@@ -1,7 +1,7 @@
 use crate::{
     backends::BackendItem,
     conversion::{ConversionLog, ConversionResult, ConversionWarning},
-    convert::{ConversionConfig, map_type},
+    convert::{ConversionConfig, IdentifierKind, map_type, rename_identifier},
     ir::{Annotation, LanguageField},
     type_map::TargetLanguage,
 };
@@ -126,8 +126,11 @@ impl BackendItem for CppField {
             }
         }
 
+        let name = rename_identifier(&config, &input.name, TargetLanguage::Cpp, IdentifierKind::Field);
+        result_log.add_warnings(name.log.warnings);
+
         let cpp_field = CppField {
-            name: input.name,
+            name: name.value,
             field_type: field_type.value,
             visibility: visibility.value,
             array_size: None,

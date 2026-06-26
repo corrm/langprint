@@ -3,7 +3,7 @@
 //! The neutral IR carries type spellings as opaque strings. When a declaration is converted from
 //! one language to another, a primitive written in the source language (`f32`, `uint8_t`, `int`)
 //! must be re-spelled in the target language (`float`, `byte`, `int`). [`TypeMap`] performs that
-//! re-spelling. A [`builtin`](TypeMap::builtin) table covers the common primitives, and callers can
+//! re-spelling. The [default](TypeMap::default) table covers the common primitives, and callers can
 //! override, extend, or clear it before driving a conversion.
 
 use std::collections::HashMap;
@@ -179,6 +179,15 @@ impl TypeMap {
         self.output.insert((primitive, language), spelling.into());
     }
 
+    /// Remove a single primitive's output for one language, so it renders to nothing there.
+    ///
+    /// Recognition of the primitive's spellings is left intact; only the `(primitive, language)`
+    /// output entry is dropped. After removal, [`render`](Self::render) and [`map`](Self::map)
+    /// return `None` for that pair, which a caller surfaces as an unmapped-type warning.
+    pub fn clear_output(&mut self, primitive: PrimitiveType, language: TargetLanguage) {
+        self.output.remove(&(primitive, language));
+    }
+
     /// Merge another map into this one; entries from `other` take precedence.
     pub fn extend(&mut self, other: TypeMap) {
         self.recognize.extend(other.recognize);
@@ -189,5 +198,24 @@ impl TypeMap {
     pub fn clear(&mut self) {
         self.recognize.clear();
         self.output.clear();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{PrimitiveType, TargetLanguage, TypeMap};
+
+    #[test]
+    fn clear_output_drops_only_the_targeted_pair() {
+        let mut map = TypeMap::default();
+        assert_eq!(map.map("i128", TargetLanguage::Python), Some("int".to_string()));
+
+        map.clear_output(PrimitiveType::I128, TargetLanguage::Python);
+
+        // The Python output is gone, so the spelling no longer maps there...
+        assert_eq!(map.map("i128", TargetLanguage::Python), None);
+        // ...but recognition and other languages' outputs are untouched.
+        assert_eq!(map.resolve("i128"), Some(PrimitiveType::I128));
+        assert_eq!(map.map("i128", TargetLanguage::Rust), Some("i128".to_string()));
     }
 }

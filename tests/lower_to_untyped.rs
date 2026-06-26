@@ -221,8 +221,26 @@ fn ctypes_type_map_has_expected_entries() {
     let map = ctypes_type_map();
     assert_eq!(map.map("f64", TargetLanguage::Python), Some("ctypes.c_double".to_string()));
     assert_eq!(map.map("i32", TargetLanguage::Python), Some("ctypes.c_int32".to_string()));
-    // i128 has no ctypes entry — falls back to builtin TypeMap Python output
-    assert_eq!(map.map("i128", TargetLanguage::Python), Some("int".to_string()));
+    // i128/u128 have no ctypes type: their Python output is removed so they map to nothing.
+    assert_eq!(map.map("i128", TargetLanguage::Python), None);
+    assert_eq!(map.map("u128", TargetLanguage::Python), None);
+}
+
+#[test]
+fn ctypes_unmapped_128bit_field_warns() {
+    let options = PythonStructConversionOptions { config: ctypes_config() };
+    let input = neutral_ctypes_struct(vec![primitive_field("Big", "i128")]);
+    let result = PythonStruct::from_ir(input, Some(&options));
+
+    assert!(
+        result
+            .log
+            .warnings
+            .iter()
+            .any(|warning| matches!(warning, ConversionWarning::UnsupportedFeature { .. })),
+        "i128 has no ctypes type and must warn: {:?}",
+        result.log.warnings
+    );
 }
 
 #[test]

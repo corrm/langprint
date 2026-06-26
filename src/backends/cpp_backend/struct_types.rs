@@ -7,7 +7,7 @@ use crate::type_map::TargetLanguage;
 use crate::{
     backends::BackendItem,
     conversion::{ConversionLog, ConversionResult, ConversionWarning},
-    convert::ConversionConfig,
+    convert::{ConversionConfig, IdentifierKind, rename_identifier},
     ir::{Annotation, LanguageBase, LanguageStruct, Visibility},
 };
 
@@ -37,6 +37,8 @@ pub struct CppStruct {
     pub is_final: bool,
     /// Over-alignment for the struct (`alignas(N)`); `None` = natural alignment.
     pub alignment: Option<u32>,
+    /// Packed layout, no padding between fields; renders via `#pragma pack`.
+    pub is_packed: bool,
     /// The name of the struct.
     pub name: String,
     /// Template parameters for the struct/class (C++ templates).
@@ -113,6 +115,9 @@ impl BackendItem for CppStruct {
         let mut annotations = Vec::new();
         if let Some(alignment) = self.alignment {
             annotations.push(Annotation::Aligned(alignment));
+        }
+        if self.is_packed {
+            annotations.push(Annotation::Packed);
         }
 
         let mut lang_struct = LanguageStruct {
@@ -214,9 +219,12 @@ impl BackendItem for CppStruct {
         }
 
         let mut alignment = None;
+        let mut is_packed = false;
         for annotation in &input.annotations {
-            if let Annotation::Aligned(n) = annotation {
-                alignment = Some(*n);
+            match annotation {
+                Annotation::Aligned(n) => alignment = Some(*n),
+                Annotation::Packed => is_packed = true,
+                Annotation::ReprC => {}
             }
         }
         for raw in &input.raw_attributes {
@@ -228,6 +236,9 @@ impl BackendItem for CppStruct {
             }
         }
 
+        let name = rename_identifier(&config, &input.name, TargetLanguage::Cpp, IdentifierKind::Type);
+        result_log.add_warnings(name.log.warnings);
+
         let cpp_struct = CppStruct {
             struct_kind: match input.struct_kind {
                 LanguageStructKind::Struct => CppStructKind::Struct,
@@ -236,7 +247,8 @@ impl BackendItem for CppStruct {
             },
             is_final: input.is_final,
             alignment,
-            name: input.name.clone(),
+            is_packed,
+            name: name.value,
             template_params,
             bases,
             fields,

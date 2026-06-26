@@ -1,7 +1,11 @@
 //! Tests for the configurable `NamingMap` (case conventions) and `KeywordMap` (reserved-word
 //! escaping) carried on `ConversionConfig` and applied by `rename_identifier`.
 
+use langprint::backends::rust_backend::{RustEnum, RustStruct};
+use langprint::backends::BackendItem;
+use langprint::conversion::ConversionWarning;
 use langprint::convert::{rename_identifier, ConversionConfig, IdentifierKind};
+use langprint::ir::{EnumVariant, EnumVariantValue, LanguageEnum, LanguageStruct, LanguageStructKind, Visibility};
 use langprint::{CaseStyle, KeywordMap, NamingMap, TargetLanguage};
 
 #[test]
@@ -92,4 +96,54 @@ fn keyword_map_user_extend() {
     };
     let escaped = rename_identifier(&config, "mykw", TargetLanguage::Python, IdentifierKind::Field);
     assert_eq!(escaped.value, "mykw_");
+}
+
+#[test]
+fn from_ir_escapes_rust_struct_keyword_name() {
+    let ir = LanguageStruct {
+        visibility: Visibility::Default,
+        struct_kind: LanguageStructKind::Struct,
+        is_abstract: false,
+        is_final: true,
+        name: "type".to_string(),
+        generic_args: Vec::new(),
+        bases: Vec::new(),
+        fields: Vec::new(),
+        methods: Vec::new(),
+        docs: None,
+        annotations: Vec::new(),
+        raw_attributes: Vec::new(),
+    };
+
+    let result = RustStruct::from_ir(ir, None);
+    assert_eq!(result.value.name, "r#type");
+    assert!(result.log.warnings.iter().any(|warning| matches!(
+        warning,
+        ConversionWarning::NamingConventionChanged { original, converted }
+            if original == "type" && converted == "r#type"
+    )));
+}
+
+#[test]
+fn from_ir_escapes_rust_enum_variant_keyword() {
+    let ir = LanguageEnum {
+        name: "Kind".to_string(),
+        visibility: Visibility::Default,
+        variants: vec![EnumVariant {
+            name: "type".to_string(),
+            value: EnumVariantValue::NoValue,
+            docs: None,
+        }],
+        underlying_type: None,
+        docs: None,
+        annotations: Vec::new(),
+        raw_attributes: Vec::new(),
+    };
+
+    let result = RustEnum::from_ir(ir, None);
+    assert_eq!(result.value.variants[0].name, "r#type");
+    assert!(result.log.warnings.iter().any(|warning| matches!(
+        warning,
+        ConversionWarning::NamingConventionChanged { converted, .. } if converted == "r#type"
+    )));
 }

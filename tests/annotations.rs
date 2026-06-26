@@ -6,11 +6,14 @@
 //! when projected to a different target.
 
 use langprint::backends::BackendItem;
-use langprint::backends::cpp_backend::{CppBackend, CppStruct, DocsStyle};
+use langprint::backends::cpp_backend::{CppBackend, CppEnum, CppStruct, CppStructKind, DocsStyle};
 use langprint::backends::csharp_backend::{CSharpBackend, CSharpType, CSharpTypeKind, CSharpVisibility};
 use langprint::backends::rust_backend::{RustBackend, RustStruct, RustVisibility};
 use langprint::conversion::ConversionWarning;
-use langprint::ir::{Annotation, LanguageField, LanguageStruct, LanguageStructKind, RawAttribute, Visibility};
+use langprint::ir::{
+    Annotation, EnumVariant, EnumVariantValue, LanguageEnum, LanguageField, LanguageStruct, LanguageStructKind,
+    RawAttribute, Visibility,
+};
 use langprint::renderers::StructRenderer;
 use langprint::text::{IndentStyle, NewLineStyle};
 use langprint::type_map::TargetLanguage;
@@ -215,5 +218,98 @@ fn tier2_rust_only_attribute_is_dropped_for_csharp_with_warning() {
         )),
         "expected a dropped-attribute warning naming the Rust source, got {:?}",
         csharp.log.warnings
+    );
+}
+
+fn packed_cpp_struct() -> CppStruct {
+    CppStruct {
+        struct_kind: CppStructKind::Struct,
+        is_final: false,
+        alignment: None,
+        is_packed: true,
+        name: "Packet".to_string(),
+        template_params: Vec::new(),
+        bases: Vec::new(),
+        fields: Vec::new(),
+        methods: Vec::new(),
+        docs: None,
+    }
+}
+
+/// A packed C++ struct renders wrapped in `#pragma pack(push, 1)` / `#pragma pack(pop)`.
+#[test]
+fn cpp_packed_struct_renders_pragma_pack() {
+    let rendered = cpp_backend()
+        .render_struct::<&str>(&packed_cpp_struct(), None, None, None, &mut 0)
+        .unwrap();
+    assert!(
+        rendered.contains("#pragma pack(push, 1)") && rendered.contains("#pragma pack(pop)"),
+        "rendered: {rendered}"
+    );
+}
+
+/// `is_packed` survives a C++ round-trip through the IR (native packing → `Annotation::Packed` → native).
+#[test]
+fn cpp_packed_struct_roundtrips() {
+    let ir = packed_cpp_struct().to_ir(None);
+    assert!(ir.value.annotations.contains(&Annotation::Packed));
+
+    let back = CppStruct::from_ir(ir.value, None);
+    assert!(back.value.is_packed);
+}
+
+/// An IR struct carrying `Annotation::Packed` lowers to a packed C++ struct.
+#[test]
+fn cpp_packed_annotation_lowers_to_is_packed() {
+    let cpp = CppStruct::from_ir(ir_struct(vec![Annotation::Packed]), None);
+    assert!(cpp.value.is_packed);
+}
+
+/// A C++ struct named with a reserved keyword is escaped on `from_ir`, with a `NamingConventionChanged` warning.
+#[test]
+fn cpp_struct_keyword_name_is_escaped() {
+    let mut ir = ir_struct(vec![]);
+    ir.name = "class".to_string();
+
+    let cpp = CppStruct::from_ir(ir, None);
+    assert_eq!(cpp.value.name, "class_");
+    assert!(
+        cpp.log.warnings.iter().any(|warning| matches!(
+            warning,
+            ConversionWarning::NamingConventionChanged { original, converted }
+                if original == "class" && converted == "class_"
+        )),
+        "expected a NamingConventionChanged warning, got {:?}",
+        cpp.log.warnings
+    );
+}
+
+/// A C++ enum named with a reserved keyword is escaped on `from_ir`, with a `NamingConventionChanged` warning.
+#[test]
+fn cpp_enum_keyword_name_is_escaped() {
+    let ir = LanguageEnum {
+        name: "enum".to_string(),
+        visibility: Visibility::Public,
+        variants: vec![EnumVariant {
+            name: "default".to_string(),
+            value: EnumVariantValue::NoValue,
+            docs: None,
+        }],
+        underlying_type: None,
+        docs: None,
+        annotations: Vec::new(),
+        raw_attributes: Vec::new(),
+    };
+
+    let cpp = CppEnum::from_ir(ir, None);
+    assert_eq!(cpp.value.name, "enum_");
+    assert_eq!(cpp.value.variants[0].name, "default_");
+    assert!(
+        cpp.log.warnings.iter().any(|warning| matches!(
+            warning,
+            ConversionWarning::NamingConventionChanged { original, .. } if original == "enum"
+        )),
+        "expected a NamingConventionChanged warning for the enum name, got {:?}",
+        cpp.log.warnings
     );
 }

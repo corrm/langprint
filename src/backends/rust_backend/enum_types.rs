@@ -1,7 +1,7 @@
 use crate::{
     backends::BackendItem,
     conversion::{ConversionLog, ConversionResult, ConversionWarning},
-    convert::{ConversionConfig, map_type},
+    convert::{ConversionConfig, IdentifierKind, map_type, rename_identifier},
     ir::{EnumVariant, EnumVariantValue, LanguageEnum, RawAttribute},
     type_map::TargetLanguage,
 };
@@ -130,6 +130,9 @@ impl BackendItem for RustEnum {
             hooks.before_from_ir_enum(&mut input);
         }
 
+        let name = rename_identifier(&config, &input.name, TargetLanguage::Rust, IdentifierKind::Type);
+        log.add_warnings(name.log.warnings);
+
         let visibility = RustVisibility::from_ir(input.visibility, None);
         log.add_warnings(visibility.log.warnings);
 
@@ -156,11 +159,12 @@ impl BackendItem for RustEnum {
             None => None,
         };
 
-        let variants = input
-            .variants
-            .into_iter()
-            .map(|variant| RustEnumVariant {
-                name: variant.name,
+        let mut variants = Vec::with_capacity(input.variants.len());
+        for variant in input.variants {
+            let variant_name = rename_identifier(&config, &variant.name, TargetLanguage::Rust, IdentifierKind::EnumMember);
+            log.add_warnings(variant_name.log.warnings);
+            variants.push(RustEnumVariant {
+                name: variant_name.value,
                 value: match variant.value {
                     EnumVariantValue::NoValue => RustEnumVariantValue::Unit,
                     EnumVariantValue::Value(value) => RustEnumVariantValue::Discriminant(value),
@@ -168,12 +172,12 @@ impl BackendItem for RustEnum {
                     EnumVariantValue::Struct(fields) => RustEnumVariantValue::Struct(fields),
                 },
                 docs: variant.docs,
-            })
-            .collect();
+            });
+        }
 
         ConversionResult::with_log(
             RustEnum {
-                name: input.name,
+                name: name.value,
                 visibility: visibility.value,
                 variants,
                 repr,

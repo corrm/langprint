@@ -664,6 +664,10 @@ impl StructRenderer for CppBackend {
             write!(out, ">{}", self.new_line.as_str())?;
         }
 
+        if input.is_packed {
+            write!(out, "{}#pragma pack(push, 1){}", indent_str, self.new_line.as_str())?;
+        }
+
         // Write struct declaration
         let alignas_prefix: String = match input.alignment {
             Some(n) => format!("alignas({}) ", n),
@@ -1022,6 +1026,10 @@ impl StructRenderer for CppBackend {
             self.new_line.as_str()
         )?;
 
+        if input.is_packed {
+            write!(out, "{}#pragma pack(pop){}", indent_str, self.new_line.as_str())?;
+        }
+
         // Write after string if provided
         if let Some(after) = after {
             write!(out, "{}", after.as_ref())?;
@@ -1108,6 +1116,7 @@ mod tests {
             struct_kind: CppStructKind::Struct,
             is_final: false,
             alignment,
+            is_packed: false,
             name: "Foo".to_string(),
             template_params: Vec::new(),
             bases: Vec::new(),

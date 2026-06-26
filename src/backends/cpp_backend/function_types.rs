@@ -1,7 +1,7 @@
 use crate::{
     backends::BackendItem,
     conversion::{ConversionLog, ConversionResult, ConversionWarning},
-    convert::{ConversionConfig, map_type},
+    convert::{ConversionConfig, IdentifierKind, map_type, rename_identifier},
     ir::{LanguageFunction, LanguageFunctionParameter},
     type_map::TargetLanguage,
 };
@@ -236,8 +236,11 @@ impl BackendItem for CppFunction {
             }
         }
 
+        let name = rename_identifier(&config, &input.name, TargetLanguage::Cpp, IdentifierKind::Function);
+        result_log.add_warnings(name.log.warnings);
+
         let cpp_function = CppFunction {
-            name: input.name,
+            name: name.value,
             parent_name: None, // Scope is managed by the caller.
             visibility: visibility_result.value,
             parameters,
