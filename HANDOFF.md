@@ -1,7 +1,17 @@
 # Session Handoff — langprint emitter for polyplugc
 
-**Branch:** `feat/langprint-emitter` (NOT merged to `main`, NOT published — both held for explicit owner approval).
-**Gate:** 261 tests pass · `cargo build`/`cargo doc` clean · `cargo clippy --all-targets -- -D warnings` = **1 lint only**: `renderers.rs` 8-arg render signature (owner-pending API decision, HANDOFF items A/C/D — do NOT band-aid).
+**Branch:** all work lives on `main` (there is no `feat/langprint-emitter` branch — that model never materialized; every commit landed on `main`). NOT published — held for explicit owner approval.
+**Gate:** 285 tests pass · `cargo build` clean · `cargo doc --no-deps` = **0 warnings** · `cargo clippy --all-targets -- -D warnings` = **1 lint only**: `renderers.rs:271` 8-arg `EnumRenderer` signature (owner-pending API decision, HANDOFF items A/C/D — do NOT band-aid).
+
+**Formatting convention:** this repo is deliberately NOT rustfmt-formatted (no `rustfmt.toml`, no fmt in CI; clean HEAD is fmt-dirty in 400+ spots). Do NOT run `cargo fmt` repo-wide — it reformats 80+ files (import-sorting + line-wrapping) and buries real changes. Match the existing compact style by hand.
+
+## Pre-merge review pass (commit `25fe8c0`)
+An honest reviewer found 4 real findings; all verified against source and fixed natively (no band-aids):
+- **C1 (data loss):** C++ silently dropped `Annotation::Packed`. Now `CppStruct.is_packed` renders `#pragma pack(push,1)`/`pop` and round-trips via `Annotation::Packed`.
+- **I1 (uncompilable output):** keyword escaping skipped for Rust/C++ type/enum/variant (+C++ field/function) names on `from_ir`. Now routed through `rename_identifier` (NamingConventionChanged warning on collision).
+- **I2 (invalid ctypes + false doc):** `ctypes_type_map()` silently mapped i128/u128 to invalid `int`. Added `TypeMap::clear_output`; i128/u128 now warn as unmapped (override via `type_override`); `void->None` kept for returns.
+- **I3 (stale docs):** 4 broken `builtin` intra-doc links → `default`; truncated AnnotationMap C++ sentence completed.
+Reviewer's two by-design notes (C++ `ReprC` emits nothing; C# `Aligned` no native form) verified as sanctioned by the IR contract — not defects.
 
 ## Done (all 12 Plane issues + epic closed)
 - **LANGPRINT-2..10** (epic `32ec681e` closed): body-slot contract; Python/Lua/JS thin render-only backends; per-backend imports; IR thin from_ir targets; native FFI qualifiers (Rust `abi`/`extern "C"`, C++ `extern "C"`, C# `unsafe` modifier — structs safe by construction); two-tier IR annotation system (Tier-1 `Annotation` curated + Tier-2 `RawAttribute` opaque carry); opt-in lifecycle hooks.
