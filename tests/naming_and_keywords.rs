@@ -62,6 +62,25 @@ fn keyword_escape_rust_and_csharp() {
 }
 
 #[test]
+fn keyword_escape_rust_non_rawable_fallback() {
+    // `crate`, `self`, `Self`, `super` cannot be written as raw identifiers (`r#crate` is illegal),
+    // so they fall back to a `_` suffix; ordinary keywords still use `r#`.
+    let config = ConversionConfig {
+        rename: false,
+        ..ConversionConfig::default()
+    };
+
+    for word in ["crate", "self", "Self", "super"] {
+        let escaped = rename_identifier(&config, word, TargetLanguage::Rust, IdentifierKind::Field);
+        assert_eq!(escaped.value, format!("{word}_"));
+        assert!(escaped.log.has_warnings(), "escaping `{word}` should warn");
+    }
+
+    let rawable = rename_identifier(&config, "type", TargetLanguage::Rust, IdentifierKind::Field);
+    assert_eq!(rawable.value, "r#type");
+}
+
+#[test]
 fn keyword_map_user_extend() {
     let mut keyword_map = KeywordMap::empty();
     keyword_map.insert(TargetLanguage::Python, "mykw");

@@ -3,7 +3,7 @@
 //! re-spelled (Python PEP-484 hints, JS JSDoc, Lua none) and identifiers renamed to convention.
 //! The reverse (untyped → IR transpile) is explicitly out of scope and not tested here.
 
-use langprint::backends::js_backend::{JsClass, JsFunction};
+use langprint::backends::js_backend::{JsBackend, JsClass, JsFunction};
 use langprint::backends::lua_backend::{LuaBackend, LuaFunction};
 use langprint::backends::python_backend::{
     ctypes_type_map, PythonBackend, PythonClass, PythonFunction, PythonStruct, PythonStructConversionOptions,
@@ -16,7 +16,7 @@ use langprint::ir::{
     LanguageStructKind, RawAttribute, Visibility,
 };
 use langprint::renderers::{FunctionRenderer, StructRenderer};
-use langprint::type_map::{PrimitiveType, TargetLanguage, TypeMap};
+use langprint::type_map::{PrimitiveType, TargetLanguage};
 
 /// Build a ConversionConfig with ctypes spellings for Python output.
 fn ctypes_config() -> ConversionConfig {
@@ -330,8 +330,7 @@ fn mentions_drop(warnings: &[ConversionWarning]) -> bool {
     warnings.iter().any(|warning| {
         matches!(
             warning,
-            ConversionWarning::UnsupportedFeature { resolution, .. }
-                if resolution.contains("no native attribute model")
+            ConversionWarning::UnsupportedFeature { feature, .. } if feature.contains("annotation")
         )
     })
 }
@@ -356,6 +355,32 @@ fn untyped_from_ir_warns_on_dropped_annotations() {
     // An item with no annotations produces no such warning.
     assert!(!mentions_drop(&PythonClass::from_ir(neutral_struct(), None).log.warnings));
     assert!(!mentions_drop(&LuaFunction::from_ir(neutral_function(), None).log.warnings));
+}
+
+#[test]
+fn lowers_function_body_verbatim_into_untyped_backends() {
+    // The body slot is a verbatim seam: the consumer's lines must appear in the rendered block of
+    // every untyped backend, untouched.
+    let mut function = neutral_function();
+    function.body = Some(vec!["return 1".to_string()]);
+
+    let python = PythonFunction::from_ir(function.clone(), None).value;
+    let python_src = PythonBackend::default()
+        .render_function(&python, None::<&str>, None::<&str>, None, &mut 0)
+        .unwrap();
+    assert!(python_src.contains("return 1"), "python: {python_src}");
+
+    let lua = LuaFunction::from_ir(function.clone(), None).value;
+    let lua_src = LuaBackend::default()
+        .render_function(&lua, None::<&str>, None::<&str>, None, &mut 0)
+        .unwrap();
+    assert!(lua_src.contains("return 1"), "lua: {lua_src}");
+
+    let js = JsFunction::from_ir(function, None).value;
+    let js_src = JsBackend::default()
+        .render_function(&js, None::<&str>, None::<&str>, None, &mut 0)
+        .unwrap();
+    assert!(js_src.contains("return 1"), "js: {js_src}");
 }
 
 #[test]

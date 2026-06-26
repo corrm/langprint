@@ -7,6 +7,7 @@ use langprint::backends::BackendItem;
 use langprint::backends::cpp_backend::*;
 use langprint::backends::csharp_backend::*;
 use langprint::backends::rust_backend::*;
+use langprint::conversion::ConversionWarning;
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -521,6 +522,82 @@ fn clean_csharp_namespace() -> CSharpNamespace {
         file_scoped: false,
         docs: None,
     }
+}
+
+// ── FFI qualifiers: lossy by design ──────────────────────────────────────────
+//
+// Native FFI qualifiers have no neutral-IR representation: `to_ir` drops them with a warning and
+// `from_ir` restores the default. These tests lock that documented lossy behavior on non-default
+// values (the `clean_*` round-trips above only cover the defaults).
+
+fn has_unsupported_warning(warnings: &[ConversionWarning]) -> bool {
+    warnings
+        .iter()
+        .any(|warning| matches!(warning, ConversionWarning::UnsupportedFeature { .. }))
+}
+
+#[test]
+fn rust_function_abi_is_dropped_and_defaulted() {
+    let mut function = clean_rust_function();
+    function.abi = Some("C".into());
+
+    let ir = function.to_ir(None);
+    assert!(
+        has_unsupported_warning(&ir.log.warnings),
+        "abi must warn on to_ir: {:?}",
+        ir.log.warnings
+    );
+
+    let back = RustFunction::from_ir(ir.value, None);
+    assert_eq!(back.value.abi, None, "abi defaults to None out of the IR");
+}
+
+#[test]
+fn cpp_function_extern_c_is_dropped_and_defaulted() {
+    let mut function = clean_cpp_function();
+    function.is_extern_c = true;
+
+    let ir = function.to_ir(None);
+    assert!(
+        has_unsupported_warning(&ir.log.warnings),
+        "extern \"C\" must warn on to_ir: {:?}",
+        ir.log.warnings
+    );
+
+    let back = CppFunction::from_ir(ir.value, None);
+    assert!(!back.value.is_extern_c, "is_extern_c defaults to false out of the IR");
+}
+
+#[test]
+fn csharp_method_unsafe_is_dropped_and_defaulted() {
+    let mut method = clean_csharp_method();
+    method.is_unsafe = true;
+
+    let ir = method.to_ir(None);
+    assert!(
+        has_unsupported_warning(&ir.log.warnings),
+        "`unsafe` method must warn on to_ir: {:?}",
+        ir.log.warnings
+    );
+
+    let back = CSharpMethod::from_ir(ir.value, None);
+    assert!(!back.value.is_unsafe, "is_unsafe defaults to false out of the IR");
+}
+
+#[test]
+fn csharp_type_unsafe_is_dropped_and_defaulted() {
+    let mut ty = clean_csharp_type();
+    ty.is_unsafe = true;
+
+    let ir = ty.to_ir(None);
+    assert!(
+        has_unsupported_warning(&ir.log.warnings),
+        "`unsafe` type must warn on to_ir: {:?}",
+        ir.log.warnings
+    );
+
+    let back = CSharpType::from_ir(ir.value, None);
+    assert!(!back.value.is_unsafe, "is_unsafe defaults to false out of the IR");
 }
 
 #[test]

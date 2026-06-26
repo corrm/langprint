@@ -209,6 +209,37 @@ fn non_extern_function_omits_extern_specifier() {
 }
 
 #[test]
+fn renders_declaration_only_function_when_body_is_none() {
+    let backend = RustBackend::default();
+    let function = RustFunction {
+        name: "callback".to_string(),
+        visibility: RustVisibility::Pub,
+        self_kind: RustSelfKind::None,
+        parameters: vec![RustParameter {
+            name: "x".to_string(),
+            param_type: "i32".to_string(),
+        }],
+        generic_args: vec![],
+        return_type: Some("i32".to_string()),
+        is_unsafe: false,
+        is_async: false,
+        is_const: false,
+        abi: None,
+        body: None,
+        attributes: vec![],
+        docs: None,
+    };
+
+    let mut level = 0;
+    let rendered = backend
+        .render_function(&function, None::<&str>, None::<&str>, None, &mut level)
+        .unwrap();
+
+    assert_eq!(rendered, "pub fn callback(x: i32) -> i32;\n");
+    assert!(!rendered.contains('{'), "declaration must have no body block: {rendered}");
+}
+
+#[test]
 fn renders_struct_with_impl_block() {
     let backend = RustBackend::default();
     let value = RustStruct {
