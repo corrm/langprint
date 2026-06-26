@@ -5,7 +5,8 @@
 
 use langprint::backends::BackendItem;
 use langprint::backends::csharp_backend::{
-    CSharpBackend, CSharpField, CSharpType, CSharpTypeConversionOptions, CSharpTypeKind, CSharpVisibility,
+    CSharpBackend, CSharpField, CSharpType, CSharpTypeConversionOptions, CSharpTypeKind,
+    CSharpVisibility,
 };
 use langprint::backends::rust_backend::{RustBackend, RustField, RustStruct, RustVisibility};
 use langprint::conversion::ConversionWarning;
@@ -29,7 +30,11 @@ fn print_warnings(label: &str, warnings: &[ConversionWarning]) {
     }
     println!("({label}: lossy — each dropped feature is reported, never silent)");
     for warning in warnings {
-        if let ConversionWarning::UnsupportedFeature { feature, resolution } = warning {
+        if let ConversionWarning::UnsupportedFeature {
+            feature,
+            resolution,
+        } = warning
+        {
             println!("  - {feature}: {resolution}");
         }
     }
@@ -121,7 +126,10 @@ fn main() {
         name: "Actor".to_string(),
         visibility: RustVisibility::Pub,
         generic_args: vec![],
-        fields: vec![rust_field("display_name", "FString"), rust_field("health", "f32")],
+        fields: vec![
+            rust_field("display_name", "FString"),
+            rust_field("health", "f32"),
+        ],
         methods: vec![],
         derives: vec![],
         attributes: vec![],

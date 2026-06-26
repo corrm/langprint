@@ -5,7 +5,9 @@ use langprint::{
     backends::BackendItem,
     backends::js_backend::{JsBackend, JsClass, JsField, JsFunction, JsParameter},
     conversion::ConversionWarning,
-    ir::{LanguageFunction, LanguageGenericArgument, LanguageStruct, LanguageStructKind, Visibility},
+    ir::{
+        LanguageFunction, LanguageGenericArgument, LanguageStruct, LanguageStructKind, Visibility,
+    },
     renderers::FunctionRenderer,
 };
 
@@ -67,7 +69,10 @@ fn renders_function_with_verbatim_body() {
         return_type: None,
         doc: None,
         is_static: false,
-        body: Some(vec!["const result = a + b;".to_string(), "return result;".to_string()]),
+        body: Some(vec![
+            "const result = a + b;".to_string(),
+            "return result;".to_string(),
+        ]),
     };
 
     let mut level = 0;
@@ -208,7 +213,12 @@ fn function_from_ir_warns_on_dropped_generics() {
         name: "identity".to_string(),
         visibility: Visibility::Public,
         parameters: vec![],
-        generic_args: vec![LanguageGenericArgument { name: "T".to_string(), keyword: String::new(), default_value: None, where_clause: None }],
+        generic_args: vec![LanguageGenericArgument {
+            name: "T".to_string(),
+            keyword: String::new(),
+            default_value: None,
+            where_clause: None,
+        }],
         return_type: None,
         is_static: false,
         is_abstract: false,
@@ -233,7 +243,12 @@ fn class_from_ir_warns_on_dropped_generics() {
         is_abstract: false,
         is_final: false,
         name: "Box".to_string(),
-        generic_args: vec![LanguageGenericArgument { name: "T".to_string(), keyword: String::new(), default_value: None, where_clause: None }],
+        generic_args: vec![LanguageGenericArgument {
+            name: "T".to_string(),
+            keyword: String::new(),
+            default_value: None,
+            where_clause: None,
+        }],
         bases: vec![],
         fields: vec![],
         methods: vec![],

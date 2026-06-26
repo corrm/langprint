@@ -95,14 +95,24 @@ impl BackendItem for CSharpEnum {
         ConversionResult::with_log(language_enum, log)
     }
 
-    fn from_ir(mut input: Self::IrType, options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
+    fn from_ir(
+        mut input: Self::IrType,
+        options: Option<&Self::ConversionOptions>,
+    ) -> ConversionResult<Self> {
         let mut log = ConversionLog::new();
-        let config = options.map(|options| options.config.clone()).unwrap_or_default();
+        let config = options
+            .map(|options| options.config.clone())
+            .unwrap_or_default();
         if let Some(hooks) = &config.hooks {
             hooks.before_from_ir_enum(&mut input);
         }
 
-        let name = rename_identifier(&config, &input.name, TargetLanguage::CSharp, IdentifierKind::Type);
+        let name = rename_identifier(
+            &config,
+            &input.name,
+            TargetLanguage::CSharp,
+            IdentifierKind::Type,
+        );
         log.add_warnings(name.log.warnings);
 
         let visibility = CSharpVisibility::from_ir(input.visibility, None);
@@ -141,14 +151,23 @@ impl BackendItem for CSharpEnum {
                 EnumVariantValue::Value(value) => Some(value),
                 EnumVariantValue::Tuple(_) | EnumVariantValue::Struct(_) => {
                     log.add_warning(ConversionWarning::UnsupportedFeature {
-                        feature: format!("data-carrying variant `{}` on enum `{}`", variant.name, input.name),
-                        resolution: "C# enums cannot carry data; rendered as a plain member".to_string(),
+                        feature: format!(
+                            "data-carrying variant `{}` on enum `{}`",
+                            variant.name, input.name
+                        ),
+                        resolution: "C# enums cannot carry data; rendered as a plain member"
+                            .to_string(),
                     });
                     None
                 }
             };
 
-            let name = rename_identifier(&config, &variant.name, TargetLanguage::CSharp, IdentifierKind::EnumMember);
+            let name = rename_identifier(
+                &config,
+                &variant.name,
+                TargetLanguage::CSharp,
+                IdentifierKind::EnumMember,
+            );
             log.add_warnings(name.log.warnings);
 
             members.push(CSharpEnumMember {

@@ -1,7 +1,9 @@
 use crate::{
     backends::BackendItem,
-    conversion::{dropped_annotations_warning, dropped_feature_warning, ConversionLog, ConversionResult},
-    convert::{map_type, rename_identifier, ConversionConfig, IdentifierKind},
+    conversion::{
+        ConversionLog, ConversionResult, dropped_annotations_warning, dropped_feature_warning,
+    },
+    convert::{ConversionConfig, IdentifierKind, map_type, rename_identifier},
     ir::{LanguageFunction, LanguageFunctionParameter, Visibility},
     type_map::{PrimitiveType, TargetLanguage},
 };
@@ -34,11 +36,21 @@ impl BackendItem for JsParameter {
         })
     }
 
-    fn from_ir(input: Self::IrType, options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
+    fn from_ir(
+        input: Self::IrType,
+        options: Option<&Self::ConversionOptions>,
+    ) -> ConversionResult<Self> {
         let mut log = ConversionLog::new();
-        let config = options.map(|options| options.config.clone()).unwrap_or_default();
+        let config = options
+            .map(|options| options.config.clone())
+            .unwrap_or_default();
 
-        let name = rename_identifier(&config, &input.name, TargetLanguage::Js, IdentifierKind::Field);
+        let name = rename_identifier(
+            &config,
+            &input.name,
+            TargetLanguage::Js,
+            IdentifierKind::Field,
+        );
         log.add_warnings(name.log.warnings);
 
         let type_doc = if input.param_type.is_empty() {
@@ -125,18 +137,32 @@ impl BackendItem for JsFunction {
         ConversionResult::with_log(ir, log)
     }
 
-    fn from_ir(mut input: Self::IrType, options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
+    fn from_ir(
+        mut input: Self::IrType,
+        options: Option<&Self::ConversionOptions>,
+    ) -> ConversionResult<Self> {
         let mut log = ConversionLog::new();
-        let config = options.map(|options| options.config.clone()).unwrap_or_default();
+        let config = options
+            .map(|options| options.config.clone())
+            .unwrap_or_default();
         if let Some(hooks) = &config.hooks {
             hooks.before_from_ir_function(&mut input);
         }
 
         if !input.generic_args.is_empty() {
-            log.add_warning(dropped_feature_warning("generic arguments", &input.name, "JavaScript"));
+            log.add_warning(dropped_feature_warning(
+                "generic arguments",
+                &input.name,
+                "JavaScript",
+            ));
         }
 
-        let name = rename_identifier(&config, &input.name, TargetLanguage::Js, IdentifierKind::Function);
+        let name = rename_identifier(
+            &config,
+            &input.name,
+            TargetLanguage::Js,
+            IdentifierKind::Function,
+        );
         log.add_warnings(name.log.warnings);
 
         if !input.annotations.is_empty() || !input.raw_attributes.is_empty() {
@@ -148,7 +174,9 @@ impl BackendItem for JsFunction {
             ));
         }
 
-        let parameter_options = JsParameterConversionOptions { config: config.clone() };
+        let parameter_options = JsParameterConversionOptions {
+            config: config.clone(),
+        };
         let mut parameters = Vec::with_capacity(input.parameters.len());
         for parameter in input.parameters {
             let result = JsParameter::from_ir(parameter, Some(&parameter_options));
@@ -158,7 +186,11 @@ impl BackendItem for JsFunction {
 
         // A `void` return carries no JSDoc `@returns`; idiomatic JS omits it.
         let return_type = match input.return_type {
-            Some(return_type) if config.type_map.resolve(&return_type) == Some(PrimitiveType::Void) => None,
+            Some(return_type)
+                if config.type_map.resolve(&return_type) == Some(PrimitiveType::Void) =>
+            {
+                None
+            }
             Some(return_type) => {
                 let mapped = map_type(&config, &return_type, TargetLanguage::Js);
                 log.add_warnings(mapped.log.warnings);

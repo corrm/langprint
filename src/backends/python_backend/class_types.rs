@@ -1,7 +1,9 @@
 use crate::{
     backends::BackendItem,
-    conversion::{dropped_annotations_warning, dropped_feature_warning, ConversionLog, ConversionResult},
-    convert::{rename_identifier, ConversionConfig, IdentifierKind},
+    conversion::{
+        ConversionLog, ConversionResult, dropped_annotations_warning, dropped_feature_warning,
+    },
+    convert::{ConversionConfig, IdentifierKind, rename_identifier},
     ir::{LanguageBase, LanguageField, LanguageStruct, LanguageStructKind, Visibility},
     type_map::TargetLanguage,
 };
@@ -97,18 +99,32 @@ impl BackendItem for PythonClass {
         ConversionResult::with_log(ir, log)
     }
 
-    fn from_ir(mut input: Self::IrType, options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
+    fn from_ir(
+        mut input: Self::IrType,
+        options: Option<&Self::ConversionOptions>,
+    ) -> ConversionResult<Self> {
         let mut log = ConversionLog::new();
-        let config = options.map(|options| options.config.clone()).unwrap_or_default();
+        let config = options
+            .map(|options| options.config.clone())
+            .unwrap_or_default();
         if let Some(hooks) = &config.hooks {
             hooks.before_from_ir_struct(&mut input);
         }
 
-        let name = rename_identifier(&config, &input.name, TargetLanguage::Python, IdentifierKind::Type);
+        let name = rename_identifier(
+            &config,
+            &input.name,
+            TargetLanguage::Python,
+            IdentifierKind::Type,
+        );
         log.add_warnings(name.log.warnings);
 
         if !input.generic_args.is_empty() {
-            log.add_warning(dropped_feature_warning("generic arguments", &input.name, "Python"));
+            log.add_warning(dropped_feature_warning(
+                "generic arguments",
+                &input.name,
+                "Python",
+            ));
         }
 
         if !input.annotations.is_empty() || !input.raw_attributes.is_empty() {
@@ -121,12 +137,21 @@ impl BackendItem for PythonClass {
         }
 
         if !input.fields.is_empty() {
-            log.add_warning(dropped_feature_warning("field values", &input.name, "Python"));
+            log.add_warning(dropped_feature_warning(
+                "field values",
+                &input.name,
+                "Python",
+            ));
         }
 
         let mut fields = Vec::with_capacity(input.fields.len());
         for field in input.fields {
-            let field_name = rename_identifier(&config, &field.name, TargetLanguage::Python, IdentifierKind::Field);
+            let field_name = rename_identifier(
+                &config,
+                &field.name,
+                TargetLanguage::Python,
+                IdentifierKind::Field,
+            );
             log.add_warnings(field_name.log.warnings);
             fields.push(PythonClassField {
                 name: field_name.value,
@@ -134,7 +159,9 @@ impl BackendItem for PythonClass {
             });
         }
 
-        let function_options = PythonFunctionConversionOptions { config: config.clone() };
+        let function_options = PythonFunctionConversionOptions {
+            config: config.clone(),
+        };
         let mut methods = Vec::with_capacity(input.methods.len());
         for method in input.methods {
             let result = PythonFunction::from_ir(method, Some(&function_options));
@@ -178,5 +205,7 @@ impl Default for PythonClassRenderOptions {
 }
 
 impl PythonClassRenderOptions {
-    pub const DEFAULT: Self = Self { render_docstring: true };
+    pub const DEFAULT: Self = Self {
+        render_docstring: true,
+    };
 }

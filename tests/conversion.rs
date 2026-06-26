@@ -7,8 +7,8 @@
 use langprint::backends::BackendItem;
 use langprint::backends::cpp_backend::struct_types::CppStructKind;
 use langprint::backends::cpp_backend::{
-    CppConstant, CppDefinition, CppEnum, CppEnumVariant, CppField, CppFunction, CppNamespace, CppParameter, CppStruct,
-    CppVisibility,
+    CppConstant, CppDefinition, CppEnum, CppEnumVariant, CppField, CppFunction, CppNamespace,
+    CppParameter, CppStruct, CppVisibility,
 };
 use langprint::conversion::ConversionWarning;
 use langprint::ir::{Annotation, EnumVariant, EnumVariantValue, LanguageEnum, Visibility};

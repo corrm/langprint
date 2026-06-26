@@ -7,13 +7,16 @@ use crate::{
 };
 
 use super::{
-    CppConstant, CppConstantRenderOptions, CppDefinition, CppDefinitionRenderOptions, CppEnum, CppEnumConversionOptions,
-    CppEnumRenderOptions, CppFunction, CppFunctionConversionOptions,
+    CppConstant, CppConstantRenderOptions, CppDefinition, CppDefinitionRenderOptions, CppEnum,
+    CppEnumConversionOptions, CppEnumRenderOptions, CppFunction, CppFunctionConversionOptions,
     CppFunctionRenderOptions, CppStruct, CppStructConversionOptions, CppStructRenderOptions,
 };
 
 /// Convert an optional list of native items to their IR form, collecting any warnings.
-fn namespace_items_to_ir<T: BackendItem>(items: Option<Vec<T>>, log: &mut ConversionLog) -> Option<Vec<T::IrType>> {
+fn namespace_items_to_ir<T: BackendItem>(
+    items: Option<Vec<T>>,
+    log: &mut ConversionLog,
+) -> Option<Vec<T::IrType>> {
     items.map(|items| {
         items
             .into_iter()
@@ -90,9 +93,14 @@ impl BackendItem for CppNamespace {
         ConversionResult::with_log(language_namespace, result_log)
     }
 
-    fn from_ir(input: Self::IrType, options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
+    fn from_ir(
+        input: Self::IrType,
+        options: Option<&Self::ConversionOptions>,
+    ) -> ConversionResult<Self> {
         let mut result_log = ConversionLog::new();
-        let config = options.map(|options| options.config.clone()).unwrap_or_default();
+        let config = options
+            .map(|options| options.config.clone())
+            .unwrap_or_default();
 
         if input.visibility != Visibility::Default {
             result_log.add_warning(ConversionWarning::UnsupportedFeature {
@@ -108,7 +116,12 @@ impl BackendItem for CppNamespace {
         }
 
         let name = {
-            let renamed = rename_identifier(&config, &input.name, TargetLanguage::Cpp, IdentifierKind::Namespace);
+            let renamed = rename_identifier(
+                &config,
+                &input.name,
+                TargetLanguage::Cpp,
+                IdentifierKind::Namespace,
+            );
             result_log.add_warnings(renamed.log.warnings);
             renamed.value
         };
@@ -117,17 +130,39 @@ impl BackendItem for CppNamespace {
             config: config.clone(),
             ..Default::default()
         };
-        let struct_options = CppStructConversionOptions { config: config.clone() };
-        let function_options = CppFunctionConversionOptions { config: config.clone() };
-        let namespace_options = CppNamespaceConversionOptions { config: config.clone() };
+        let struct_options = CppStructConversionOptions {
+            config: config.clone(),
+        };
+        let function_options = CppFunctionConversionOptions {
+            config: config.clone(),
+        };
+        let namespace_options = CppNamespaceConversionOptions {
+            config: config.clone(),
+        };
 
         let cpp_namespace = CppNamespace {
             name,
             defines: namespace_items_from_ir::<CppDefinition>(input.defines, None, &mut result_log),
-            constants: namespace_items_from_ir::<CppConstant>(input.constants, None, &mut result_log),
-            enums: namespace_items_from_ir::<CppEnum>(input.enums, Some(&enum_options), &mut result_log),
-            structs: namespace_items_from_ir::<CppStruct>(input.structs, Some(&struct_options), &mut result_log),
-            functions: namespace_items_from_ir::<CppFunction>(input.functions, Some(&function_options), &mut result_log),
+            constants: namespace_items_from_ir::<CppConstant>(
+                input.constants,
+                None,
+                &mut result_log,
+            ),
+            enums: namespace_items_from_ir::<CppEnum>(
+                input.enums,
+                Some(&enum_options),
+                &mut result_log,
+            ),
+            structs: namespace_items_from_ir::<CppStruct>(
+                input.structs,
+                Some(&struct_options),
+                &mut result_log,
+            ),
+            functions: namespace_items_from_ir::<CppFunction>(
+                input.functions,
+                Some(&function_options),
+                &mut result_log,
+            ),
             namespaces: namespace_items_from_ir::<CppNamespace>(
                 input.namespaces,
                 Some(&namespace_options),

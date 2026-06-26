@@ -2,14 +2,16 @@ use crate::{
     backends::BackendItem,
     conversion::{ConversionLog, ConversionResult, ConversionWarning},
     convert::{ConversionConfig, IdentifierKind, rename_identifier},
-    ir::{LanguageBase, LanguageField, LanguageStruct, LanguageStructKind, RawAttribute, Visibility},
+    ir::{
+        LanguageBase, LanguageField, LanguageStruct, LanguageStructKind, RawAttribute, Visibility,
+    },
     type_map::TargetLanguage,
 };
 
 use super::attributes::csharp_attribute_to_annotation;
 use super::{
-    CSharpField, CSharpFieldConversionOptions, CSharpGenericArgument, CSharpMethod, CSharpMethodConversionOptions,
-    CSharpProperty, CSharpVisibility,
+    CSharpField, CSharpFieldConversionOptions, CSharpGenericArgument, CSharpMethod,
+    CSharpMethodConversionOptions, CSharpProperty, CSharpVisibility,
 };
 
 /// The kind of a C# type declaration.
@@ -107,14 +109,16 @@ impl BackendItem for CSharpType {
             CSharpTypeKind::Interface => {
                 log.add_warning(ConversionWarning::UnsupportedFeature {
                     feature: format!("`interface` kind on type `{}`", self.name),
-                    resolution: "interface flattened to a class in the language-agnostic IR".to_string(),
+                    resolution: "interface flattened to a class in the language-agnostic IR"
+                        .to_string(),
                 });
                 LanguageStructKind::Class
             }
             CSharpTypeKind::Record => {
                 log.add_warning(ConversionWarning::UnsupportedFeature {
                     feature: format!("`record` kind on type `{}`", self.name),
-                    resolution: "record flattened to a class in the language-agnostic IR".to_string(),
+                    resolution: "record flattened to a class in the language-agnostic IR"
+                        .to_string(),
                 });
                 LanguageStructKind::Class
             }
@@ -226,9 +230,14 @@ impl BackendItem for CSharpType {
         ConversionResult::with_log(language_struct, log)
     }
 
-    fn from_ir(mut input: Self::IrType, options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
+    fn from_ir(
+        mut input: Self::IrType,
+        options: Option<&Self::ConversionOptions>,
+    ) -> ConversionResult<Self> {
         let mut log = ConversionLog::new();
-        let config = options.map(|options| options.config.clone()).unwrap_or_default();
+        let config = options
+            .map(|options| options.config.clone())
+            .unwrap_or_default();
         if let Some(hooks) = &config.hooks {
             hooks.before_from_ir_struct(&mut input);
         }
@@ -254,7 +263,12 @@ impl BackendItem for CSharpType {
             kind = CSharpTypeKind::Class;
         }
 
-        let name = rename_identifier(&config, &input.name, TargetLanguage::CSharp, IdentifierKind::Type);
+        let name = rename_identifier(
+            &config,
+            &input.name,
+            TargetLanguage::CSharp,
+            IdentifierKind::Type,
+        );
         log.add_warnings(name.log.warnings);
 
         let visibility = CSharpVisibility::from_ir(input.visibility, None);
@@ -262,7 +276,10 @@ impl BackendItem for CSharpType {
 
         let mut attributes = Vec::new();
         for annotation in &input.annotations {
-            if let Some(rendered) = config.annotation_map.resolve(TargetLanguage::CSharp, annotation) {
+            if let Some(rendered) = config
+                .annotation_map
+                .resolve(TargetLanguage::CSharp, annotation)
+            {
                 attributes.push(rendered);
             }
         }
@@ -281,7 +298,9 @@ impl BackendItem for CSharpType {
         let base_class = bases.next().map(|base| base.name);
         let interfaces = bases.map(|base| base.name).collect();
 
-        let field_options = CSharpFieldConversionOptions { config: config.clone() };
+        let field_options = CSharpFieldConversionOptions {
+            config: config.clone(),
+        };
         let mut fields = Vec::with_capacity(input.fields.len());
         for field in input.fields {
             let result = CSharpField::from_ir(field, Some(&field_options));
@@ -289,7 +308,9 @@ impl BackendItem for CSharpType {
             fields.push(result.value);
         }
 
-        let method_options = CSharpMethodConversionOptions { config: config.clone() };
+        let method_options = CSharpMethodConversionOptions {
+            config: config.clone(),
+        };
         let mut methods = Vec::with_capacity(input.methods.len());
         for method in input.methods {
             let result = CSharpMethod::from_ir(method, Some(&method_options));

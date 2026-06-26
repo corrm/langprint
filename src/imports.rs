@@ -78,7 +78,10 @@ pub struct ImportSet {
 impl ImportSet {
     /// Create an empty set for `language`.
     pub fn new(language: TargetLanguage) -> Self {
-        Self { language, entries: BTreeSet::new() }
+        Self {
+            language,
+            entries: BTreeSet::new(),
+        }
     }
 
     /// The language this set renders for.
@@ -225,16 +228,45 @@ impl ImportMap {
         let mut map = Self::empty();
         match language {
             TargetLanguage::Cpp => {
-                let stdint = ImportEntry::Include { header: "cstdint".to_string(), system: true };
+                let stdint = ImportEntry::Include {
+                    header: "cstdint".to_string(),
+                    system: true,
+                };
                 for name in [
-                    "int8_t", "uint8_t", "int16_t", "uint16_t", "int32_t", "uint32_t", "int64_t", "uint64_t",
-                    "intptr_t", "uintptr_t",
+                    "int8_t",
+                    "uint8_t",
+                    "int16_t",
+                    "uint16_t",
+                    "int32_t",
+                    "uint32_t",
+                    "int64_t",
+                    "uint64_t",
+                    "intptr_t",
+                    "uintptr_t",
                 ] {
                     map.insert(name, stdint.clone());
                 }
-                map.insert("size_t", ImportEntry::Include { header: "cstddef".to_string(), system: true });
-                map.insert("std::string", ImportEntry::Include { header: "string".to_string(), system: true });
-                map.insert("std::vector", ImportEntry::Include { header: "vector".to_string(), system: true });
+                map.insert(
+                    "size_t",
+                    ImportEntry::Include {
+                        header: "cstddef".to_string(),
+                        system: true,
+                    },
+                );
+                map.insert(
+                    "std::string",
+                    ImportEntry::Include {
+                        header: "string".to_string(),
+                        system: true,
+                    },
+                );
+                map.insert(
+                    "std::vector",
+                    ImportEntry::Include {
+                        header: "vector".to_string(),
+                        system: true,
+                    },
+                );
             }
             TargetLanguage::CSharp => {
                 let system = ImportEntry::Using("System".to_string());
@@ -247,8 +279,20 @@ impl ImportMap {
             }
             TargetLanguage::Python => {
                 map.insert("ctypes", ImportEntry::PyImport("ctypes".to_string()));
-                map.insert("enum.IntEnum", ImportEntry::PyFrom { module: "enum".to_string(), symbol: "IntEnum".to_string() });
-                map.insert("enum.Enum", ImportEntry::PyFrom { module: "enum".to_string(), symbol: "Enum".to_string() });
+                map.insert(
+                    "enum.IntEnum",
+                    ImportEntry::PyFrom {
+                        module: "enum".to_string(),
+                        symbol: "IntEnum".to_string(),
+                    },
+                );
+                map.insert(
+                    "enum.Enum",
+                    ImportEntry::PyFrom {
+                        module: "enum".to_string(),
+                        symbol: "Enum".to_string(),
+                    },
+                );
             }
             TargetLanguage::Rust | TargetLanguage::Lua | TargetLanguage::Js => {}
         }

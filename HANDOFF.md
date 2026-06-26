@@ -4,7 +4,7 @@
 **Published:** **`0.2.0` is live on crates.io** (tag `v0.2.0` pushed → publish workflow ran build+test+`cargo publish`, all green; index confirms 0.1.0/0.1.1/0.2.0). Publish path is owner-configured: pushing a `v*` tag triggers `.github/workflows/publish.yml`.
 **Gate:** 285 tests pass · `cargo build` clean · `cargo doc --no-deps` = **0 warnings** · `cargo clippy --all-targets -- -D warnings` = **fully clean** (the former `renderers.rs:271` 8-arg `EnumRenderer` lint is resolved — variant render options nested into `RenderOptions.variant`).
 
-**Formatting convention:** this repo is deliberately NOT rustfmt-formatted (no `rustfmt.toml`, no fmt in CI; clean HEAD is fmt-dirty in 400+ spots). Do NOT run `cargo fmt` repo-wide — it reformats 80+ files (import-sorting + line-wrapping) and buries real changes. Match the existing compact style by hand.
+**Formatting convention:** the repo is rustfmt-default formatted and enforced. `lefthook.yml` runs `cargo fmt --check` + clippy in `pre-commit`, and `cargo test` + `cargo doc -D warnings` in `pre-push`; `commit-msg` enforces conventional-commit format. Run `cargo fmt` before committing. (This supersedes the earlier hand-formatted convention — the repo was reformatted in one pass.)
 
 ## Pre-merge review pass (commit `25fe8c0`)
 An honest reviewer found 4 real findings; all verified against source and fixed natively (no band-aids):

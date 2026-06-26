@@ -38,7 +38,9 @@ pub trait DefinitionRenderer: BackendMetadata {
     /// The render options type for this renderer.
     type RenderOptions: Default;
 
-    fn default_options() -> Self::RenderOptions { Self::RenderOptions::default() }
+    fn default_options() -> Self::RenderOptions {
+        Self::RenderOptions::default()
+    }
 
     /// Render a language-specific define to a writer.
     ///
@@ -82,7 +84,9 @@ pub trait DefinitionRenderer: BackendMetadata {
         options: Option<&Self::RenderOptions>,
         indent_level: &mut i32,
     ) -> Result<String, io::Error> {
-        render_to_string(|out| self.render_definition_to(input, before, after, options, indent_level, out))
+        render_to_string(|out| {
+            self.render_definition_to(input, before, after, options, indent_level, out)
+        })
     }
 }
 
@@ -93,7 +97,9 @@ pub trait NamespaceRenderer: BackendMetadata {
     /// The render options type for this renderer.
     type RenderOptions: Default;
 
-    fn default_options() -> Self::RenderOptions { Self::RenderOptions::default() }
+    fn default_options() -> Self::RenderOptions {
+        Self::RenderOptions::default()
+    }
 
     /// Render a language-specific namespace to a writer.
     ///
@@ -134,7 +140,9 @@ pub trait NamespaceRenderer: BackendMetadata {
         options: Option<&Self::RenderOptions>,
         indent_level: &mut i32,
     ) -> Result<String, io::Error> {
-        render_to_string(|out| self.render_namespace_to(input, before, after, options, indent_level, out))
+        render_to_string(|out| {
+            self.render_namespace_to(input, before, after, options, indent_level, out)
+        })
     }
 }
 
@@ -145,7 +153,9 @@ pub trait ConstantRenderer: BackendMetadata {
     /// The render options type for this renderer.
     type RenderOptions: Default;
 
-    fn default_options() -> Self::RenderOptions { Self::RenderOptions::default() }
+    fn default_options() -> Self::RenderOptions {
+        Self::RenderOptions::default()
+    }
 
     /// Render a language-specific constant to a writer.
     ///
@@ -185,7 +195,9 @@ pub trait ConstantRenderer: BackendMetadata {
         options: Option<&Self::RenderOptions>,
         indent_level: &mut i32,
     ) -> Result<String, io::Error> {
-        render_to_string(|out| self.render_constant_to(input, before, after, options, indent_level, out))
+        render_to_string(|out| {
+            self.render_constant_to(input, before, after, options, indent_level, out)
+        })
     }
 }
 
@@ -202,7 +214,9 @@ pub trait FunctionRenderer: BackendMetadata {
     /// The render options type for this renderer.
     type RenderOptions: Default;
 
-    fn default_options() -> Self::RenderOptions { Self::RenderOptions::default() }
+    fn default_options() -> Self::RenderOptions {
+        Self::RenderOptions::default()
+    }
 
     /// Render a language-specific function to a writer.
     ///
@@ -242,7 +256,9 @@ pub trait FunctionRenderer: BackendMetadata {
         options: Option<&Self::RenderOptions>,
         indent_level: &mut i32,
     ) -> Result<String, io::Error> {
-        render_to_string(|out| self.render_function_to(input, before, after, options, indent_level, out))
+        render_to_string(|out| {
+            self.render_function_to(input, before, after, options, indent_level, out)
+        })
     }
 }
 
@@ -253,7 +269,9 @@ pub trait EnumRenderer: BackendMetadata {
     /// The render options type for this renderer. Variant render options are nested within it.
     type RenderOptions: Default;
 
-    fn default_options() -> Self::RenderOptions { Self::RenderOptions::default() }
+    fn default_options() -> Self::RenderOptions {
+        Self::RenderOptions::default()
+    }
 
     /// Render a language-specific enum to a writer.
     ///
@@ -296,7 +314,9 @@ pub trait EnumRenderer: BackendMetadata {
         options: Option<&Self::RenderOptions>,
         indent_level: &mut i32,
     ) -> Result<String, io::Error> {
-        render_to_string(|out| self.render_enum_to(input, before, after, options, indent_level, out))
+        render_to_string(|out| {
+            self.render_enum_to(input, before, after, options, indent_level, out)
+        })
     }
 }
 
@@ -307,7 +327,9 @@ pub trait StructRenderer: BackendMetadata {
     /// The render options type for this renderer.
     type RenderOptions: Default;
 
-    fn default_options() -> Self::RenderOptions { Self::RenderOptions::default() }
+    fn default_options() -> Self::RenderOptions {
+        Self::RenderOptions::default()
+    }
 
     /// Render a language-specific struct to a writer.
     ///
@@ -348,7 +370,9 @@ pub trait StructRenderer: BackendMetadata {
         options: Option<&Self::RenderOptions>,
         indent_level: &mut i32,
     ) -> Result<String, io::Error> {
-        render_to_string(|out| self.render_struct_to(input, before, after, options, indent_level, out))
+        render_to_string(|out| {
+            self.render_struct_to(input, before, after, options, indent_level, out)
+        })
     }
 }
 
@@ -359,7 +383,9 @@ pub trait InterfaceRenderer: BackendMetadata {
     /// The render options type for this renderer.
     type RenderOptions: Default;
 
-    fn default_options() -> Self::RenderOptions { Self::RenderOptions::default() }
+    fn default_options() -> Self::RenderOptions {
+        Self::RenderOptions::default()
+    }
 
     /// Render a language-specific interface to a writer.
     ///
@@ -400,6 +426,8 @@ pub trait InterfaceRenderer: BackendMetadata {
         options: Option<&Self::RenderOptions>,
         indent_level: &mut i32,
     ) -> Result<String, io::Error> {
-        render_to_string(|out| self.render_interface_to(input, before, after, options, indent_level, out))
+        render_to_string(|out| {
+            self.render_interface_to(input, before, after, options, indent_level, out)
+        })
     }
 }

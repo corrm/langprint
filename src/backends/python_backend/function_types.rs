@@ -1,7 +1,9 @@
 use crate::{
     backends::BackendItem,
-    conversion::{dropped_annotations_warning, dropped_feature_warning, ConversionLog, ConversionResult},
-    convert::{map_type, rename_identifier, ConversionConfig, IdentifierKind},
+    conversion::{
+        ConversionLog, ConversionResult, dropped_annotations_warning, dropped_feature_warning,
+    },
+    convert::{ConversionConfig, IdentifierKind, map_type, rename_identifier},
     ir::{LanguageFunction, LanguageFunctionParameter, Visibility},
     type_map::{PrimitiveType, TargetLanguage},
 };
@@ -33,11 +35,21 @@ impl BackendItem for PythonParameter {
         })
     }
 
-    fn from_ir(input: Self::IrType, options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
+    fn from_ir(
+        input: Self::IrType,
+        options: Option<&Self::ConversionOptions>,
+    ) -> ConversionResult<Self> {
         let mut log = ConversionLog::new();
-        let config = options.map(|options| options.config.clone()).unwrap_or_default();
+        let config = options
+            .map(|options| options.config.clone())
+            .unwrap_or_default();
 
-        let name = rename_identifier(&config, &input.name, TargetLanguage::Python, IdentifierKind::Field);
+        let name = rename_identifier(
+            &config,
+            &input.name,
+            TargetLanguage::Python,
+            IdentifierKind::Field,
+        );
         log.add_warnings(name.log.warnings);
 
         let type_hint = if input.param_type.is_empty() {
@@ -118,18 +130,32 @@ impl BackendItem for PythonFunction {
         ConversionResult::with_log(ir, log)
     }
 
-    fn from_ir(mut input: Self::IrType, options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
+    fn from_ir(
+        mut input: Self::IrType,
+        options: Option<&Self::ConversionOptions>,
+    ) -> ConversionResult<Self> {
         let mut log = ConversionLog::new();
-        let config = options.map(|options| options.config.clone()).unwrap_or_default();
+        let config = options
+            .map(|options| options.config.clone())
+            .unwrap_or_default();
         if let Some(hooks) = &config.hooks {
             hooks.before_from_ir_function(&mut input);
         }
 
-        let name = rename_identifier(&config, &input.name, TargetLanguage::Python, IdentifierKind::Function);
+        let name = rename_identifier(
+            &config,
+            &input.name,
+            TargetLanguage::Python,
+            IdentifierKind::Function,
+        );
         log.add_warnings(name.log.warnings);
 
         if !input.generic_args.is_empty() {
-            log.add_warning(dropped_feature_warning("generic arguments", &input.name, "Python"));
+            log.add_warning(dropped_feature_warning(
+                "generic arguments",
+                &input.name,
+                "Python",
+            ));
         }
 
         if !input.annotations.is_empty() || !input.raw_attributes.is_empty() {
@@ -141,7 +167,9 @@ impl BackendItem for PythonFunction {
             ));
         }
 
-        let parameter_options = PythonParameterConversionOptions { config: config.clone() };
+        let parameter_options = PythonParameterConversionOptions {
+            config: config.clone(),
+        };
         let mut parameters = Vec::with_capacity(input.parameters.len());
         for parameter in input.parameters {
             let result = PythonParameter::from_ir(parameter, Some(&parameter_options));
@@ -151,7 +179,11 @@ impl BackendItem for PythonFunction {
 
         // A `void` return carries no PEP-484 annotation; idiomatic Python omits it.
         let return_type = match input.return_type {
-            Some(return_type) if config.type_map.resolve(&return_type) == Some(PrimitiveType::Void) => None,
+            Some(return_type)
+                if config.type_map.resolve(&return_type) == Some(PrimitiveType::Void) =>
+            {
+                None
+            }
             Some(return_type) => {
                 let mapped = map_type(&config, &return_type, TargetLanguage::Python);
                 log.add_warnings(mapped.log.warnings);
@@ -194,5 +226,7 @@ impl Default for PythonFunctionRenderOptions {
 }
 
 impl PythonFunctionRenderOptions {
-    pub const DEFAULT: Self = Self { render_docstring: true };
+    pub const DEFAULT: Self = Self {
+        render_docstring: true,
+    };
 }

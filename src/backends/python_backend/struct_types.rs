@@ -1,7 +1,9 @@
 use crate::{
     backends::BackendItem,
-    conversion::{dropped_annotations_warning, dropped_feature_warning, ConversionLog, ConversionResult},
-    convert::{map_type, rename_identifier, ConversionConfig, IdentifierKind},
+    conversion::{
+        ConversionLog, ConversionResult, dropped_annotations_warning, dropped_feature_warning,
+    },
+    convert::{ConversionConfig, IdentifierKind, map_type, rename_identifier},
     ir::{LanguageField, LanguageStruct, LanguageStructKind, Visibility},
     type_map::TargetLanguage,
 };
@@ -71,7 +73,10 @@ impl BackendItem for PythonStruct {
         ConversionResult::new(ir)
     }
 
-    fn from_ir(mut input: Self::IrType, options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
+    fn from_ir(
+        mut input: Self::IrType,
+        options: Option<&Self::ConversionOptions>,
+    ) -> ConversionResult<Self> {
         let mut log = ConversionLog::new();
         let config = options.map(|o| o.config.clone()).unwrap_or_default();
         if let Some(hooks) = &config.hooks {
@@ -79,10 +84,19 @@ impl BackendItem for PythonStruct {
         }
 
         if !input.generic_args.is_empty() {
-            log.add_warning(dropped_feature_warning("generic arguments", &input.name, "Python"));
+            log.add_warning(dropped_feature_warning(
+                "generic arguments",
+                &input.name,
+                "Python",
+            ));
         }
 
-        let name = rename_identifier(&config, &input.name, TargetLanguage::Python, IdentifierKind::Type);
+        let name = rename_identifier(
+            &config,
+            &input.name,
+            TargetLanguage::Python,
+            IdentifierKind::Type,
+        );
         log.add_warnings(name.log.warnings);
 
         if !input.annotations.is_empty() || !input.raw_attributes.is_empty() {
@@ -96,7 +110,12 @@ impl BackendItem for PythonStruct {
 
         let mut fields = Vec::with_capacity(input.fields.len());
         for field in input.fields {
-            let field_name = rename_identifier(&config, &field.name, TargetLanguage::Python, IdentifierKind::Field);
+            let field_name = rename_identifier(
+                &config,
+                &field.name,
+                TargetLanguage::Python,
+                IdentifierKind::Field,
+            );
             log.add_warnings(field_name.log.warnings);
 
             let mapped = map_type(&config, &field.field_type, TargetLanguage::Python);
@@ -140,5 +159,7 @@ impl Default for PythonStructRenderOptions {
 }
 
 impl PythonStructRenderOptions {
-    pub const DEFAULT: Self = Self { render_docstring: true };
+    pub const DEFAULT: Self = Self {
+        render_docstring: true,
+    };
 }

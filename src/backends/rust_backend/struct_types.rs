@@ -9,8 +9,8 @@ use crate::{
 use super::attributes::rust_attribute_to_annotation;
 
 use super::{
-    RustField, RustFieldConversionOptions, RustFunction, RustFunctionConversionOptions, RustGenericArgument,
-    RustVisibility,
+    RustField, RustFieldConversionOptions, RustFunction, RustFunctionConversionOptions,
+    RustGenericArgument, RustVisibility,
 };
 
 /// Represents a Rust struct, together with the methods rendered in its `impl` block.
@@ -63,7 +63,8 @@ impl BackendItem for RustStruct {
         if self.is_tuple {
             log.add_warning(ConversionWarning::UnsupportedFeature {
                 feature: format!("tuple struct `{}`", self.name),
-                resolution: "lowered to a named-field struct in the language-agnostic IR".to_string(),
+                resolution: "lowered to a named-field struct in the language-agnostic IR"
+                    .to_string(),
             });
         }
 
@@ -113,9 +114,14 @@ impl BackendItem for RustStruct {
         ConversionResult::with_log(ir, log)
     }
 
-    fn from_ir(mut input: Self::IrType, options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
+    fn from_ir(
+        mut input: Self::IrType,
+        options: Option<&Self::ConversionOptions>,
+    ) -> ConversionResult<Self> {
         let mut log = ConversionLog::new();
-        let config = options.map(|options| options.config.clone()).unwrap_or_default();
+        let config = options
+            .map(|options| options.config.clone())
+            .unwrap_or_default();
         if let Some(hooks) = &config.hooks {
             hooks.before_from_ir_struct(&mut input);
         }
@@ -123,7 +129,8 @@ impl BackendItem for RustStruct {
         if input.struct_kind == LanguageStructKind::Union {
             log.add_warning(ConversionWarning::UnsupportedFeature {
                 feature: format!("union `{}`", input.name),
-                resolution: "lowered to a Rust struct (use a `union` manually for C layout)".to_string(),
+                resolution: "lowered to a Rust struct (use a `union` manually for C layout)"
+                    .to_string(),
             });
         }
         if input.is_abstract {
@@ -135,11 +142,18 @@ impl BackendItem for RustStruct {
         for base in &input.bases {
             log.add_warning(ConversionWarning::UnsupportedFeature {
                 feature: format!("base `{}` of `{}`", base.name, input.name),
-                resolution: "Rust has no inheritance; the base was dropped (use composition/traits)".to_string(),
+                resolution:
+                    "Rust has no inheritance; the base was dropped (use composition/traits)"
+                        .to_string(),
             });
         }
 
-        let name = rename_identifier(&config, &input.name, TargetLanguage::Rust, IdentifierKind::Type);
+        let name = rename_identifier(
+            &config,
+            &input.name,
+            TargetLanguage::Rust,
+            IdentifierKind::Type,
+        );
         log.add_warnings(name.log.warnings);
 
         let visibility = RustVisibility::from_ir(input.visibility, None);
@@ -148,7 +162,10 @@ impl BackendItem for RustStruct {
         let mut derives = Vec::new();
         let mut attributes = Vec::new();
         for annotation in &input.annotations {
-            if let Some(rendered) = config.annotation_map.resolve(TargetLanguage::Rust, annotation) {
+            if let Some(rendered) = config
+                .annotation_map
+                .resolve(TargetLanguage::Rust, annotation)
+            {
                 attributes.push(rendered);
             }
         }
@@ -160,13 +177,19 @@ impl BackendItem for RustStruct {
                 });
                 continue;
             }
-            match raw.text.strip_prefix("derive(").and_then(|rest| rest.strip_suffix(")")) {
+            match raw
+                .text
+                .strip_prefix("derive(")
+                .and_then(|rest| rest.strip_suffix(")"))
+            {
                 Some(derive) => derives.push(derive.to_string()),
                 None => attributes.push(raw.text.clone()),
             }
         }
 
-        let field_options = RustFieldConversionOptions { config: config.clone() };
+        let field_options = RustFieldConversionOptions {
+            config: config.clone(),
+        };
         let mut fields = Vec::with_capacity(input.fields.len());
         for field in input.fields {
             let result = RustField::from_ir(field, Some(&field_options));
@@ -174,7 +197,9 @@ impl BackendItem for RustStruct {
             fields.push(result.value);
         }
 
-        let function_options = RustFunctionConversionOptions { config: config.clone() };
+        let function_options = RustFunctionConversionOptions {
+            config: config.clone(),
+        };
         let mut methods = Vec::with_capacity(input.methods.len());
         for method in input.methods {
             let result = RustFunction::from_ir(method, Some(&function_options));

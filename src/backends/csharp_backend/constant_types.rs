@@ -33,7 +33,10 @@ impl BackendItem for CSharpConstant {
         ConversionResult::with_log(constant, visibility.log)
     }
 
-    fn from_ir(input: Self::IrType, _options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
+    fn from_ir(
+        input: Self::IrType,
+        _options: Option<&Self::ConversionOptions>,
+    ) -> ConversionResult<Self> {
         let visibility = CSharpVisibility::from_ir(input.visibility, None);
         let constant = CSharpConstant {
             name: input.name,

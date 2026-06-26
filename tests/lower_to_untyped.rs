@@ -3,17 +3,18 @@
 //! re-spelled (Python PEP-484 hints, JS JSDoc, Lua none) and identifiers renamed to convention.
 //! The reverse (untyped → IR transpile) is explicitly out of scope and not tested here.
 
+use langprint::backends::BackendItem;
 use langprint::backends::js_backend::{JsBackend, JsClass, JsFunction};
 use langprint::backends::lua_backend::{LuaBackend, LuaFunction};
 use langprint::backends::python_backend::{
-    ctypes_type_map, PythonBackend, PythonClass, PythonFunction, PythonStruct, PythonStructConversionOptions,
+    PythonBackend, PythonClass, PythonFunction, PythonStruct, PythonStructConversionOptions,
+    ctypes_type_map,
 };
-use langprint::backends::BackendItem;
 use langprint::conversion::ConversionWarning;
 use langprint::convert::ConversionConfig;
 use langprint::ir::{
-    Annotation, LanguageBase, LanguageField, LanguageFunction, LanguageFunctionParameter, LanguageStruct,
-    LanguageStructKind, RawAttribute, Visibility,
+    Annotation, LanguageBase, LanguageField, LanguageFunction, LanguageFunctionParameter,
+    LanguageStruct, LanguageStructKind, RawAttribute, Visibility,
 };
 use langprint::renderers::{FunctionRenderer, StructRenderer};
 use langprint::type_map::{PrimitiveType, TargetLanguage};
@@ -24,19 +25,30 @@ fn ctypes_config() -> ConversionConfig {
 }
 
 /// Build a ConversionConfig with ctypes spellings plus custom overrides.
-fn ctypes_config_with_override(overrides: &[(PrimitiveType, &str)], custom_types: Vec<(&str, &str)>) -> ConversionConfig {
+fn ctypes_config_with_override(
+    overrides: &[(PrimitiveType, &str)],
+    custom_types: Vec<(&str, &str)>,
+) -> ConversionConfig {
     let mut type_map = ctypes_type_map();
     for (primitive, spelling) in overrides {
         type_map.set_output(*primitive, TargetLanguage::Python, *spelling);
     }
     let mut config = ConversionConfig::new(type_map, false);
-    let custom: Vec<(String, String)> = custom_types.into_iter().map(|(k, v)| (k.to_string(), v.to_string())).collect();
-    config.type_override = Some(std::sync::Arc::new(move |spelling: &str, lang: TargetLanguage| -> Option<String> {
-        if lang != TargetLanguage::Python {
-            return None;
-        }
-        custom.iter().find(|(s, _)| s.as_str() == spelling).map(|(_, v)| v.clone())
-    }));
+    let custom: Vec<(String, String)> = custom_types
+        .into_iter()
+        .map(|(k, v)| (k.to_string(), v.to_string()))
+        .collect();
+    config.type_override = Some(std::sync::Arc::new(
+        move |spelling: &str, lang: TargetLanguage| -> Option<String> {
+            if lang != TargetLanguage::Python {
+                return None;
+            }
+            custom
+                .iter()
+                .find(|(s, _)| s.as_str() == spelling)
+                .map(|(_, v)| v.clone())
+        },
+    ));
     config
 }
 
@@ -128,7 +140,10 @@ fn lowers_class_to_python_pascal_with_snake_fields() {
     assert_eq!(class.name, "OrderLine");
     assert_eq!(class.fields[0].name, "total_amount");
     assert_eq!(class.methods[0].name, "compute_total");
-    assert_eq!(class.bases, vec!["BaseEntity".to_string(), "Auditable".to_string()]);
+    assert_eq!(
+        class.bases,
+        vec!["BaseEntity".to_string(), "Auditable".to_string()]
+    );
 }
 
 #[test]
@@ -154,11 +169,10 @@ fn lowers_class_to_js_single_extends_with_warning() {
     assert_eq!(class.methods[0].name, "computeTotal");
     // Two bases collapse to the first; the drop is reported, never silent.
     assert_eq!(class.extends.as_deref(), Some("BaseEntity"));
-    assert!(result
-        .log
-        .warnings
-        .iter()
-        .any(|warning| matches!(warning, langprint::conversion::ConversionWarning::UnsupportedFeature { .. })));
+    assert!(result.log.warnings.iter().any(|warning| matches!(
+        warning,
+        langprint::conversion::ConversionWarning::UnsupportedFeature { .. }
+    )));
 }
 
 /// A neutral struct (not a class) with primitive fields, as if destined for a ctypes `Structure`.
@@ -206,21 +220,35 @@ fn python_struct_from_ir_maps_primitives_to_ctypes() {
         primitive_field("X", "f64"),
         primitive_field("Count", "i32"),
     ]);
-    let options = PythonStructConversionOptions { config: ctypes_config() };
+    let options = PythonStructConversionOptions {
+        config: ctypes_config(),
+    };
     let result = PythonStruct::from_ir(input, Some(&options));
     let rendered = render_python_struct(&result.value);
 
     assert!(rendered.contains("ctypes.c_double"), "rendered: {rendered}");
     assert!(rendered.contains("ctypes.c_int32"), "rendered: {rendered}");
-    assert!(!rendered.contains("f64"), "literal IR spelling leaked: {rendered}");
-    assert!(!rendered.contains("i32"), "literal IR spelling leaked: {rendered}");
+    assert!(
+        !rendered.contains("f64"),
+        "literal IR spelling leaked: {rendered}"
+    );
+    assert!(
+        !rendered.contains("i32"),
+        "literal IR spelling leaked: {rendered}"
+    );
 }
 
 #[test]
 fn ctypes_type_map_has_expected_entries() {
     let map = ctypes_type_map();
-    assert_eq!(map.map("f64", TargetLanguage::Python), Some("ctypes.c_double".to_string()));
-    assert_eq!(map.map("i32", TargetLanguage::Python), Some("ctypes.c_int32".to_string()));
+    assert_eq!(
+        map.map("f64", TargetLanguage::Python),
+        Some("ctypes.c_double".to_string())
+    );
+    assert_eq!(
+        map.map("i32", TargetLanguage::Python),
+        Some("ctypes.c_int32".to_string())
+    );
     // i128/u128 have no ctypes type: their Python output is removed so they map to nothing.
     assert_eq!(map.map("i128", TargetLanguage::Python), None);
     assert_eq!(map.map("u128", TargetLanguage::Python), None);
@@ -228,7 +256,9 @@ fn ctypes_type_map_has_expected_entries() {
 
 #[test]
 fn ctypes_unmapped_128bit_field_warns() {
-    let options = PythonStructConversionOptions { config: ctypes_config() };
+    let options = PythonStructConversionOptions {
+        config: ctypes_config(),
+    };
     let input = neutral_ctypes_struct(vec![primitive_field("Big", "i128")]);
     let result = PythonStruct::from_ir(input, Some(&options));
 
@@ -246,7 +276,10 @@ fn ctypes_unmapped_128bit_field_warns() {
 #[test]
 fn python_struct_from_ir_uses_custom_type_map() {
     let config = ctypes_config_with_override(
-        &[(PrimitiveType::F64, "MyDouble"), (PrimitiveType::I128, "ctypes.c_int128")],
+        &[
+            (PrimitiveType::F64, "MyDouble"),
+            (PrimitiveType::I128, "ctypes.c_int128"),
+        ],
         vec![],
     );
     let options = PythonStructConversionOptions { config };
@@ -287,10 +320,7 @@ fn python_struct_from_ir_default_options_uses_builtin_typemap() {
 
 #[test]
 fn python_struct_from_ir_custom_type_override() {
-    let config = ctypes_config_with_override(
-        &[],
-        vec![("MyHandle", "ctypes.c_void_p")],
-    );
+    let config = ctypes_config_with_override(&[], vec![("MyHandle", "ctypes.c_void_p")]);
     let options = PythonStructConversionOptions { config };
 
     let input = neutral_ctypes_struct(vec![primitive_field("Handle", "MyHandle")]);
@@ -319,7 +349,10 @@ fn python_struct_from_ir_passes_unknown_ctype_verbatim() {
     // type_override to map custom types and suppress the warning.
     let config = ctypes_config_with_override(
         &[],
-        vec![("ctypes.c_void_p", "ctypes.c_void_p"), ("SomeStructure", "SomeStructure")],
+        vec![
+            ("ctypes.c_void_p", "ctypes.c_void_p"),
+            ("SomeStructure", "SomeStructure"),
+        ],
     );
     let options = PythonStructConversionOptions { config };
 
@@ -343,7 +376,6 @@ fn python_struct_from_ir_passes_unknown_ctype_verbatim() {
     );
 }
 
-
 fn mentions_drop(warnings: &[ConversionWarning]) -> bool {
     warnings.iter().any(|warning| {
         matches!(
@@ -364,15 +396,37 @@ fn untyped_from_ir_warns_on_dropped_annotations() {
         text: "inline".to_string(),
     }];
 
-    assert!(mentions_drop(&PythonClass::from_ir(annotated_struct.clone(), None).log.warnings));
-    assert!(mentions_drop(&PythonFunction::from_ir(annotated_function.clone(), None).log.warnings));
-    assert!(mentions_drop(&JsClass::from_ir(annotated_struct.clone(), None).log.warnings));
-    assert!(mentions_drop(&JsFunction::from_ir(annotated_function.clone(), None).log.warnings));
-    assert!(mentions_drop(&LuaFunction::from_ir(annotated_function, None).log.warnings));
+    assert!(mentions_drop(
+        &PythonClass::from_ir(annotated_struct.clone(), None)
+            .log
+            .warnings
+    ));
+    assert!(mentions_drop(
+        &PythonFunction::from_ir(annotated_function.clone(), None)
+            .log
+            .warnings
+    ));
+    assert!(mentions_drop(
+        &JsClass::from_ir(annotated_struct.clone(), None)
+            .log
+            .warnings
+    ));
+    assert!(mentions_drop(
+        &JsFunction::from_ir(annotated_function.clone(), None)
+            .log
+            .warnings
+    ));
+    assert!(mentions_drop(
+        &LuaFunction::from_ir(annotated_function, None).log.warnings
+    ));
 
     // An item with no annotations produces no such warning.
-    assert!(!mentions_drop(&PythonClass::from_ir(neutral_struct(), None).log.warnings));
-    assert!(!mentions_drop(&LuaFunction::from_ir(neutral_function(), None).log.warnings));
+    assert!(!mentions_drop(
+        &PythonClass::from_ir(neutral_struct(), None).log.warnings
+    ));
+    assert!(!mentions_drop(
+        &LuaFunction::from_ir(neutral_function(), None).log.warnings
+    ));
 }
 
 #[test]
@@ -406,7 +460,10 @@ fn lowers_function_to_lua_snake_case_with_no_types() {
     let function = LuaFunction::from_ir(neutral_function(), None).value;
 
     assert_eq!(function.name, "compute_total");
-    assert_eq!(function.parameters, vec!["item_count".to_string(), "unit_price".to_string()]);
+    assert_eq!(
+        function.parameters,
+        vec!["item_count".to_string(), "unit_price".to_string()]
+    );
 
     let backend = LuaBackend::default();
     let mut level = 0;
@@ -415,5 +472,8 @@ fn lowers_function_to_lua_snake_case_with_no_types() {
         .unwrap();
 
     // No types anywhere — bare names and a closing `end`.
-    assert_eq!(rendered, "function compute_total(item_count, unit_price)\nend\n");
+    assert_eq!(
+        rendered,
+        "function compute_total(item_count, unit_price)\nend\n"
+    );
 }

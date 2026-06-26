@@ -24,8 +24,8 @@ pub mod text;
 pub mod type_map;
 
 pub use convert::{AnnotationMap, CaseStyle, ConversionConfig, KeywordMap, NamingMap};
-pub use ir::{Annotation, AnnotationKind};
 pub use imports::{ImportEntry, ImportMap, ImportSet};
+pub use ir::{Annotation, AnnotationKind};
 pub use type_map::{PrimitiveType, TargetLanguage, TypeMap};
 
 /// Available backend names.

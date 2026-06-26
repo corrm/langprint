@@ -52,7 +52,10 @@ impl BackendItem for RustConstant {
         )
     }
 
-    fn from_ir(input: Self::IrType, _options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
+    fn from_ir(
+        input: Self::IrType,
+        _options: Option<&Self::ConversionOptions>,
+    ) -> ConversionResult<Self> {
         let mut log = ConversionLog::new();
 
         let visibility = RustVisibility::from_ir(input.visibility, None);

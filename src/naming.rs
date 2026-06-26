@@ -17,7 +17,11 @@ fn words(name: &str) -> Vec<String> {
             continue;
         }
 
-        let prev = if index > 0 { Some(chars[index - 1]) } else { None };
+        let prev = if index > 0 {
+            Some(chars[index - 1])
+        } else {
+            None
+        };
         let next = chars.get(index + 1).copied();
 
         // Boundary before an uppercase letter that starts a new word:
@@ -65,6 +69,12 @@ pub fn to_camel_case(name: &str) -> String {
     words(name)
         .iter()
         .enumerate()
-        .map(|(index, word)| if index == 0 { word.clone() } else { capitalize(word) })
+        .map(|(index, word)| {
+            if index == 0 {
+                word.clone()
+            } else {
+                capitalize(word)
+            }
+        })
         .collect()
 }

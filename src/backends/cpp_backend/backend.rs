@@ -1,15 +1,19 @@
 use std::io::{self, Write};
 
 use super::{
-    CppConstant, CppConstantRenderOptions, CppDefinition, CppDefinitionRenderOptions, CppEnum, CppEnumRenderOptions,
-    CppFunction, CppFunctionRenderOptions, CppNamespace, CppNamespaceRenderOptions, CppStruct, CppStructRenderOptions,
-    CppVisibility, enum_types::CppEnumVariantRenderOptions,
+    CppConstant, CppConstantRenderOptions, CppDefinition, CppDefinitionRenderOptions, CppEnum,
+    CppEnumRenderOptions, CppFunction, CppFunctionRenderOptions, CppNamespace,
+    CppNamespaceRenderOptions, CppStruct, CppStructRenderOptions, CppVisibility,
+    enum_types::CppEnumVariantRenderOptions,
 };
 use crate::backends::cpp_backend::struct_types::CppStructKind;
 use crate::{
     backends::{BackendFeature, BackendMetadata},
     helper::indent,
-    renderers::{ConstantRenderer, DefinitionRenderer, EnumRenderer, FunctionRenderer, NamespaceRenderer, StructRenderer},
+    renderers::{
+        ConstantRenderer, DefinitionRenderer, EnumRenderer, FunctionRenderer, NamespaceRenderer,
+        StructRenderer,
+    },
     text::{IndentStyle, NewLineStyle},
 };
 
@@ -129,7 +133,11 @@ impl ConstantRenderer for CppBackend {
         }
 
         // Determine which keyword to use based on options
-        let keyword: &str = if options.use_constexpr { "constexpr" } else { "const" };
+        let keyword: &str = if options.use_constexpr {
+            "constexpr"
+        } else {
+            "const"
+        };
 
         // Add inline if requested
         let inline_prefix: &str = if options.use_inline { "inline " } else { "" };
@@ -306,7 +314,13 @@ impl NamespaceRenderer for CppBackend {
         let indent_str = indent(*indent_level, self.indent_size, self.indent_style);
         write!(out, "{}namespace {}", indent_str, input.name)?;
         if self.open_brace_on_new_line {
-            write!(out, "{}{}{{{}", self.new_line.as_str(), indent_str, self.new_line.as_str())?;
+            write!(
+                out,
+                "{}{}{{{}",
+                self.new_line.as_str(),
+                indent_str,
+                self.new_line.as_str()
+            )?;
         } else {
             write!(out, " {{{}", self.new_line.as_str())?;
         }
@@ -372,7 +386,13 @@ impl NamespaceRenderer for CppBackend {
         }
         if let Some(namespaces) = &input.namespaces {
             for namespace in namespaces {
-                blocks.push(self.render_namespace(namespace, None::<&str>, None::<&str>, Some(options), &mut body_level)?);
+                blocks.push(self.render_namespace(
+                    namespace,
+                    None::<&str>,
+                    None::<&str>,
+                    Some(options),
+                    &mut body_level,
+                )?);
             }
         }
         *indent_level -= 1;
@@ -563,9 +583,11 @@ impl FunctionRenderer for CppBackend {
             || input.is_deleted
             || input.is_default
             || (input.is_friend && options.render_body_if_friend);
-        let template_ok_to_skip: bool = input.template_params.is_empty() || !options.render_body_if_template;
+        let template_ok_to_skip: bool =
+            input.template_params.is_empty() || !options.render_body_if_template;
         let friend_ok_to_skip: bool = !input.is_friend || !options.render_body_if_friend;
-        let skip_body: bool = !options.force_render_body && base_skip && template_ok_to_skip && friend_ok_to_skip;
+        let skip_body: bool =
+            !options.force_render_body && base_skip && template_ok_to_skip && friend_ok_to_skip;
         match (&input.body, skip_body) {
             (Some(body_lines), false) => {
                 if self.open_brace_on_new_line {
@@ -576,7 +598,8 @@ impl FunctionRenderer for CppBackend {
 
                 // Process each line of the body with proper indentation
                 // Increase indent level for function body
-                let body_indent_str: String = indent(*indent_level + 1, self.indent_size, self.indent_style);
+                let body_indent_str: String =
+                    indent(*indent_level + 1, self.indent_size, self.indent_style);
 
                 for line in body_lines {
                     if !line.trim().is_empty() {
@@ -660,7 +683,12 @@ impl StructRenderer for CppBackend {
         }
 
         if input.is_packed {
-            write!(out, "{}#pragma pack(push, 1){}", indent_str, self.new_line.as_str())?;
+            write!(
+                out,
+                "{}#pragma pack(push, 1){}",
+                indent_str,
+                self.new_line.as_str()
+            )?;
         }
 
         // Write struct declaration
@@ -669,9 +697,15 @@ impl StructRenderer for CppBackend {
             None => String::new(),
         };
         match input.struct_kind {
-            CppStructKind::Class => write!(out, "{}class {}{}", indent_str, alignas_prefix, input.name)?,
-            CppStructKind::Struct => write!(out, "{}struct {}{}", indent_str, alignas_prefix, input.name)?,
-            CppStructKind::Union => write!(out, "{}union {}{}", indent_str, alignas_prefix, input.name)?,
+            CppStructKind::Class => {
+                write!(out, "{}class {}{}", indent_str, alignas_prefix, input.name)?
+            }
+            CppStructKind::Struct => {
+                write!(out, "{}struct {}{}", indent_str, alignas_prefix, input.name)?
+            }
+            CppStructKind::Union => {
+                write!(out, "{}union {}{}", indent_str, alignas_prefix, input.name)?
+            }
         }
 
         if input.is_final {
@@ -792,7 +826,8 @@ impl StructRenderer for CppBackend {
                     _ => current_visibility,
                 };
 
-                let should_print_visibility: bool = effective_visibility != effective_current_visibility
+                let should_print_visibility: bool = effective_visibility
+                    != effective_current_visibility
                     || (index == 0 && options.render_default_visibility);
                 if should_print_visibility {
                     // Add a newline between sections (except before the first section)
@@ -892,7 +927,8 @@ impl StructRenderer for CppBackend {
                     }
                 } else {
                     // No alignment - write normally
-                    let mut field_decl = String::with_capacity(type_part.len() + field.name.len() + 10);
+                    let mut field_decl =
+                        String::with_capacity(type_part.len() + field.name.len() + 10);
                     field_decl.push_str(&type_part);
                     field_decl.push(' ');
                     field_decl.push_str(&field.name);
@@ -967,7 +1003,8 @@ impl StructRenderer for CppBackend {
                     _ => current_visibility,
                 };
 
-                let should_print_visibility: bool = effective_visibility != effective_current_visibility
+                let should_print_visibility: bool = effective_visibility
+                    != effective_current_visibility
                     || (is_first_method && options.render_default_visibility);
                 if should_print_visibility {
                     // Decrease indent for visibility label
@@ -1001,7 +1038,14 @@ impl StructRenderer for CppBackend {
                 }
 
                 // Render the method
-                self.render_function_to::<&str>(method, None, None, Some(&options.method_options), indent_level, out)?;
+                self.render_function_to::<&str>(
+                    method,
+                    None,
+                    None,
+                    Some(&options.method_options),
+                    indent_level,
+                    out,
+                )?;
 
                 if !is_last_method {
                     write!(out, "{}", self.new_line.as_str())?;
@@ -1022,7 +1066,12 @@ impl StructRenderer for CppBackend {
         )?;
 
         if input.is_packed {
-            write!(out, "{}#pragma pack(pop){}", indent_str, self.new_line.as_str())?;
+            write!(
+                out,
+                "{}#pragma pack(pop){}",
+                indent_str,
+                self.new_line.as_str()
+            )?;
         }
 
         // Write after string if provided
@@ -1035,7 +1084,12 @@ impl StructRenderer for CppBackend {
 }
 
 impl CppBackend {
-    fn write_docs(&self, docs: &Vec<String>, indent_level: &mut i32, out: &mut impl Write) -> Result<(), io::Error> {
+    fn write_docs(
+        &self,
+        docs: &Vec<String>,
+        indent_level: &mut i32,
+        out: &mut impl Write,
+    ) -> Result<(), io::Error> {
         for line in docs {
             match self.docs_style {
                 DocsStyle::DoubleSlash => write!(
@@ -1153,7 +1207,10 @@ mod tests {
             .render_struct::<&str>(&input, None, None, None, &mut indent_level)
             .expect("render struct");
 
-        assert!(output.contains("struct alignas(16) Foo"), "output was: {output}");
+        assert!(
+            output.contains("struct alignas(16) Foo"),
+            "output was: {output}"
+        );
     }
 
     fn free_function(name: &str, is_extern_c: bool) -> CppFunction {
@@ -1191,7 +1248,10 @@ mod tests {
             .render_function::<&str>(&input, None, None, None, &mut indent_level)
             .expect("render function");
 
-        assert!(output.contains("extern \"C\" void polyplug_init("), "output was: {output}");
+        assert!(
+            output.contains("extern \"C\" void polyplug_init("),
+            "output was: {output}"
+        );
     }
 
     #[test]

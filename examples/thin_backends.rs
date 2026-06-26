@@ -11,7 +11,8 @@ use langprint::backends::BackendItem;
 use langprint::backends::js_backend::{JsBackend, JsClass, JsField, JsFunction};
 use langprint::backends::lua_backend::{LuaBackend, LuaFunction};
 use langprint::backends::python_backend::{
-    ctypes_type_map, PythonBackend, PythonFunction, PythonParameter, PythonStruct, PythonStructConversionOptions,
+    PythonBackend, PythonFunction, PythonParameter, PythonStruct, PythonStructConversionOptions,
+    ctypes_type_map,
 };
 use langprint::convert::ConversionConfig;
 use langprint::ir::{LanguageField, LanguageStruct, LanguageStructKind, Visibility};
@@ -76,7 +77,10 @@ fn main() {
             return_type: Some("number".to_string()),
             doc: None,
             is_static: false,
-            body: Some(vec!["this.count += 1;".to_string(), "return this.count;".to_string()]),
+            body: Some(vec![
+                "this.count += 1;".to_string(),
+                "return this.count;".to_string(),
+            ]),
         }],
         doc: None,
     };
@@ -90,7 +94,8 @@ fn main() {
     // primitive, so a `type_override` re-spells it to `ctypes.c_void_p`.
     let mut config = ConversionConfig::new(ctypes_type_map(), false);
     config.type_override = Some(Arc::new(|spelling: &str, language: TargetLanguage| {
-        (language == TargetLanguage::Python && spelling == "MyHandle").then(|| "ctypes.c_void_p".to_string())
+        (language == TargetLanguage::Python && spelling == "MyHandle")
+            .then(|| "ctypes.c_void_p".to_string())
     }));
 
     let handle_struct = LanguageStruct {

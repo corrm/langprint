@@ -4,7 +4,10 @@
 use langprint::{ImportEntry, ImportMap, ImportSet, TargetLanguage};
 
 fn include(header: &str, system: bool) -> ImportEntry {
-    ImportEntry::Include { header: header.to_string(), system }
+    ImportEntry::Include {
+        header: header.to_string(),
+        system,
+    }
 }
 
 // ---------- C++ ----------
@@ -86,7 +89,11 @@ fn rust_dedup_and_order() {
 
 #[test]
 fn rust_builtin_is_empty() {
-    assert!(ImportMap::builtin(TargetLanguage::Rust).resolve("u32").is_none());
+    assert!(
+        ImportMap::builtin(TargetLanguage::Rust)
+            .resolve("u32")
+            .is_none()
+    );
 }
 
 // ---------- Python ----------
@@ -94,7 +101,10 @@ fn rust_builtin_is_empty() {
 #[test]
 fn python_import_before_from_then_alphabetical() {
     let mut set = ImportSet::new(TargetLanguage::Python);
-    set.add(ImportEntry::PyFrom { module: "enum".to_string(), symbol: "IntEnum".to_string() });
+    set.add(ImportEntry::PyFrom {
+        module: "enum".to_string(),
+        symbol: "IntEnum".to_string(),
+    });
     set.add(ImportEntry::PyImport("sys".to_string()));
     set.add(ImportEntry::PyImport("ctypes".to_string()));
     set.add(ImportEntry::PyImport("ctypes".to_string()));
@@ -118,9 +128,18 @@ fn python_auto_from_type_ref() {
 #[test]
 fn lua_dedup_and_order() {
     let mut set = ImportSet::new(TargetLanguage::Lua);
-    set.add(ImportEntry::Require { name: "json".to_string(), module: "cjson".to_string() });
-    set.add(ImportEntry::Require { name: "json".to_string(), module: "cjson".to_string() });
-    set.add(ImportEntry::Require { name: "bit".to_string(), module: "bit".to_string() });
+    set.add(ImportEntry::Require {
+        name: "json".to_string(),
+        module: "cjson".to_string(),
+    });
+    set.add(ImportEntry::Require {
+        name: "json".to_string(),
+        module: "cjson".to_string(),
+    });
+    set.add(ImportEntry::Require {
+        name: "bit".to_string(),
+        module: "bit".to_string(),
+    });
     assert_eq!(
         set.render(),
         "local bit = require(\"bit\")\nlocal json = require(\"cjson\")\n"
@@ -129,7 +148,11 @@ fn lua_dedup_and_order() {
 
 #[test]
 fn lua_builtin_is_empty() {
-    assert!(ImportMap::builtin(TargetLanguage::Lua).resolve("anything").is_none());
+    assert!(
+        ImportMap::builtin(TargetLanguage::Lua)
+            .resolve("anything")
+            .is_none()
+    );
 }
 
 // ---------- JS ----------
@@ -137,18 +160,28 @@ fn lua_builtin_is_empty() {
 #[test]
 fn js_named_and_default_syntax() {
     let mut set = ImportSet::new(TargetLanguage::Js);
-    set.add(ImportEntry::JsNamed { name: "A".to_string(), source: "b".to_string() });
-    set.add(ImportEntry::JsNamed { name: "A".to_string(), source: "b".to_string() });
-    set.add(ImportEntry::JsDefault { name: "C".to_string(), source: "c".to_string() });
-    assert_eq!(
-        set.render(),
-        "import C from 'c';\nimport { A } from 'b';\n"
-    );
+    set.add(ImportEntry::JsNamed {
+        name: "A".to_string(),
+        source: "b".to_string(),
+    });
+    set.add(ImportEntry::JsNamed {
+        name: "A".to_string(),
+        source: "b".to_string(),
+    });
+    set.add(ImportEntry::JsDefault {
+        name: "C".to_string(),
+        source: "c".to_string(),
+    });
+    assert_eq!(set.render(), "import C from 'c';\nimport { A } from 'b';\n");
 }
 
 #[test]
 fn js_builtin_is_empty() {
-    assert!(ImportMap::builtin(TargetLanguage::Js).resolve("anything").is_none());
+    assert!(
+        ImportMap::builtin(TargetLanguage::Js)
+            .resolve("anything")
+            .is_none()
+    );
 }
 
 // ---------- additive guarantee ----------

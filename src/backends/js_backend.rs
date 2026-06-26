@@ -14,5 +14,6 @@ pub mod function_types;
 pub use backend::JsBackend;
 pub use class_types::{JsClass, JsClassConversionOptions, JsClassRenderOptions, JsField};
 pub use function_types::{
-    JsFunction, JsFunctionConversionOptions, JsFunctionRenderOptions, JsParameter, JsParameterConversionOptions,
+    JsFunction, JsFunctionConversionOptions, JsFunctionRenderOptions, JsParameter,
+    JsParameterConversionOptions,
 };

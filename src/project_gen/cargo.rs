@@ -96,7 +96,11 @@ mod tests {
 
     #[test]
     fn renders_cdylib_with_rust_edition() {
-        let contents = CargoGenerator::render(&spec_with(LanguageStandard::Rust2024, OutputKind::SharedLib)).unwrap();
+        let contents = CargoGenerator::render(&spec_with(
+            LanguageStandard::Rust2024,
+            OutputKind::SharedLib,
+        ))
+        .unwrap();
         let expected = "\
 [package]
 name = \"VampireSurvivors\"
@@ -111,14 +115,22 @@ crate-type = [\"cdylib\"]
 
     #[test]
     fn renders_staticlib() {
-        let contents = CargoGenerator::render(&spec_with(LanguageStandard::Rust2021, OutputKind::StaticLib)).unwrap();
+        let contents = CargoGenerator::render(&spec_with(
+            LanguageStandard::Rust2021,
+            OutputKind::StaticLib,
+        ))
+        .unwrap();
         assert!(contents.contains("edition = \"2021\"\n"));
         assert!(contents.contains("[lib]\ncrate-type = [\"staticlib\"]\n"));
     }
 
     #[test]
     fn renders_binary_target() {
-        let contents = CargoGenerator::render(&spec_with(LanguageStandard::Rust2021, OutputKind::Executable)).unwrap();
+        let contents = CargoGenerator::render(&spec_with(
+            LanguageStandard::Rust2021,
+            OutputKind::Executable,
+        ))
+        .unwrap();
         let expected = "\
 [package]
 name = \"VampireSurvivors\"
@@ -134,7 +146,9 @@ path = \"src/main.rs\"
 
     #[test]
     fn rejects_non_rust_standard() {
-        let err = CargoGenerator::render(&spec_with(LanguageStandard::Cpp20, OutputKind::SharedLib)).unwrap_err();
+        let err =
+            CargoGenerator::render(&spec_with(LanguageStandard::Cpp20, OutputKind::SharedLib))
+                .unwrap_err();
         assert!(matches!(
             err,
             ProjectGenError::UnsupportedLanguage {

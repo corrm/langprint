@@ -48,8 +48,15 @@ impl CSharpProjectGenerator {
         out.push_str("<Project Sdk=\"Microsoft.NET.Sdk\">\n");
         out.push_str("  <PropertyGroup>\n");
         let _ = writeln!(out, "    <OutputType>{output_type}</OutputType>");
-        let _ = writeln!(out, "    <TargetFramework>{TARGET_FRAMEWORK}</TargetFramework>");
-        let _ = writeln!(out, "    <AssemblyName>{}</AssemblyName>", xml_escape(&spec.name));
+        let _ = writeln!(
+            out,
+            "    <TargetFramework>{TARGET_FRAMEWORK}</TargetFramework>"
+        );
+        let _ = writeln!(
+            out,
+            "    <AssemblyName>{}</AssemblyName>",
+            xml_escape(&spec.name)
+        );
         let _ = writeln!(out, "    <LangVersion>{lang_version}</LangVersion>");
         out.push_str("    <Nullable>enable</Nullable>\n");
         out.push_str("    <ImplicitUsings>enable</ImplicitUsings>\n");
@@ -102,8 +109,11 @@ mod tests {
 
     #[test]
     fn renders_library_with_lang_version() {
-        let contents =
-            CSharpProjectGenerator::render(&spec_with(LanguageStandard::CSharp12, OutputKind::SharedLib)).unwrap();
+        let contents = CSharpProjectGenerator::render(&spec_with(
+            LanguageStandard::CSharp12,
+            OutputKind::SharedLib,
+        ))
+        .unwrap();
         let expected = "\
 <Project Sdk=\"Microsoft.NET.Sdk\">
   <PropertyGroup>
@@ -121,8 +131,11 @@ mod tests {
 
     #[test]
     fn renders_exe_output_type() {
-        let contents =
-            CSharpProjectGenerator::render(&spec_with(LanguageStandard::CSharp11, OutputKind::Executable)).unwrap();
+        let contents = CSharpProjectGenerator::render(&spec_with(
+            LanguageStandard::CSharp11,
+            OutputKind::Executable,
+        ))
+        .unwrap();
         assert!(contents.contains("<OutputType>Exe</OutputType>"));
         assert!(contents.contains("<LangVersion>11</LangVersion>"));
     }
@@ -138,8 +151,11 @@ mod tests {
 
     #[test]
     fn rejects_non_csharp_standard() {
-        let err =
-            CSharpProjectGenerator::render(&spec_with(LanguageStandard::Cpp20, OutputKind::SharedLib)).unwrap_err();
+        let err = CSharpProjectGenerator::render(&spec_with(
+            LanguageStandard::Cpp20,
+            OutputKind::SharedLib,
+        ))
+        .unwrap_err();
         assert!(matches!(
             err,
             ProjectGenError::UnsupportedLanguage {

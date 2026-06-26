@@ -566,7 +566,10 @@ fn cpp_function_extern_c_is_dropped_and_defaulted() {
     );
 
     let back = CppFunction::from_ir(ir.value, None);
-    assert!(!back.value.is_extern_c, "is_extern_c defaults to false out of the IR");
+    assert!(
+        !back.value.is_extern_c,
+        "is_extern_c defaults to false out of the IR"
+    );
 }
 
 #[test]
@@ -582,7 +585,10 @@ fn csharp_method_unsafe_is_dropped_and_defaulted() {
     );
 
     let back = CSharpMethod::from_ir(ir.value, None);
-    assert!(!back.value.is_unsafe, "is_unsafe defaults to false out of the IR");
+    assert!(
+        !back.value.is_unsafe,
+        "is_unsafe defaults to false out of the IR"
+    );
 }
 
 #[test]
@@ -598,7 +604,10 @@ fn csharp_type_unsafe_is_dropped_and_defaulted() {
     );
 
     let back = CSharpType::from_ir(ir.value, None);
-    assert!(!back.value.is_unsafe, "is_unsafe defaults to false out of the IR");
+    assert!(
+        !back.value.is_unsafe,
+        "is_unsafe defaults to false out of the IR"
+    );
 }
 
 #[test]

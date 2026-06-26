@@ -2,12 +2,13 @@
 
 use langprint::backends::BackendItem;
 use langprint::backends::cpp_backend::{
-    CppBackend, CppEnum, CppEnumVariant, CppField, CppFunction, CppNamespace, CppStruct, CppStructKind, CppVisibility,
-    DocsStyle,
+    CppBackend, CppEnum, CppEnumVariant, CppField, CppFunction, CppNamespace, CppStruct,
+    CppStructKind, CppVisibility, DocsStyle,
 };
 use langprint::backends::csharp_backend::{CSharpNamespace, CSharpNamespaceConversionOptions};
 use langprint::backends::rust_backend::{
-    RustBackend, RustEnum, RustEnumVariant, RustEnumVariantValue, RustFunction, RustModule, RustSelfKind, RustVisibility,
+    RustBackend, RustEnum, RustEnumVariant, RustEnumVariantValue, RustFunction, RustModule,
+    RustSelfKind, RustVisibility,
 };
 use langprint::conversion::ConversionWarning;
 use langprint::renderers::NamespaceRenderer;

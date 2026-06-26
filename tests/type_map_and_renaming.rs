@@ -5,7 +5,9 @@ use langprint::backends::BackendItem;
 use langprint::backends::csharp_backend::{CSharpField, CSharpFieldConversionOptions, CSharpType};
 use langprint::backends::rust_backend::RustField;
 use langprint::conversion::ConversionWarning;
-use langprint::ir::{LanguageField, LanguageGenericArgument, LanguageStruct, LanguageStructKind, Visibility};
+use langprint::ir::{
+    LanguageField, LanguageGenericArgument, LanguageStruct, LanguageStructKind, Visibility,
+};
 use langprint::naming::{to_pascal_case, to_snake_case};
 use langprint::{ConversionConfig, PrimitiveType, TargetLanguage, TypeMap};
 
@@ -25,11 +27,26 @@ fn ir_field(name: &str, field_type: &str) -> LanguageField {
 #[test]
 fn builtin_maps_primitives_across_languages() {
     let map = TypeMap::default();
-    assert_eq!(map.map("f32", TargetLanguage::CSharp), Some("float".to_string()));
-    assert_eq!(map.map("uint8_t", TargetLanguage::Rust), Some("u8".to_string()));
-    assert_eq!(map.map("byte", TargetLanguage::Rust), Some("u8".to_string()));
-    assert_eq!(map.map("int", TargetLanguage::Cpp), Some("int32_t".to_string()));
-    assert_eq!(map.map("double", TargetLanguage::Rust), Some("f64".to_string()));
+    assert_eq!(
+        map.map("f32", TargetLanguage::CSharp),
+        Some("float".to_string())
+    );
+    assert_eq!(
+        map.map("uint8_t", TargetLanguage::Rust),
+        Some("u8".to_string())
+    );
+    assert_eq!(
+        map.map("byte", TargetLanguage::Rust),
+        Some("u8".to_string())
+    );
+    assert_eq!(
+        map.map("int", TargetLanguage::Cpp),
+        Some("int32_t".to_string())
+    );
+    assert_eq!(
+        map.map("double", TargetLanguage::Rust),
+        Some("f64".to_string())
+    );
     assert_eq!(map.resolve("ushort"), Some(PrimitiveType::U16));
     // A user-defined type is not a primitive.
     assert_eq!(map.map("Player", TargetLanguage::Rust), None);
@@ -39,7 +56,10 @@ fn builtin_maps_primitives_across_languages() {
 fn type_map_override_extend_and_clear() {
     let mut map = TypeMap::default();
     map.set_output(PrimitiveType::F32, TargetLanguage::CSharp, "Single");
-    assert_eq!(map.map("f32", TargetLanguage::CSharp), Some("Single".to_string()));
+    assert_eq!(
+        map.map("f32", TargetLanguage::CSharp),
+        Some("Single".to_string())
+    );
 
     map.insert_spelling("FFloat", PrimitiveType::F32);
     assert_eq!(map.resolve("FFloat"), Some(PrimitiveType::F32));
@@ -48,7 +68,10 @@ fn type_map_override_extend_and_clear() {
     extension.insert_spelling("BOOL", PrimitiveType::Bool);
     extension.set_output(PrimitiveType::Bool, TargetLanguage::Rust, "bool");
     map.extend(extension);
-    assert_eq!(map.map("BOOL", TargetLanguage::Rust), Some("bool".to_string()));
+    assert_eq!(
+        map.map("BOOL", TargetLanguage::Rust),
+        Some("bool".to_string())
+    );
 
     map.clear();
     assert_eq!(map.map("f32", TargetLanguage::CSharp), None);

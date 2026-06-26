@@ -1,7 +1,7 @@
 use crate::{
     backends::BackendItem,
-    conversion::{dropped_feature_warning, ConversionLog, ConversionResult},
-    convert::{rename_identifier, ConversionConfig, IdentifierKind},
+    conversion::{ConversionLog, ConversionResult, dropped_feature_warning},
+    convert::{ConversionConfig, IdentifierKind, rename_identifier},
     ir::{LanguageConstant, LanguageNamespace, Visibility},
     type_map::TargetLanguage,
 };
@@ -48,7 +48,12 @@ impl BackendItem for LuaModule {
             .fields
             .into_iter()
             .map(|field| {
-                let renamed = rename_identifier(&config, &field.name, TargetLanguage::Lua, IdentifierKind::Field);
+                let renamed = rename_identifier(
+                    &config,
+                    &field.name,
+                    TargetLanguage::Lua,
+                    IdentifierKind::Field,
+                );
                 LanguageConstant {
                     name: renamed.value,
                     visibility: Visibility::Public,
@@ -59,7 +64,9 @@ impl BackendItem for LuaModule {
             })
             .collect::<Vec<_>>();
 
-        let function_options = LuaFunctionConversionOptions { config: config.clone() };
+        let function_options = LuaFunctionConversionOptions {
+            config: config.clone(),
+        };
         let mut functions = Vec::with_capacity(self.functions.len());
         for function in self.functions {
             let result = function.to_ir(Some(&function_options));
@@ -83,12 +90,24 @@ impl BackendItem for LuaModule {
         )
     }
 
-    fn from_ir(input: Self::IrType, options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
+    fn from_ir(
+        input: Self::IrType,
+        options: Option<&Self::ConversionOptions>,
+    ) -> ConversionResult<Self> {
         let mut log = ConversionLog::new();
-        let config = options.map(|options| options.config.clone()).unwrap_or_default();
-        let function_options = LuaFunctionConversionOptions { config: config.clone() };
+        let config = options
+            .map(|options| options.config.clone())
+            .unwrap_or_default();
+        let function_options = LuaFunctionConversionOptions {
+            config: config.clone(),
+        };
 
-        let table_name = rename_identifier(&config, &input.name, TargetLanguage::Lua, IdentifierKind::Namespace);
+        let table_name = rename_identifier(
+            &config,
+            &input.name,
+            TargetLanguage::Lua,
+            IdentifierKind::Namespace,
+        );
         log.add_warnings(table_name.log.warnings);
 
         let fields = input
@@ -115,13 +134,24 @@ impl BackendItem for LuaModule {
             log.add_warning(dropped_feature_warning("nested enums", &input.name, "Lua"));
         }
         if input.structs.is_some_and(|structs| !structs.is_empty()) {
-            log.add_warning(dropped_feature_warning("nested structs", &input.name, "Lua"));
+            log.add_warning(dropped_feature_warning(
+                "nested structs",
+                &input.name,
+                "Lua",
+            ));
         }
         if input.defines.is_some_and(|defines| !defines.is_empty()) {
             log.add_warning(dropped_feature_warning("defines", &input.name, "Lua"));
         }
-        if input.namespaces.is_some_and(|namespaces| !namespaces.is_empty()) {
-            log.add_warning(dropped_feature_warning("nested namespaces", &input.name, "Lua"));
+        if input
+            .namespaces
+            .is_some_and(|namespaces| !namespaces.is_empty())
+        {
+            log.add_warning(dropped_feature_warning(
+                "nested namespaces",
+                &input.name,
+                "Lua",
+            ));
         }
 
         ConversionResult::with_log(

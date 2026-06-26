@@ -1,7 +1,9 @@
 use crate::{
     backends::BackendItem,
-    conversion::{dropped_annotations_warning, dropped_feature_warning, ConversionLog, ConversionResult},
-    convert::{rename_identifier, ConversionConfig, IdentifierKind},
+    conversion::{
+        ConversionLog, ConversionResult, dropped_annotations_warning, dropped_feature_warning,
+    },
+    convert::{ConversionConfig, IdentifierKind, rename_identifier},
     ir::{LanguageFunction, LanguageFunctionParameter, Visibility},
     type_map::TargetLanguage,
 };
@@ -69,15 +71,24 @@ impl BackendItem for LuaFunction {
         ConversionResult::new(ir)
     }
 
-    fn from_ir(mut input: Self::IrType, options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
+    fn from_ir(
+        mut input: Self::IrType,
+        options: Option<&Self::ConversionOptions>,
+    ) -> ConversionResult<Self> {
         let mut log = ConversionLog::new();
-        let config = options.map(|options| options.config.clone()).unwrap_or_default();
+        let config = options
+            .map(|options| options.config.clone())
+            .unwrap_or_default();
         if let Some(hooks) = &config.hooks {
             hooks.before_from_ir_function(&mut input);
         }
 
         if !input.generic_args.is_empty() {
-            log.add_warning(dropped_feature_warning("generic arguments", &input.name, "Lua"));
+            log.add_warning(dropped_feature_warning(
+                "generic arguments",
+                &input.name,
+                "Lua",
+            ));
         }
         if input.return_type.is_some() {
             log.add_warning(dropped_feature_warning("return type", &input.name, "Lua"));
@@ -91,12 +102,22 @@ impl BackendItem for LuaFunction {
             ));
         }
 
-        let name = rename_identifier(&config, &input.name, TargetLanguage::Lua, IdentifierKind::Function);
+        let name = rename_identifier(
+            &config,
+            &input.name,
+            TargetLanguage::Lua,
+            IdentifierKind::Function,
+        );
         log.add_warnings(name.log.warnings);
 
         let mut parameters = Vec::with_capacity(input.parameters.len());
         for parameter in input.parameters {
-            let renamed = rename_identifier(&config, &parameter.name, TargetLanguage::Lua, IdentifierKind::Field);
+            let renamed = rename_identifier(
+                &config,
+                &parameter.name,
+                TargetLanguage::Lua,
+                IdentifierKind::Field,
+            );
             log.add_warnings(renamed.log.warnings);
             parameters.push(renamed.value);
         }

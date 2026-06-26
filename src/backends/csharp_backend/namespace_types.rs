@@ -7,13 +7,16 @@ use crate::{
 };
 
 use super::{
-    CSharpConstant, CSharpConstantRenderOptions, CSharpDefinition, CSharpDefinitionRenderOptions, CSharpEnum,
-    CSharpEnumConversionOptions, CSharpEnumRenderOptions, CSharpType,
+    CSharpConstant, CSharpConstantRenderOptions, CSharpDefinition, CSharpDefinitionRenderOptions,
+    CSharpEnum, CSharpEnumConversionOptions, CSharpEnumRenderOptions, CSharpType,
     CSharpTypeConversionOptions, CSharpTypeRenderOptions,
 };
 
 /// Convert an optional list of native items to their IR form, collecting any warnings.
-fn items_to_ir<T: BackendItem>(items: Option<Vec<T>>, log: &mut ConversionLog) -> Option<Vec<T::IrType>> {
+fn items_to_ir<T: BackendItem>(
+    items: Option<Vec<T>>,
+    log: &mut ConversionLog,
+) -> Option<Vec<T::IrType>> {
     items.map(|items| {
         items
             .into_iter()
@@ -94,9 +97,14 @@ impl BackendItem for CSharpNamespace {
         ConversionResult::with_log(language_namespace, log)
     }
 
-    fn from_ir(input: Self::IrType, options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
+    fn from_ir(
+        input: Self::IrType,
+        options: Option<&Self::ConversionOptions>,
+    ) -> ConversionResult<Self> {
         let mut log = ConversionLog::new();
-        let config = options.map(|options| options.config.clone()).unwrap_or_default();
+        let config = options
+            .map(|options| options.config.clone())
+            .unwrap_or_default();
 
         if input.visibility != Visibility::Default {
             log.add_warning(ConversionWarning::UnsupportedFeature {
@@ -112,14 +120,25 @@ impl BackendItem for CSharpNamespace {
         }
 
         let name = {
-            let renamed = rename_identifier(&config, &input.name, TargetLanguage::CSharp, IdentifierKind::Namespace);
+            let renamed = rename_identifier(
+                &config,
+                &input.name,
+                TargetLanguage::CSharp,
+                IdentifierKind::Namespace,
+            );
             log.add_warnings(renamed.log.warnings);
             renamed.value
         };
 
-        let enum_options = CSharpEnumConversionOptions { config: config.clone() };
-        let type_options = CSharpTypeConversionOptions { config: config.clone() };
-        let namespace_options = CSharpNamespaceConversionOptions { config: config.clone() };
+        let enum_options = CSharpEnumConversionOptions {
+            config: config.clone(),
+        };
+        let type_options = CSharpTypeConversionOptions {
+            config: config.clone(),
+        };
+        let namespace_options = CSharpNamespaceConversionOptions {
+            config: config.clone(),
+        };
 
         let csharp_namespace = CSharpNamespace {
             name,
@@ -127,7 +146,11 @@ impl BackendItem for CSharpNamespace {
             constants: items_from_ir::<CSharpConstant>(input.constants, None, &mut log),
             enums: items_from_ir::<CSharpEnum>(input.enums, Some(&enum_options), &mut log),
             types: items_from_ir::<CSharpType>(input.structs, Some(&type_options), &mut log),
-            namespaces: items_from_ir::<CSharpNamespace>(input.namespaces, Some(&namespace_options), &mut log),
+            namespaces: items_from_ir::<CSharpNamespace>(
+                input.namespaces,
+                Some(&namespace_options),
+                &mut log,
+            ),
             file_scoped: false,
             docs: input.docs,
         };

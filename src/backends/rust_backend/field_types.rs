@@ -61,24 +61,36 @@ impl BackendItem for RustField {
         )
     }
 
-    fn from_ir(input: Self::IrType, options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
+    fn from_ir(
+        input: Self::IrType,
+        options: Option<&Self::ConversionOptions>,
+    ) -> ConversionResult<Self> {
         let mut log = ConversionLog::new();
-        let config = options.map(|options| options.config.clone()).unwrap_or_default();
+        let config = options
+            .map(|options| options.config.clone())
+            .unwrap_or_default();
 
         if input.is_static {
             log.add_warning(ConversionWarning::UnsupportedFeature {
                 feature: format!("static field `{}`", input.name),
-                resolution: "Rust struct fields cannot be static; the modifier was dropped".to_string(),
+                resolution: "Rust struct fields cannot be static; the modifier was dropped"
+                    .to_string(),
             });
         }
         if input.is_const {
             log.add_warning(ConversionWarning::UnsupportedFeature {
                 feature: format!("const field `{}`", input.name),
-                resolution: "Rust struct fields cannot be const; the modifier was dropped".to_string(),
+                resolution: "Rust struct fields cannot be const; the modifier was dropped"
+                    .to_string(),
             });
         }
 
-        let name = rename_identifier(&config, &input.name, TargetLanguage::Rust, IdentifierKind::Field);
+        let name = rename_identifier(
+            &config,
+            &input.name,
+            TargetLanguage::Rust,
+            IdentifierKind::Field,
+        );
         log.add_warnings(name.log.warnings);
 
         let field_type = map_type(&config, &input.field_type, TargetLanguage::Rust);
@@ -89,7 +101,10 @@ impl BackendItem for RustField {
 
         let mut attributes = Vec::new();
         for annotation in &input.annotations {
-            if let Some(rendered) = config.annotation_map.resolve(TargetLanguage::Rust, annotation) {
+            if let Some(rendered) = config
+                .annotation_map
+                .resolve(TargetLanguage::Rust, annotation)
+            {
                 attributes.push(rendered);
             }
         }

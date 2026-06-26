@@ -2,14 +2,18 @@ use std::io::{self, Write};
 
 use super::{
     RustConstant, RustConstantRenderOptions, RustDefinition, RustDefinitionRenderOptions, RustEnum,
-    RustEnumRenderOptions, RustEnumVariantRenderOptions, RustEnumVariantValue, RustField, RustFunction,
-    RustFunctionRenderOptions, RustModule, RustModuleRenderOptions, RustStruct, RustStructRenderOptions,
+    RustEnumRenderOptions, RustEnumVariantRenderOptions, RustEnumVariantValue, RustField,
+    RustFunction, RustFunctionRenderOptions, RustModule, RustModuleRenderOptions, RustStruct,
+    RustStructRenderOptions,
     generic_types::{render_generic_decls, render_generic_uses},
 };
 use crate::{
     backends::{BackendFeature, BackendMetadata},
     helper::indent,
-    renderers::{ConstantRenderer, DefinitionRenderer, EnumRenderer, FunctionRenderer, NamespaceRenderer, StructRenderer},
+    renderers::{
+        ConstantRenderer, DefinitionRenderer, EnumRenderer, FunctionRenderer, NamespaceRenderer,
+        StructRenderer,
+    },
     text::{IndentStyle, NewLineStyle},
 };
 
@@ -39,7 +43,12 @@ impl RustBackend {
         indent(level, self.indent_size, self.indent_style)
     }
 
-    fn write_docs(&self, docs: &[String], indent_level: i32, out: &mut impl Write) -> Result<(), io::Error> {
+    fn write_docs(
+        &self,
+        docs: &[String],
+        indent_level: i32,
+        out: &mut impl Write,
+    ) -> Result<(), io::Error> {
         for line in docs {
             write!(
                 out,
@@ -70,7 +79,12 @@ impl RustBackend {
         Ok(())
     }
 
-    fn write_derives(&self, derives: &[String], indent_level: i32, out: &mut impl Write) -> Result<(), io::Error> {
+    fn write_derives(
+        &self,
+        derives: &[String],
+        indent_level: i32,
+        out: &mut impl Write,
+    ) -> Result<(), io::Error> {
         if derives.is_empty() {
             return Ok(());
         }
@@ -101,7 +115,12 @@ impl RustBackend {
             self.write_attributes(&input.attributes, indent_level, out)?;
         }
 
-        write!(out, "{}{}", self.indent(indent_level), input.visibility.prefix())?;
+        write!(
+            out,
+            "{}{}",
+            self.indent(indent_level),
+            input.visibility.prefix()
+        )?;
         if input.is_const {
             write!(out, "const ")?;
         }
@@ -114,7 +133,12 @@ impl RustBackend {
         if let Some(abi) = &input.abi {
             write!(out, "extern \"{}\" ", abi)?;
         }
-        write!(out, "fn {}{}(", input.name, render_generic_decls(&input.generic_args))?;
+        write!(
+            out,
+            "fn {}{}(",
+            input.name,
+            render_generic_decls(&input.generic_args)
+        )?;
 
         let mut first = true;
         if let Some(receiver) = input.self_kind.render() {
@@ -148,7 +172,12 @@ impl RustBackend {
                         self.new_line.as_str()
                     )?;
                 }
-                write!(out, "{}}}{}", self.indent(indent_level), self.new_line.as_str())?;
+                write!(
+                    out,
+                    "{}}}{}",
+                    self.indent(indent_level),
+                    self.new_line.as_str()
+                )?;
             }
             None => write!(out, ";{}", self.new_line.as_str())?,
         }
@@ -340,7 +369,12 @@ impl EnumRenderer for RustBackend {
         }
         *indent_level -= 1;
 
-        write!(out, "{}}}{}", self.indent(*indent_level), self.new_line.as_str())?;
+        write!(
+            out,
+            "{}}}{}",
+            self.indent(*indent_level),
+            self.new_line.as_str()
+        )?;
 
         if let Some(after) = after {
             write!(out, "{}", after.as_ref())?;
@@ -469,7 +503,13 @@ impl NamespaceRenderer for RustBackend {
         }
         if let Some(modules) = &input.modules {
             for module in modules {
-                blocks.push(self.render_namespace(module, None::<&str>, None::<&str>, Some(options), &mut body_level)?);
+                blocks.push(self.render_namespace(
+                    module,
+                    None::<&str>,
+                    None::<&str>,
+                    Some(options),
+                    &mut body_level,
+                )?);
             }
         }
         *indent_level -= 1;
@@ -484,7 +524,12 @@ impl NamespaceRenderer for RustBackend {
             write!(out, "{}{}", body, self.new_line.as_str())?;
         }
 
-        write!(out, "{}}}{}", self.indent(*indent_level), self.new_line.as_str())?;
+        write!(
+            out,
+            "{}}}{}",
+            self.indent(*indent_level),
+            self.new_line.as_str()
+        )?;
 
         if let Some(after) = after {
             write!(out, "{}", after.as_ref())?;
@@ -548,7 +593,12 @@ impl StructRenderer for RustBackend {
                 self.write_field(field, options, *indent_level, out)?;
             }
             *indent_level -= 1;
-            write!(out, "{}}}{}", self.indent(*indent_level), self.new_line.as_str())?;
+            write!(
+                out,
+                "{}}}{}",
+                self.indent(*indent_level),
+                self.new_line.as_str()
+            )?;
         }
 
         if options.render_impl && !input.methods.is_empty() {
@@ -571,7 +621,12 @@ impl StructRenderer for RustBackend {
                 self.write_function(method, &fn_options, *indent_level, out)?;
             }
             *indent_level -= 1;
-            write!(out, "{}}}{}", self.indent(*indent_level), self.new_line.as_str())?;
+            write!(
+                out,
+                "{}}}{}",
+                self.indent(*indent_level),
+                self.new_line.as_str()
+            )?;
         }
 
         if let Some(after) = after {

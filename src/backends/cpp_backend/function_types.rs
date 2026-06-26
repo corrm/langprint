@@ -31,8 +31,13 @@ impl BackendItem for CppParameter {
         })
     }
 
-    fn from_ir(input: Self::IrType, options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
-        let config = options.map(|options| options.config.clone()).unwrap_or_default();
+    fn from_ir(
+        input: Self::IrType,
+        options: Option<&Self::ConversionOptions>,
+    ) -> ConversionResult<Self> {
+        let config = options
+            .map(|options| options.config.clone())
+            .unwrap_or_default();
         let param_type = map_type(&config, &input.param_type, TargetLanguage::Cpp);
 
         ConversionResult::with_log(
@@ -178,15 +183,22 @@ impl BackendItem for CppFunction {
         ConversionResult::with_log(lang_function, result_log)
     }
 
-    fn from_ir(mut input: Self::IrType, options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
+    fn from_ir(
+        mut input: Self::IrType,
+        options: Option<&Self::ConversionOptions>,
+    ) -> ConversionResult<Self> {
         let mut result_log = ConversionLog::new();
-        let config = options.map(|options| options.config.clone()).unwrap_or_default();
+        let config = options
+            .map(|options| options.config.clone())
+            .unwrap_or_default();
         if let Some(hooks) = &config.hooks {
             hooks.before_from_ir_function(&mut input);
         }
 
         // Convert parameters
-        let parameter_options = CppParameterConversionOptions { config: config.clone() };
+        let parameter_options = CppParameterConversionOptions {
+            config: config.clone(),
+        };
         let mut parameters: Vec<CppParameter> = Vec::with_capacity(input.parameters.len());
         for param in &input.parameters {
             let param_result: ConversionResult<CppParameter> =
@@ -236,7 +248,12 @@ impl BackendItem for CppFunction {
             }
         }
 
-        let name = rename_identifier(&config, &input.name, TargetLanguage::Cpp, IdentifierKind::Function);
+        let name = rename_identifier(
+            &config,
+            &input.name,
+            TargetLanguage::Cpp,
+            IdentifierKind::Function,
+        );
         result_log.add_warnings(name.log.warnings);
 
         let cpp_function = CppFunction {

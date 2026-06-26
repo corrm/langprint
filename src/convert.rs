@@ -72,7 +72,10 @@ impl fmt::Debug for ConversionConfig {
         f.debug_struct("ConversionConfig")
             .field("type_map", &self.type_map)
             .field("rename", &self.rename)
-            .field("type_override", &self.type_override.as_ref().map(|_| "<fn>"))
+            .field(
+                "type_override",
+                &self.type_override.as_ref().map(|_| "<fn>"),
+            )
             .field("naming_map", &self.naming_map)
             .field("keyword_map", &self.keyword_map)
             .field("annotation_map", &self.annotation_map)
@@ -152,7 +155,9 @@ impl Default for NamingMap {
         use IdentifierKind::{Field, Function, Namespace, Type};
         use TargetLanguage::{CSharp, Js, Lua, Python, Rust};
 
-        let mut map = Self { styles: HashMap::new() };
+        let mut map = Self {
+            styles: HashMap::new(),
+        };
 
         for kind in [Function, Field, Namespace] {
             map.insert(Rust, kind, Snake);
@@ -210,7 +215,9 @@ pub struct KeywordMap {
 
 impl Default for KeywordMap {
     fn default() -> Self {
-        let mut map = Self { reserved: HashMap::new() };
+        let mut map = Self {
+            reserved: HashMap::new(),
+        };
 
         let python = [
             "False", "None", "True", "and", "as", "assert", "async", "await", "break", "class",
@@ -227,36 +234,199 @@ impl Default for KeywordMap {
             "union",
         ];
         let csharp = [
-            "abstract", "as", "base", "bool", "break", "byte", "case", "catch", "char", "checked",
-            "class", "const", "continue", "decimal", "default", "delegate", "do", "double", "else",
-            "enum", "event", "explicit", "extern", "false", "finally", "fixed", "float", "for",
-            "foreach", "goto", "if", "implicit", "in", "int", "interface", "internal", "is", "lock",
-            "long", "namespace", "new", "null", "object", "operator", "out", "override", "params",
-            "private", "protected", "public", "readonly", "ref", "return", "sbyte", "sealed",
-            "short", "sizeof", "stackalloc", "static", "string", "struct", "switch", "this",
-            "throw", "true", "try", "typeof", "uint", "ulong", "unchecked", "unsafe", "ushort",
-            "using", "virtual", "void", "volatile", "while",
+            "abstract",
+            "as",
+            "base",
+            "bool",
+            "break",
+            "byte",
+            "case",
+            "catch",
+            "char",
+            "checked",
+            "class",
+            "const",
+            "continue",
+            "decimal",
+            "default",
+            "delegate",
+            "do",
+            "double",
+            "else",
+            "enum",
+            "event",
+            "explicit",
+            "extern",
+            "false",
+            "finally",
+            "fixed",
+            "float",
+            "for",
+            "foreach",
+            "goto",
+            "if",
+            "implicit",
+            "in",
+            "int",
+            "interface",
+            "internal",
+            "is",
+            "lock",
+            "long",
+            "namespace",
+            "new",
+            "null",
+            "object",
+            "operator",
+            "out",
+            "override",
+            "params",
+            "private",
+            "protected",
+            "public",
+            "readonly",
+            "ref",
+            "return",
+            "sbyte",
+            "sealed",
+            "short",
+            "sizeof",
+            "stackalloc",
+            "static",
+            "string",
+            "struct",
+            "switch",
+            "this",
+            "throw",
+            "true",
+            "try",
+            "typeof",
+            "uint",
+            "ulong",
+            "unchecked",
+            "unsafe",
+            "ushort",
+            "using",
+            "virtual",
+            "void",
+            "volatile",
+            "while",
         ];
         let cpp = [
-            "alignas", "alignof", "and", "asm", "auto", "bool", "break", "case", "catch", "char",
-            "class", "const", "constexpr", "continue", "decltype", "default", "delete", "do",
-            "double", "else", "enum", "explicit", "export", "extern", "false", "float", "for",
-            "friend", "goto", "if", "inline", "int", "long", "mutable", "namespace", "new",
-            "noexcept", "nullptr", "operator", "or", "private", "protected", "public", "register",
-            "return", "short", "signed", "sizeof", "static", "struct", "switch", "template", "this",
-            "throw", "true", "try", "typedef", "typeid", "typename", "union", "unsigned", "using",
-            "virtual", "void", "volatile", "while", "xor",
+            "alignas",
+            "alignof",
+            "and",
+            "asm",
+            "auto",
+            "bool",
+            "break",
+            "case",
+            "catch",
+            "char",
+            "class",
+            "const",
+            "constexpr",
+            "continue",
+            "decltype",
+            "default",
+            "delete",
+            "do",
+            "double",
+            "else",
+            "enum",
+            "explicit",
+            "export",
+            "extern",
+            "false",
+            "float",
+            "for",
+            "friend",
+            "goto",
+            "if",
+            "inline",
+            "int",
+            "long",
+            "mutable",
+            "namespace",
+            "new",
+            "noexcept",
+            "nullptr",
+            "operator",
+            "or",
+            "private",
+            "protected",
+            "public",
+            "register",
+            "return",
+            "short",
+            "signed",
+            "sizeof",
+            "static",
+            "struct",
+            "switch",
+            "template",
+            "this",
+            "throw",
+            "true",
+            "try",
+            "typedef",
+            "typeid",
+            "typename",
+            "union",
+            "unsigned",
+            "using",
+            "virtual",
+            "void",
+            "volatile",
+            "while",
+            "xor",
         ];
         let js = [
-            "await", "break", "case", "catch", "class", "const", "continue", "debugger", "default",
-            "delete", "do", "else", "enum", "export", "extends", "false", "finally", "for",
-            "function", "if", "import", "in", "instanceof", "new", "null", "return", "super",
-            "switch", "this", "throw", "true", "try", "typeof", "var", "void", "while", "with",
-            "yield", "let", "static",
+            "await",
+            "break",
+            "case",
+            "catch",
+            "class",
+            "const",
+            "continue",
+            "debugger",
+            "default",
+            "delete",
+            "do",
+            "else",
+            "enum",
+            "export",
+            "extends",
+            "false",
+            "finally",
+            "for",
+            "function",
+            "if",
+            "import",
+            "in",
+            "instanceof",
+            "new",
+            "null",
+            "return",
+            "super",
+            "switch",
+            "this",
+            "throw",
+            "true",
+            "try",
+            "typeof",
+            "var",
+            "void",
+            "while",
+            "with",
+            "yield",
+            "let",
+            "static",
         ];
         let lua = [
-            "and", "break", "do", "else", "elseif", "end", "false", "for", "function", "goto", "if",
-            "in", "local", "nil", "not", "or", "repeat", "return", "then", "true", "until", "while",
+            "and", "break", "do", "else", "elseif", "end", "false", "for", "function", "goto",
+            "if", "in", "local", "nil", "not", "or", "repeat", "return", "then", "true", "until",
+            "while",
         ];
 
         for word in python {
@@ -285,17 +455,24 @@ impl Default for KeywordMap {
 impl KeywordMap {
     /// Create an empty map that reserves nothing.
     pub fn empty() -> Self {
-        Self { reserved: HashMap::new() }
+        Self {
+            reserved: HashMap::new(),
+        }
     }
 
     /// Reserve a word in a language (extends or overrides).
     pub fn insert(&mut self, language: TargetLanguage, word: impl Into<String>) {
-        self.reserved.entry(language).or_default().insert(word.into());
+        self.reserved
+            .entry(language)
+            .or_default()
+            .insert(word.into());
     }
 
     /// Whether a word is reserved in a language.
     pub fn contains(&self, language: TargetLanguage, word: &str) -> bool {
-        self.reserved.get(&language).is_some_and(|set| set.contains(word))
+        self.reserved
+            .get(&language)
+            .is_some_and(|set| set.contains(word))
     }
 
     /// Merge another map into this one.
@@ -355,14 +532,20 @@ impl Default for AnnotationMap {
         use AnnotationKind::{Aligned, Packed, ReprC};
         use TargetLanguage::{CSharp, Rust};
 
-        let mut map = Self { spellings: HashMap::new() };
+        let mut map = Self {
+            spellings: HashMap::new(),
+        };
 
         map.insert(Rust, ReprC, "repr(C)");
         map.insert(Rust, Packed, "repr(packed)");
         map.insert(Rust, Aligned, "repr(align({n}))");
 
         map.insert(CSharp, ReprC, "StructLayout(LayoutKind.Sequential)");
-        map.insert(CSharp, Packed, "StructLayout(LayoutKind.Sequential, Pack = 1)");
+        map.insert(
+            CSharp,
+            Packed,
+            "StructLayout(LayoutKind.Sequential, Pack = 1)",
+        );
 
         map
     }
@@ -371,7 +554,9 @@ impl Default for AnnotationMap {
 impl AnnotationMap {
     /// Create an empty map; every annotation emits nothing.
     pub fn empty() -> Self {
-        Self { spellings: HashMap::new() }
+        Self {
+            spellings: HashMap::new(),
+        }
     }
 
     /// Set the native spelling template for a `(language, kind)` pair (extends or overrides).
@@ -379,7 +564,12 @@ impl AnnotationMap {
     /// An [`Aligned`](AnnotationKind::Aligned) template must include the `{n}` placeholder, which
     /// [`resolve`](AnnotationMap::resolve) substitutes with the alignment value; omitting it drops
     /// the alignment. Other kinds are emitted verbatim.
-    pub fn insert(&mut self, language: TargetLanguage, kind: AnnotationKind, template: impl Into<String>) {
+    pub fn insert(
+        &mut self,
+        language: TargetLanguage,
+        kind: AnnotationKind,
+        template: impl Into<String>,
+    ) {
         self.spellings.insert((language, kind), template.into());
     }
 
@@ -418,7 +608,11 @@ impl AnnotationMap {
 ///
 /// The mapped spelling, or the original spelling plus an `UnsupportedFeature` warning when the
 /// type is not a recognized primitive.
-pub fn map_type(config: &ConversionConfig, spelling: &str, language: TargetLanguage) -> ConversionResult<String> {
+pub fn map_type(
+    config: &ConversionConfig,
+    spelling: &str,
+    language: TargetLanguage,
+) -> ConversionResult<String> {
     if let Some(resolver) = &config.type_override
         && let Some(mapped) = resolver(spelling, language)
     {
@@ -470,7 +664,11 @@ pub fn rename_identifier(
     };
 
     let escaped = config.keyword_map.escape(language, &candidate);
-    let final_name = if escaped != candidate { escaped } else { candidate };
+    let final_name = if escaped != candidate {
+        escaped
+    } else {
+        candidate
+    };
 
     if final_name == name {
         return ConversionResult::new(final_name);

@@ -47,7 +47,10 @@ impl BackendItem for RustGenericArgument {
         })
     }
 
-    fn from_ir(input: Self::IrType, _options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
+    fn from_ir(
+        input: Self::IrType,
+        _options: Option<&Self::ConversionOptions>,
+    ) -> ConversionResult<Self> {
         let is_lifetime = input.keyword == LIFETIME_KEYWORD;
         let const_type = input
             .keyword

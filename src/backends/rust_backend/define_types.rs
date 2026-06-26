@@ -27,7 +27,10 @@ impl BackendItem for RustDefinition {
         })
     }
 
-    fn from_ir(input: Self::IrType, _options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
+    fn from_ir(
+        input: Self::IrType,
+        _options: Option<&Self::ConversionOptions>,
+    ) -> ConversionResult<Self> {
         ConversionResult::new(RustDefinition {
             name: input.name,
             value: input.value,

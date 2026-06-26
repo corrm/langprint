@@ -21,7 +21,9 @@ pub fn infer_const_type(value: &str) -> Option<&'static str> {
     if value.len() >= 2 && value.starts_with('\'') && value.ends_with('\'') {
         return Some("char");
     }
-    if let Some(hex) = value.strip_prefix("0x").or_else(|| value.strip_prefix("0X"))
+    if let Some(hex) = value
+        .strip_prefix("0x")
+        .or_else(|| value.strip_prefix("0X"))
         && i64::from_str_radix(hex, 16).is_ok()
     {
         return Some("int");
@@ -64,7 +66,10 @@ impl BackendItem for CSharpDefinition {
         })
     }
 
-    fn from_ir(input: Self::IrType, _options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
+    fn from_ir(
+        input: Self::IrType,
+        _options: Option<&Self::ConversionOptions>,
+    ) -> ConversionResult<Self> {
         ConversionResult::new(CSharpDefinition {
             name: input.name,
             value: input.value,

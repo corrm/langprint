@@ -10,8 +10,8 @@
 use std::{collections::BTreeSet, fmt::Write as _, path::Path};
 
 use super::{
-    Arch, LanguageFamily, OutputKind, Platform, ProjectGenError, ProjectGenerator, ProjectSpec, format_define,
-    path_to_forward_slashes,
+    Arch, LanguageFamily, OutputKind, Platform, ProjectGenError, ProjectGenerator, ProjectSpec,
+    format_define, path_to_forward_slashes,
 };
 
 /// The compiler toolchain conventions for a single language family.
@@ -50,10 +50,12 @@ impl MakefileGenerator {
                 flags_var: "CFLAGS",
                 compiler_default: "cc",
             }),
-            LanguageFamily::CSharp | LanguageFamily::Rust => Err(ProjectGenError::UnsupportedLanguage {
-                generator: "MakefileGenerator",
-                standard: spec.language_standard,
-            }),
+            LanguageFamily::CSharp | LanguageFamily::Rust => {
+                Err(ProjectGenError::UnsupportedLanguage {
+                    generator: "MakefileGenerator",
+                    standard: spec.language_standard,
+                })
+            }
         }
     }
 
@@ -93,7 +95,11 @@ impl MakefileGenerator {
             OutputKind::Executable => name.clone(),
         };
 
-        let sources: Vec<String> = spec.sources.iter().map(|s| path_to_forward_slashes(s)).collect();
+        let sources: Vec<String> = spec
+            .sources
+            .iter()
+            .map(|s| path_to_forward_slashes(s))
+            .collect();
         // Object names are computed here (not via a single `$(SRCS:.ext=.o)`
         // substitution) so mixed source extensions all land in `OBJS`.
         let objects: Vec<String> = spec
@@ -180,7 +186,10 @@ mod tests {
         ProjectSpec {
             name: "VampireSurvivors".to_string(),
             language_standard: LanguageStandard::Cpp17,
-            sources: vec![PathBuf::from("Assembly-CSharp.cpp"), PathBuf::from("UnityEngine.cpp")],
+            sources: vec![
+                PathBuf::from("Assembly-CSharp.cpp"),
+                PathBuf::from("UnityEngine.cpp"),
+            ],
             headers: Vec::new(),
             include_dirs: vec![PathBuf::from("Headers")],
             defines: vec![
@@ -335,7 +344,9 @@ clean:
             ..sample_spec()
         };
         let dir = tempfile::tempdir().unwrap();
-        let err = MakefileGenerator::new().generate(&spec, dir.path()).unwrap_err();
+        let err = MakefileGenerator::new()
+            .generate(&spec, dir.path())
+            .unwrap_err();
         assert!(matches!(
             err,
             ProjectGenError::IncompatiblePlatform {

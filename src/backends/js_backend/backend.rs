@@ -45,11 +45,19 @@ impl JsBackend {
     fn has_doc_info(input: &JsFunction) -> bool {
         input.doc.is_some()
             || input.return_type.is_some()
-            || input.parameters.iter().any(|param| param.type_doc.is_some())
+            || input
+                .parameters
+                .iter()
+                .any(|param| param.type_doc.is_some())
     }
 
     /// Render a JSDoc block from the type information that genuinely exists on the model.
-    fn write_jsdoc(&self, input: &JsFunction, indent_level: i32, out: &mut impl Write) -> Result<(), io::Error> {
+    fn write_jsdoc(
+        &self,
+        input: &JsFunction,
+        indent_level: i32,
+        out: &mut impl Write,
+    ) -> Result<(), io::Error> {
         let pad = self.indent(indent_level);
         let nl = self.new_line.as_str();
 

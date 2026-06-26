@@ -2,8 +2,8 @@
 
 use langprint::backends::BackendItem;
 use langprint::backends::csharp_backend::{
-    CSharpBackend, CSharpConstant, CSharpEnum, CSharpEnumMember, CSharpField, CSharpMethod, CSharpParameter,
-    CSharpProperty, CSharpType, CSharpTypeKind, CSharpVisibility,
+    CSharpBackend, CSharpConstant, CSharpEnum, CSharpEnumMember, CSharpField, CSharpMethod,
+    CSharpParameter, CSharpProperty, CSharpType, CSharpTypeKind, CSharpVisibility,
 };
 use langprint::ir::{EnumVariant, EnumVariantValue, LanguageEnum, RawAttribute, Visibility};
 use langprint::renderers::{ConstantRenderer, EnumRenderer, FunctionRenderer, StructRenderer};
@@ -84,7 +84,9 @@ fn renders_class_with_base_interface_field_and_method() {
     ty.fields.push(field("health", "float"));
     ty.methods.push(heal);
 
-    let rendered = backend().render_struct::<&str>(&ty, None, None, None, &mut 0).unwrap();
+    let rendered = backend()
+        .render_struct::<&str>(&ty, None, None, None, &mut 0)
+        .unwrap();
     assert_eq!(
         rendered,
         "public class Player : Entity, IDamageable\n{\n    public float health;\n\n    public void Heal(float amount)\n    {\n        this.health += amount;\n    }\n}\n"
@@ -97,7 +99,9 @@ fn renders_struct_with_fields() {
     ty.fields.push(field("x", "float"));
     ty.fields.push(field("y", "float"));
 
-    let rendered = backend().render_struct::<&str>(&ty, None, None, None, &mut 0).unwrap();
+    let rendered = backend()
+        .render_struct::<&str>(&ty, None, None, None, &mut 0)
+        .unwrap();
     assert_eq!(
         rendered,
         "public struct Vec2\n{\n    public float x;\n    public float y;\n}\n"
@@ -111,8 +115,13 @@ fn renders_interface_with_abstract_method() {
     let mut ty = empty_type(CSharpTypeKind::Interface, "IService");
     ty.methods.push(run);
 
-    let rendered = backend().render_struct::<&str>(&ty, None, None, None, &mut 0).unwrap();
-    assert_eq!(rendered, "public interface IService\n{\n    void Run();\n}\n");
+    let rendered = backend()
+        .render_struct::<&str>(&ty, None, None, None, &mut 0)
+        .unwrap();
+    assert_eq!(
+        rendered,
+        "public interface IService\n{\n    void Run();\n}\n"
+    );
 }
 
 #[test]
@@ -130,8 +139,13 @@ fn renders_auto_property() {
         docs: None,
     });
 
-    let rendered = backend().render_struct::<&str>(&ty, None, None, None, &mut 0).unwrap();
-    assert_eq!(rendered, "public class Bag\n{\n    public int Count { get; set; }\n}\n");
+    let rendered = backend()
+        .render_struct::<&str>(&ty, None, None, None, &mut 0)
+        .unwrap();
+    assert_eq!(
+        rendered,
+        "public class Bag\n{\n    public int Count { get; set; }\n}\n"
+    );
 }
 
 #[test]
@@ -333,7 +347,9 @@ fn renders_unsafe_method() {
     let mut ty = empty_type(CSharpTypeKind::Class, "Ops");
     ty.methods.push(foo);
 
-    let rendered = backend().render_struct::<&str>(&ty, None, None, None, &mut 0).unwrap();
+    let rendered = backend()
+        .render_struct::<&str>(&ty, None, None, None, &mut 0)
+        .unwrap();
     assert!(rendered.contains("private static unsafe void Foo("));
 }
 
@@ -344,7 +360,9 @@ fn renders_unsafe_class() {
     ty.is_static = true;
     ty.is_unsafe = true;
 
-    let rendered = backend().render_struct::<&str>(&ty, None, None, None, &mut 0).unwrap();
+    let rendered = backend()
+        .render_struct::<&str>(&ty, None, None, None, &mut 0)
+        .unwrap();
     assert!(rendered.contains("internal static unsafe class CallArenaOps"));
 }
 
@@ -353,7 +371,9 @@ fn unsafe_struct_stays_safe() {
     let mut ty = empty_type(CSharpTypeKind::Struct, "Handle");
     ty.is_unsafe = true;
 
-    let rendered = backend().render_struct::<&str>(&ty, None, None, None, &mut 0).unwrap();
+    let rendered = backend()
+        .render_struct::<&str>(&ty, None, None, None, &mut 0)
+        .unwrap();
     assert!(!rendered.contains("unsafe"));
     assert!(rendered.contains("struct Handle"));
 }

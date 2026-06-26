@@ -39,9 +39,14 @@ impl BackendItem for CppEnumVariant {
         })
     }
 
-    fn from_ir(input: Self::IrType, options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
+    fn from_ir(
+        input: Self::IrType,
+        options: Option<&Self::ConversionOptions>,
+    ) -> ConversionResult<Self> {
         let mut log = ConversionLog::new();
-        let config = options.map(|options| options.config.clone()).unwrap_or_default();
+        let config = options
+            .map(|options| options.config.clone())
+            .unwrap_or_default();
 
         let value = match input.value {
             EnumVariantValue::NoValue => None,
@@ -55,7 +60,12 @@ impl BackendItem for CppEnumVariant {
             }
         };
 
-        let name = rename_identifier(&config, &input.name, TargetLanguage::Cpp, IdentifierKind::EnumMember);
+        let name = rename_identifier(
+            &config,
+            &input.name,
+            TargetLanguage::Cpp,
+            IdentifierKind::EnumMember,
+        );
         log.add_warnings(name.log.warnings);
 
         ConversionResult::with_log(
@@ -147,7 +157,10 @@ impl BackendItem for CppEnum {
         ConversionResult::with_log(language_enum, result_log)
     }
 
-    fn from_ir(mut input: Self::IrType, options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
+    fn from_ir(
+        mut input: Self::IrType,
+        options: Option<&Self::ConversionOptions>,
+    ) -> ConversionResult<Self> {
         let default_options = CppEnumConversionOptions::default();
         let options: &CppEnumConversionOptions = options.unwrap_or(&default_options);
         let mut result_log = ConversionLog::new();
@@ -155,7 +168,8 @@ impl BackendItem for CppEnum {
             hooks.before_from_ir_enum(&mut input);
         }
 
-        let visibility: ConversionResult<CppVisibility> = CppVisibility::from_ir(input.visibility, None);
+        let visibility: ConversionResult<CppVisibility> =
+            CppVisibility::from_ir(input.visibility, None);
         if visibility.log.has_warnings() {
             result_log.add_warnings(visibility.log.warnings);
         }
@@ -191,7 +205,12 @@ impl BackendItem for CppEnum {
             }
         }
 
-        let name = rename_identifier(&options.config, &input.name, TargetLanguage::Cpp, IdentifierKind::Type);
+        let name = rename_identifier(
+            &options.config,
+            &input.name,
+            TargetLanguage::Cpp,
+            IdentifierKind::Type,
+        );
         result_log.add_warnings(name.log.warnings);
 
         ConversionResult::with_log(

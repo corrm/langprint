@@ -9,7 +9,8 @@
 use std::fmt::Write as _;
 
 use super::{
-    Arch, LanguageFamily, OutputKind, ProjectGenError, ProjectSpec, format_define, path_to_back_slashes, xml_escape,
+    Arch, LanguageFamily, OutputKind, ProjectGenError, ProjectSpec, format_define,
+    path_to_back_slashes, xml_escape,
 };
 
 /// FNV-1a 64-bit offset basis.
@@ -49,13 +50,18 @@ pub(crate) fn msbuild_platform(arch: Arch) -> &'static str {
 ///
 /// The [`LanguageFamily`] (C or C++) on success, or
 /// [`ProjectGenError::UnsupportedLanguage`] for C# and Rust.
-pub(crate) fn ensure_supported(spec: &ProjectSpec, generator: &'static str) -> Result<LanguageFamily, ProjectGenError> {
+pub(crate) fn ensure_supported(
+    spec: &ProjectSpec,
+    generator: &'static str,
+) -> Result<LanguageFamily, ProjectGenError> {
     match spec.language_standard.family() {
         family @ (LanguageFamily::C | LanguageFamily::Cpp) => Ok(family),
-        LanguageFamily::CSharp | LanguageFamily::Rust => Err(ProjectGenError::UnsupportedLanguage {
-            generator,
-            standard: spec.language_standard,
-        }),
+        LanguageFamily::CSharp | LanguageFamily::Rust => {
+            Err(ProjectGenError::UnsupportedLanguage {
+                generator,
+                standard: spec.language_standard,
+            })
+        }
     }
 }
 
@@ -91,8 +97,14 @@ pub(crate) fn render_vcxproj(spec: &ProjectSpec, family: LanguageFamily, guid: &
             out,
             "  <PropertyGroup Condition=\"'$(Configuration)|$(Platform)'=='{cfg}|{plat}'\" Label=\"Configuration\">"
         );
-        let _ = writeln!(out, "    <ConfigurationType>{config_type}</ConfigurationType>");
-        let _ = writeln!(out, "    <UseDebugLibraries>{debug_libs}</UseDebugLibraries>");
+        let _ = writeln!(
+            out,
+            "    <ConfigurationType>{config_type}</ConfigurationType>"
+        );
+        let _ = writeln!(
+            out,
+            "    <UseDebugLibraries>{debug_libs}</UseDebugLibraries>"
+        );
         if whole_program {
             out.push_str("    <WholeProgramOptimization>true</WholeProgramOptimization>\n");
         }
@@ -112,7 +124,10 @@ pub(crate) fn render_vcxproj(spec: &ProjectSpec, family: LanguageFamily, guid: &
         }
         LanguageFamily::C => {
             if let Some(standard) = spec.language_standard.msvc_language_standard_c() {
-                let _ = writeln!(out, "      <LanguageStandard_C>{standard}</LanguageStandard_C>");
+                let _ = writeln!(
+                    out,
+                    "      <LanguageStandard_C>{standard}</LanguageStandard_C>"
+                );
             }
         }
         LanguageFamily::CSharp | LanguageFamily::Rust => {}
@@ -193,17 +208,27 @@ pub(crate) fn render_vcxproj(spec: &ProjectSpec, family: LanguageFamily, guid: &
 
 /// Render the `<name>.vcxproj.filters` file grouping sources under a
 /// `Source Files` filter and headers under a `Header Files` filter.
-pub(crate) fn render_filters(spec: &ProjectSpec, source_filter_guid: &str, header_filter_guid: &str) -> String {
+pub(crate) fn render_filters(
+    spec: &ProjectSpec,
+    source_filter_guid: &str,
+    header_filter_guid: &str,
+) -> String {
     let mut out = String::new();
     out.push_str("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n");
     out.push_str("<Project ToolsVersion=\"4.0\" xmlns=\"http://schemas.microsoft.com/developer/msbuild/2003\">\n");
     out.push_str("  <ItemGroup>\n");
     out.push_str("    <Filter Include=\"Source Files\">\n");
-    let _ = writeln!(out, "      <UniqueIdentifier>{source_filter_guid}</UniqueIdentifier>");
+    let _ = writeln!(
+        out,
+        "      <UniqueIdentifier>{source_filter_guid}</UniqueIdentifier>"
+    );
     out.push_str("      <Extensions>cpp;c;cc;cxx</Extensions>\n");
     out.push_str("    </Filter>\n");
     out.push_str("    <Filter Include=\"Header Files\">\n");
-    let _ = writeln!(out, "      <UniqueIdentifier>{header_filter_guid}</UniqueIdentifier>");
+    let _ = writeln!(
+        out,
+        "      <UniqueIdentifier>{header_filter_guid}</UniqueIdentifier>"
+    );
     out.push_str("      <Extensions>h;hh;hpp;hxx</Extensions>\n");
     out.push_str("    </Filter>\n");
     out.push_str("  </ItemGroup>\n");

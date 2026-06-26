@@ -79,11 +79,21 @@ impl BackendItem for CSharpField {
         ConversionResult::with_log(field, log)
     }
 
-    fn from_ir(input: Self::IrType, options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
+    fn from_ir(
+        input: Self::IrType,
+        options: Option<&Self::ConversionOptions>,
+    ) -> ConversionResult<Self> {
         let mut log = ConversionLog::new();
-        let config = options.map(|options| options.config.clone()).unwrap_or_default();
+        let config = options
+            .map(|options| options.config.clone())
+            .unwrap_or_default();
 
-        let name = rename_identifier(&config, &input.name, TargetLanguage::CSharp, IdentifierKind::Field);
+        let name = rename_identifier(
+            &config,
+            &input.name,
+            TargetLanguage::CSharp,
+            IdentifierKind::Field,
+        );
         log.add_warnings(name.log.warnings);
 
         let field_type = map_type(&config, &input.field_type, TargetLanguage::CSharp);
@@ -94,7 +104,10 @@ impl BackendItem for CSharpField {
 
         let mut attributes = Vec::new();
         for annotation in &input.annotations {
-            if let Some(rendered) = config.annotation_map.resolve(TargetLanguage::CSharp, annotation) {
+            if let Some(rendered) = config
+                .annotation_map
+                .resolve(TargetLanguage::CSharp, annotation)
+            {
                 attributes.push(rendered);
             }
         }

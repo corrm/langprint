@@ -12,23 +12,40 @@ use langprint::{AnnotationMap, ConversionConfig};
 #[test]
 fn annotation_map_builtin_rust() {
     let map = AnnotationMap::default();
-    assert_eq!(map.resolve(TargetLanguage::Rust, &Annotation::ReprC).as_deref(), Some("repr(C)"));
-    assert_eq!(map.resolve(TargetLanguage::Rust, &Annotation::Packed).as_deref(), Some("repr(packed)"));
-    assert_eq!(map.resolve(TargetLanguage::Rust, &Annotation::Aligned(8)).as_deref(), Some("repr(align(8))"));
+    assert_eq!(
+        map.resolve(TargetLanguage::Rust, &Annotation::ReprC)
+            .as_deref(),
+        Some("repr(C)")
+    );
+    assert_eq!(
+        map.resolve(TargetLanguage::Rust, &Annotation::Packed)
+            .as_deref(),
+        Some("repr(packed)")
+    );
+    assert_eq!(
+        map.resolve(TargetLanguage::Rust, &Annotation::Aligned(8))
+            .as_deref(),
+        Some("repr(align(8))")
+    );
 }
 
 #[test]
 fn annotation_map_builtin_csharp() {
     let map = AnnotationMap::default();
     assert_eq!(
-        map.resolve(TargetLanguage::CSharp, &Annotation::ReprC).as_deref(),
+        map.resolve(TargetLanguage::CSharp, &Annotation::ReprC)
+            .as_deref(),
         Some("StructLayout(LayoutKind.Sequential)")
     );
     assert_eq!(
-        map.resolve(TargetLanguage::CSharp, &Annotation::Packed).as_deref(),
+        map.resolve(TargetLanguage::CSharp, &Annotation::Packed)
+            .as_deref(),
         Some("StructLayout(LayoutKind.Sequential, Pack = 1)")
     );
-    assert_eq!(map.resolve(TargetLanguage::CSharp, &Annotation::Aligned(8)), None);
+    assert_eq!(
+        map.resolve(TargetLanguage::CSharp, &Annotation::Aligned(8)),
+        None
+    );
 }
 
 #[test]
@@ -40,7 +57,11 @@ fn annotation_map_empty_resolves_none() {
 #[test]
 fn annotation_map_override_in_from_ir() {
     let mut annotation_map = AnnotationMap::default();
-    annotation_map.insert(TargetLanguage::Rust, AnnotationKind::ReprC, "repr(C, packed)");
+    annotation_map.insert(
+        TargetLanguage::Rust,
+        AnnotationKind::ReprC,
+        "repr(C, packed)",
+    );
 
     let config = ConversionConfig {
         annotation_map,
@@ -63,5 +84,9 @@ fn annotation_map_override_in_from_ir() {
     let ir = input.to_ir(None);
     let back = RustStruct::from_ir(ir.value, Some(&options));
 
-    assert!(back.value.attributes.contains(&"repr(C, packed)".to_string()));
+    assert!(
+        back.value
+            .attributes
+            .contains(&"repr(C, packed)".to_string())
+    );
 }

@@ -1,4 +1,6 @@
-use super::{Annotation, LanguageField, LanguageFunction, LanguageGenericArgument, RawAttribute, Visibility};
+use super::{
+    Annotation, LanguageField, LanguageFunction, LanguageGenericArgument, RawAttribute, Visibility,
+};
 
 /// Represents a base/super class or struct with its visibility.
 #[derive(Debug, Clone, PartialEq, Eq)]

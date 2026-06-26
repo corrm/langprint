@@ -23,7 +23,10 @@ impl BackendItem for CppDefinition {
         })
     }
 
-    fn from_ir(input: Self::IrType, _options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
+    fn from_ir(
+        input: Self::IrType,
+        _options: Option<&Self::ConversionOptions>,
+    ) -> ConversionResult<Self> {
         ConversionResult::new(CppDefinition {
             name: input.name,
             value: input.value,

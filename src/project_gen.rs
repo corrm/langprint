@@ -94,7 +94,12 @@ impl LanguageStandard {
             Self::Cpp17 => Some("cxx_std_17"),
             Self::Cpp20 => Some("cxx_std_20"),
             Self::Cpp23 => Some("cxx_std_23"),
-            Self::CSharp10 | Self::CSharp11 | Self::CSharp12 | Self::Rust2018 | Self::Rust2021 | Self::Rust2024 => None,
+            Self::CSharp10
+            | Self::CSharp11
+            | Self::CSharp12
+            | Self::Rust2018
+            | Self::Rust2021
+            | Self::Rust2024 => None,
         }
     }
 
@@ -110,7 +115,12 @@ impl LanguageStandard {
             Self::Cpp17 => Some("c++17"),
             Self::Cpp20 => Some("c++20"),
             Self::Cpp23 => Some("c++23"),
-            Self::CSharp10 | Self::CSharp11 | Self::CSharp12 | Self::Rust2018 | Self::Rust2021 | Self::Rust2024 => None,
+            Self::CSharp10
+            | Self::CSharp11
+            | Self::CSharp12
+            | Self::Rust2018
+            | Self::Rust2021
+            | Self::Rust2024 => None,
         }
     }
 
@@ -345,18 +355,19 @@ impl ProjectBuilder {
     /// Add a preprocessor define with an optional value.
     #[must_use]
     pub fn define(mut self, name: impl Into<String>, value: Option<impl Into<String>>) -> Self {
-        self.defines.push((
-            name.into(),
-            value.map(|v| v.into()),
-        ));
+        self.defines.push((name.into(), value.map(|v| v.into())));
         self
     }
 
     /// Add multiple preprocessor defines.
     #[must_use]
-    pub fn defines(mut self, defs: impl IntoIterator<Item = (impl Into<String>, Option<impl Into<String>>)>) -> Self {
+    pub fn defines(
+        mut self,
+        defs: impl IntoIterator<Item = (impl Into<String>, Option<impl Into<String>>)>,
+    ) -> Self {
         self.defines.extend(
-            defs.into_iter().map(|(n, v)| (n.into(), v.map(|x| x.into())))
+            defs.into_iter()
+                .map(|(n, v)| (n.into(), v.map(|x| x.into()))),
         );
         self
     }
@@ -480,7 +491,11 @@ impl ProjectSpec {
     /// * `language_standard` - The source-language standard.
     /// * `output_kind` - The artifact kind to build.
     #[must_use]
-    pub fn new(name: impl Into<String>, language_standard: LanguageStandard, output_kind: OutputKind) -> Self {
+    pub fn new(
+        name: impl Into<String>,
+        language_standard: LanguageStandard,
+        output_kind: OutputKind,
+    ) -> Self {
         Self {
             name: name.into(),
             language_standard,
@@ -743,10 +758,7 @@ pub(crate) fn path_to_forward_slashes(path: &Path) -> String {
 /// # Errors
 ///
 /// Returns [`ProjectGenError::Io`] if any file write fails.
-pub fn write_files(
-    files: &[(PathBuf, String)],
-    output_dir: &Path,
-) -> Result<(), ProjectGenError> {
+pub fn write_files(files: &[(PathBuf, String)], output_dir: &Path) -> Result<(), ProjectGenError> {
     for (path, content) in files {
         let full_path = output_dir.join(path);
         if let Some(parent) = full_path.parent() {
@@ -778,7 +790,11 @@ pub(crate) fn format_define(name: &str, value: Option<&str>) -> String {
 
 /// Write `contents` to `output_dir/file_name`, mapping any I/O failure to
 /// [`ProjectGenError::Io`].
-pub(crate) fn write_file(output_dir: &Path, file_name: &str, contents: &str) -> Result<(), ProjectGenError> {
+pub(crate) fn write_file(
+    output_dir: &Path,
+    file_name: &str,
+    contents: &str,
+) -> Result<(), ProjectGenError> {
     let path = output_dir.join(file_name);
     fs::write(&path, contents).map_err(|source| ProjectGenError::Io { path, source })
 }
@@ -788,10 +804,15 @@ mod tests {
     use super::*;
 
     fn valid_spec() -> ProjectSpec {
-        let mut spec = ProjectSpec::new("VampireSurvivors", LanguageStandard::Cpp17, OutputKind::SharedLib);
+        let mut spec = ProjectSpec::new(
+            "VampireSurvivors",
+            LanguageStandard::Cpp17,
+            OutputKind::SharedLib,
+        );
         spec.sources.push(PathBuf::from("SDK/Assembly-CSharp.cpp"));
         spec.include_dirs.push(PathBuf::from("Headers"));
-        spec.defines.push(("VERSION".to_string(), Some("105".to_string())));
+        spec.defines
+            .push(("VERSION".to_string(), Some("105".to_string())));
         spec
     }
 
@@ -808,7 +829,10 @@ mod tests {
 
     #[test]
     fn xml_escape_escapes_all_special_characters() {
-        assert_eq!(xml_escape("a&b<c>d\"e'f"), "a&amp;b&lt;c&gt;d&quot;e&apos;f");
+        assert_eq!(
+            xml_escape("a&b<c>d\"e'f"),
+            "a&amp;b&lt;c&gt;d&quot;e&apos;f"
+        );
     }
 
     #[test]
@@ -848,7 +872,9 @@ mod tests {
         let mut spec = valid_spec();
         spec.sources.push(PathBuf::from("/abs/main.cpp"));
         let err = validate_spec(&spec).unwrap_err();
-        assert!(matches!(err, ProjectGenError::InvalidPath { path } if path == Path::new("/abs/main.cpp")));
+        assert!(
+            matches!(err, ProjectGenError::InvalidPath { path } if path == Path::new("/abs/main.cpp"))
+        );
     }
 
     #[test]
@@ -856,13 +882,16 @@ mod tests {
         let mut spec = valid_spec();
         spec.include_dirs.push(PathBuf::from("My Headers"));
         let err = validate_spec(&spec).unwrap_err();
-        assert!(matches!(err, ProjectGenError::InvalidPath { path } if path == Path::new("My Headers")));
+        assert!(
+            matches!(err, ProjectGenError::InvalidPath { path } if path == Path::new("My Headers"))
+        );
     }
 
     #[test]
     fn validate_rejects_define_value_with_semicolon() {
         let mut spec = valid_spec();
-        spec.defines.push(("LIST".to_string(), Some("a;b".to_string())));
+        spec.defines
+            .push(("LIST".to_string(), Some("a;b".to_string())));
         let err = validate_spec(&spec).unwrap_err();
         assert!(matches!(err, ProjectGenError::InvalidDefine { name } if name == "LIST"));
     }
@@ -879,7 +908,10 @@ mod tests {
 
     #[test]
     fn sanitize_project_name_leaves_valid_name_unchanged() {
-        assert_eq!(sanitize_project_name("Already_Valid-1.0+x"), "Already_Valid-1.0+x");
+        assert_eq!(
+            sanitize_project_name("Already_Valid-1.0+x"),
+            "Already_Valid-1.0+x"
+        );
     }
 
     #[test]
@@ -912,7 +944,10 @@ mod tests {
         let mut spec = spec_with_pch();
         spec.sources.retain(|s| s != Path::new("pch.cpp"));
         let err = validate_spec(&spec).unwrap_err();
-        assert!(matches!(err, ProjectGenError::InvalidPrecompiledHeader { .. }));
+        assert!(matches!(
+            err,
+            ProjectGenError::InvalidPrecompiledHeader { .. }
+        ));
     }
 
     #[test]
@@ -920,7 +955,10 @@ mod tests {
         let mut spec = spec_with_pch();
         spec.headers.retain(|h| h != Path::new("pch.h"));
         let err = validate_spec(&spec).unwrap_err();
-        assert!(matches!(err, ProjectGenError::InvalidPrecompiledHeader { .. }));
+        assert!(matches!(
+            err,
+            ProjectGenError::InvalidPrecompiledHeader { .. }
+        ));
     }
 
     #[test]
@@ -968,7 +1006,10 @@ mod tests {
         let files = [(PathBuf::from("src/main.cpp"), "int main()".into())];
         assert!(write_files(&files, dir.path()).is_ok());
         assert!(dir.path().join("src/main.cpp").exists());
-        assert_eq!(fs::read_to_string(dir.path().join("src/main.cpp")).unwrap(), "int main()");
+        assert_eq!(
+            fs::read_to_string(dir.path().join("src/main.cpp")).unwrap(),
+            "int main()"
+        );
     }
 
     #[test]
@@ -1053,10 +1094,14 @@ mod tests {
 
     #[test]
     fn builder_rust_project() {
-        let spec = ProjectBuilder::new("my_crate", LanguageStandard::Rust2021, OutputKind::SharedLib)
-            .source("src/lib.rs")
-            .build()
-            .unwrap();
+        let spec = ProjectBuilder::new(
+            "my_crate",
+            LanguageStandard::Rust2021,
+            OutputKind::SharedLib,
+        )
+        .source("src/lib.rs")
+        .build()
+        .unwrap();
         assert_eq!(spec.name, "my_crate");
         assert_eq!(spec.language_standard, LanguageStandard::Rust2021);
     }

@@ -3,8 +3,8 @@
 use langprint::{
     AVAILABLE_BACKENDS,
     backends::python_backend::{
-        PythonBackend, PythonClass, PythonClassField, PythonEnum, PythonEnumMember, PythonFunction, PythonParameter,
-        PythonStruct, PythonStructField,
+        PythonBackend, PythonClass, PythonClassField, PythonEnum, PythonEnumMember, PythonFunction,
+        PythonParameter, PythonStruct, PythonStructField,
     },
     renderers::{EnumRenderer, FunctionRenderer, StructRenderer},
 };
@@ -56,7 +56,10 @@ fn renders_def_with_verbatim_body() {
         ],
         return_type: Some("int".to_string()),
         docstring: None,
-        body: Some(vec!["result = a + b".to_string(), "return result".to_string()]),
+        body: Some(vec![
+            "result = a + b".to_string(),
+            "return result".to_string(),
+        ]),
     };
 
     let mut level = 0;
@@ -183,7 +186,10 @@ fn renders_class_with_base_and_docstring() {
         .render_class(&class, None::<&str>, None::<&str>, None, &mut level)
         .unwrap();
 
-    assert_eq!(rendered, "class Animal(Base):\n    \"\"\"An animal.\"\"\"\n");
+    assert_eq!(
+        rendered,
+        "class Animal(Base):\n    \"\"\"An animal.\"\"\"\n"
+    );
 }
 
 #[test]
@@ -202,5 +208,8 @@ fn renders_multiline_docstring_with_indented_continuation() {
         .render_class(&class, None::<&str>, None::<&str>, None, &mut level)
         .unwrap();
 
-    assert_eq!(rendered, "class Animal:\n    \"\"\"Line1\n    Line2\"\"\"\n");
+    assert_eq!(
+        rendered,
+        "class Animal:\n    \"\"\"Line1\n    Line2\"\"\"\n"
+    );
 }

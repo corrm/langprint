@@ -1,10 +1,13 @@
 //! Exact-value regression tests for the review fixes (B2, B3, B4, S6, S7, N7).
 
 use langprint::backends::BackendItem;
-use langprint::backends::cpp_backend::{CppBackend, CppBase, CppStruct, CppStructKind, CppVisibility, DocsStyle};
+use langprint::backends::cpp_backend::{
+    CppBackend, CppBase, CppStruct, CppStructKind, CppVisibility, DocsStyle,
+};
 use langprint::backends::csharp_backend::{CSharpBackend, CSharpType, CSharpVisibility};
 use langprint::backends::rust_backend::{
-    RustBackend, RustEnum, RustEnumVariant, RustEnumVariantValue, RustFunction, RustSelfKind, RustVisibility,
+    RustBackend, RustEnum, RustEnumVariant, RustEnumVariantValue, RustFunction, RustSelfKind,
+    RustVisibility,
 };
 use langprint::conversion::ConversionWarning;
 use langprint::ir::{Annotation, LanguageStruct, LanguageStructKind, Visibility};
@@ -92,7 +95,13 @@ fn rust_repr_c_enum_maps_to_repr_c_annotation() {
 #[test]
 fn rust_decl_only_function_renders_bare_signature() {
     let out = RustBackend::default()
-        .render_function(&rust_function("tick", RustSelfKind::Ref, None), None::<&str>, None::<&str>, None, &mut 0)
+        .render_function(
+            &rust_function("tick", RustSelfKind::Ref, None),
+            None::<&str>,
+            None::<&str>,
+            None,
+            &mut 0,
+        )
         .unwrap();
     assert_eq!(out, "pub fn tick(&self);\n");
 }
@@ -115,7 +124,9 @@ fn cpp_class_default_base_is_private() {
         methods: vec![],
         docs: None,
     };
-    let out = cpp().render_struct::<&str>(&s, None, None, None, &mut 0).unwrap();
+    let out = cpp()
+        .render_struct::<&str>(&s, None, None, None, &mut 0)
+        .unwrap();
     assert_eq!(out, "class D : private B\n{\n\n};\n");
 }
 
@@ -137,7 +148,9 @@ fn cpp_struct_default_base_is_public() {
         methods: vec![],
         docs: None,
     };
-    let out = cpp().render_struct::<&str>(&s, None, None, None, &mut 0).unwrap();
+    let out = cpp()
+        .render_struct::<&str>(&s, None, None, None, &mut 0)
+        .unwrap();
     assert_eq!(out, "struct D : public B\n{\n\n};\n");
 }
 

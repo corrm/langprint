@@ -32,8 +32,13 @@ impl BackendItem for CSharpParameter {
         })
     }
 
-    fn from_ir(input: Self::IrType, options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
-        let config = options.map(|options| options.config.clone()).unwrap_or_default();
+    fn from_ir(
+        input: Self::IrType,
+        options: Option<&Self::ConversionOptions>,
+    ) -> ConversionResult<Self> {
+        let config = options
+            .map(|options| options.config.clone())
+            .unwrap_or_default();
         let param_type = map_type(&config, &input.param_type, TargetLanguage::CSharp);
 
         ConversionResult::with_log(
@@ -159,20 +164,32 @@ impl BackendItem for CSharpMethod {
         ConversionResult::with_log(function, log)
     }
 
-    fn from_ir(mut input: Self::IrType, options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
+    fn from_ir(
+        mut input: Self::IrType,
+        options: Option<&Self::ConversionOptions>,
+    ) -> ConversionResult<Self> {
         let mut log = ConversionLog::new();
-        let config = options.map(|options| options.config.clone()).unwrap_or_default();
+        let config = options
+            .map(|options| options.config.clone())
+            .unwrap_or_default();
         if let Some(hooks) = &config.hooks {
             hooks.before_from_ir_function(&mut input);
         }
 
-        let name = rename_identifier(&config, &input.name, TargetLanguage::CSharp, IdentifierKind::Function);
+        let name = rename_identifier(
+            &config,
+            &input.name,
+            TargetLanguage::CSharp,
+            IdentifierKind::Function,
+        );
         log.add_warnings(name.log.warnings);
 
         let visibility = CSharpVisibility::from_ir(input.visibility, None);
         log.add_warnings(visibility.log.warnings);
 
-        let parameter_options = CSharpParameterConversionOptions { config: config.clone() };
+        let parameter_options = CSharpParameterConversionOptions {
+            config: config.clone(),
+        };
         let mut parameters = Vec::with_capacity(input.parameters.len());
         for param in input.parameters {
             let result = CSharpParameter::from_ir(param, Some(&parameter_options));
@@ -189,7 +206,11 @@ impl BackendItem for CSharpMethod {
 
         // A `void`/unit return is the absence of a return type in C# (`None` renders `void`).
         let return_type = match input.return_type {
-            Some(return_type) if config.type_map.resolve(&return_type) == Some(PrimitiveType::Void) => None,
+            Some(return_type)
+                if config.type_map.resolve(&return_type) == Some(PrimitiveType::Void) =>
+            {
+                None
+            }
             Some(return_type) => {
                 let mapped = map_type(&config, &return_type, TargetLanguage::CSharp);
                 log.add_warnings(mapped.log.warnings);
@@ -200,7 +221,10 @@ impl BackendItem for CSharpMethod {
 
         let mut attributes = Vec::new();
         for annotation in &input.annotations {
-            if let Some(rendered) = config.annotation_map.resolve(TargetLanguage::CSharp, annotation) {
+            if let Some(rendered) = config
+                .annotation_map
+                .resolve(TargetLanguage::CSharp, annotation)
+            {
                 attributes.push(rendered);
             }
         }

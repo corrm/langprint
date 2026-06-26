@@ -1,8 +1,8 @@
 use std::io::{self, Write};
 
 use super::{
-    PythonClass, PythonClassRenderOptions, PythonEnum, PythonEnumRenderOptions,
-    PythonFunction, PythonFunctionRenderOptions, PythonStruct, PythonStructRenderOptions,
+    PythonClass, PythonClassRenderOptions, PythonEnum, PythonEnumRenderOptions, PythonFunction,
+    PythonFunctionRenderOptions, PythonStruct, PythonStructRenderOptions,
 };
 use crate::{
     backends::{BackendFeature, BackendMetadata},
@@ -42,12 +42,23 @@ impl PythonBackend {
         indent(level, self.indent_size, self.indent_style)
     }
 
-    fn write_docstring(&self, docstring: &str, indent_level: i32, out: &mut impl Write) -> Result<(), io::Error> {
+    fn write_docstring(
+        &self,
+        docstring: &str,
+        indent_level: i32,
+        out: &mut impl Write,
+    ) -> Result<(), io::Error> {
         for (index, line) in docstring.split('\n').enumerate() {
             if index == 0 {
                 write!(out, "{}\"\"\"{}", self.indent(indent_level), line)?;
             } else {
-                write!(out, "{}{}{}", self.new_line.as_str(), self.indent(indent_level), line)?;
+                write!(
+                    out,
+                    "{}{}{}",
+                    self.new_line.as_str(),
+                    self.indent(indent_level),
+                    line
+                )?;
             }
         }
         write!(out, "\"\"\"{}", self.new_line.as_str())
@@ -100,13 +111,24 @@ impl PythonBackend {
 
         if let Some(lines) = &input.body {
             for line in lines {
-                write!(out, "{}{}{}", self.indent(body_level), line, self.new_line.as_str())?;
+                write!(
+                    out,
+                    "{}{}{}",
+                    self.indent(body_level),
+                    line,
+                    self.new_line.as_str()
+                )?;
                 wrote_body = true;
             }
         }
 
         if !wrote_body {
-            write!(out, "{}pass{}", self.indent(body_level), self.new_line.as_str())?;
+            write!(
+                out,
+                "{}pass{}",
+                self.indent(body_level),
+                self.new_line.as_str()
+            )?;
         }
 
         Ok(())
@@ -119,7 +141,12 @@ impl BackendMetadata for PythonBackend {
     }
 
     fn supported_features(&self) -> &'static [BackendFeature] {
-        &[BackendFeature::Function, BackendFeature::Enum, BackendFeature::Struct, BackendFeature::Class]
+        &[
+            BackendFeature::Function,
+            BackendFeature::Enum,
+            BackendFeature::Struct,
+            BackendFeature::Class,
+        ]
     }
 }
 
@@ -185,7 +212,12 @@ impl StructRenderer for PythonBackend {
             self.write_docstring(docstring, *indent_level, out)?;
         }
 
-        write!(out, "{}_fields_ = [{}", self.indent(*indent_level), self.new_line.as_str())?;
+        write!(
+            out,
+            "{}_fields_ = [{}",
+            self.indent(*indent_level),
+            self.new_line.as_str()
+        )?;
         *indent_level += 1;
         for field in &input.fields {
             write!(
@@ -198,7 +230,12 @@ impl StructRenderer for PythonBackend {
             )?;
         }
         *indent_level -= 1;
-        write!(out, "{}]{}", self.indent(*indent_level), self.new_line.as_str())?;
+        write!(
+            out,
+            "{}]{}",
+            self.indent(*indent_level),
+            self.new_line.as_str()
+        )?;
         *indent_level -= 1;
 
         if let Some(after) = after {
@@ -244,7 +281,12 @@ impl EnumRenderer for PythonBackend {
         }
 
         if input.members.is_empty() {
-            write!(out, "{}pass{}", self.indent(*indent_level), self.new_line.as_str())?;
+            write!(
+                out,
+                "{}pass{}",
+                self.indent(*indent_level),
+                self.new_line.as_str()
+            )?;
         } else {
             for member in &input.members {
                 write!(
@@ -326,7 +368,12 @@ impl PythonBackend {
         }
 
         if !wrote_body {
-            write!(out, "{}pass{}", self.indent(*indent_level), self.new_line.as_str())?;
+            write!(
+                out,
+                "{}pass{}",
+                self.indent(*indent_level),
+                self.new_line.as_str()
+            )?;
         }
         *indent_level -= 1;
 

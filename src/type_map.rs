@@ -10,7 +10,15 @@ use std::collections::HashMap;
 
 /// One row of the built-in primitive table: the neutral primitive, its recognized spellings, then
 /// the output spelling per typed target (C++, Rust, C#, Python, JS). Lua is omitted — it is untyped.
-type BuiltinRow = (PrimitiveType, &'static [&'static str], &'static str, &'static str, &'static str, &'static str, &'static str);
+type BuiltinRow = (
+    PrimitiveType,
+    &'static [&'static str],
+    &'static str,
+    &'static str,
+    &'static str,
+    &'static str,
+    &'static str,
+);
 
 /// A neutral, language-independent primitive type identity.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -85,24 +93,168 @@ impl Default for TypeMap {
         let mut map = Self::empty();
 
         let table: &[BuiltinRow] = &[
-            (PrimitiveType::Bool, &["bool"], "bool", "bool", "bool", "bool", "boolean"),
-            (PrimitiveType::I8, &["int8_t", "i8", "sbyte", "signed char"], "int8_t", "i8", "sbyte", "int", "number"),
-            (PrimitiveType::U8, &["uint8_t", "u8", "byte", "unsigned char"], "uint8_t", "u8", "byte", "int", "number"),
-            (PrimitiveType::I16, &["int16_t", "i16", "short"], "int16_t", "i16", "short", "int", "number"),
-            (PrimitiveType::U16, &["uint16_t", "u16", "ushort"], "uint16_t", "u16", "ushort", "int", "number"),
-            (PrimitiveType::I32, &["int32_t", "i32", "int"], "int32_t", "i32", "int", "int", "number"),
-            (PrimitiveType::U32, &["uint32_t", "u32", "uint", "unsigned int"], "uint32_t", "u32", "uint", "int", "number"),
-            (PrimitiveType::I64, &["int64_t", "i64", "long"], "int64_t", "i64", "long", "int", "number"),
-            (PrimitiveType::U64, &["uint64_t", "u64", "ulong"], "uint64_t", "u64", "ulong", "int", "number"),
-            (PrimitiveType::I128, &["__int128", "i128", "Int128"], "__int128", "i128", "Int128", "int", "number"),
-            (PrimitiveType::U128, &["unsigned __int128", "u128", "UInt128"], "unsigned __int128", "u128", "UInt128", "int", "number"),
-            (PrimitiveType::ISize, &["intptr_t", "isize", "nint"], "intptr_t", "isize", "nint", "int", "number"),
-            (PrimitiveType::USize, &["uintptr_t", "size_t", "usize", "nuint"], "uintptr_t", "usize", "nuint", "int", "number"),
-            (PrimitiveType::F32, &["float", "f32", "single"], "float", "f32", "float", "float", "number"),
-            (PrimitiveType::F64, &["double", "f64"], "double", "f64", "double", "float", "number"),
-            (PrimitiveType::Char, &["char"], "char", "char", "char", "str", "string"),
-            (PrimitiveType::Void, &["void", "()"], "void", "()", "void", "None", "void"),
-            (PrimitiveType::Str, &["string", "std::string", "String"], "std::string", "String", "string", "str", "string"),
+            (
+                PrimitiveType::Bool,
+                &["bool"],
+                "bool",
+                "bool",
+                "bool",
+                "bool",
+                "boolean",
+            ),
+            (
+                PrimitiveType::I8,
+                &["int8_t", "i8", "sbyte", "signed char"],
+                "int8_t",
+                "i8",
+                "sbyte",
+                "int",
+                "number",
+            ),
+            (
+                PrimitiveType::U8,
+                &["uint8_t", "u8", "byte", "unsigned char"],
+                "uint8_t",
+                "u8",
+                "byte",
+                "int",
+                "number",
+            ),
+            (
+                PrimitiveType::I16,
+                &["int16_t", "i16", "short"],
+                "int16_t",
+                "i16",
+                "short",
+                "int",
+                "number",
+            ),
+            (
+                PrimitiveType::U16,
+                &["uint16_t", "u16", "ushort"],
+                "uint16_t",
+                "u16",
+                "ushort",
+                "int",
+                "number",
+            ),
+            (
+                PrimitiveType::I32,
+                &["int32_t", "i32", "int"],
+                "int32_t",
+                "i32",
+                "int",
+                "int",
+                "number",
+            ),
+            (
+                PrimitiveType::U32,
+                &["uint32_t", "u32", "uint", "unsigned int"],
+                "uint32_t",
+                "u32",
+                "uint",
+                "int",
+                "number",
+            ),
+            (
+                PrimitiveType::I64,
+                &["int64_t", "i64", "long"],
+                "int64_t",
+                "i64",
+                "long",
+                "int",
+                "number",
+            ),
+            (
+                PrimitiveType::U64,
+                &["uint64_t", "u64", "ulong"],
+                "uint64_t",
+                "u64",
+                "ulong",
+                "int",
+                "number",
+            ),
+            (
+                PrimitiveType::I128,
+                &["__int128", "i128", "Int128"],
+                "__int128",
+                "i128",
+                "Int128",
+                "int",
+                "number",
+            ),
+            (
+                PrimitiveType::U128,
+                &["unsigned __int128", "u128", "UInt128"],
+                "unsigned __int128",
+                "u128",
+                "UInt128",
+                "int",
+                "number",
+            ),
+            (
+                PrimitiveType::ISize,
+                &["intptr_t", "isize", "nint"],
+                "intptr_t",
+                "isize",
+                "nint",
+                "int",
+                "number",
+            ),
+            (
+                PrimitiveType::USize,
+                &["uintptr_t", "size_t", "usize", "nuint"],
+                "uintptr_t",
+                "usize",
+                "nuint",
+                "int",
+                "number",
+            ),
+            (
+                PrimitiveType::F32,
+                &["float", "f32", "single"],
+                "float",
+                "f32",
+                "float",
+                "float",
+                "number",
+            ),
+            (
+                PrimitiveType::F64,
+                &["double", "f64"],
+                "double",
+                "f64",
+                "double",
+                "float",
+                "number",
+            ),
+            (
+                PrimitiveType::Char,
+                &["char"],
+                "char",
+                "char",
+                "char",
+                "str",
+                "string",
+            ),
+            (
+                PrimitiveType::Void,
+                &["void", "()"],
+                "void",
+                "()",
+                "void",
+                "None",
+                "void",
+            ),
+            (
+                PrimitiveType::Str,
+                &["string", "std::string", "String"],
+                "std::string",
+                "String",
+                "string",
+                "str",
+                "string",
+            ),
         ];
 
         for (primitive, spellings, cpp, rust, csharp, python, js) in table {
@@ -175,7 +327,12 @@ impl TypeMap {
     }
 
     /// Set the spelling a primitive renders to in a language (overrides the default output).
-    pub fn set_output(&mut self, primitive: PrimitiveType, language: TargetLanguage, spelling: impl Into<String>) {
+    pub fn set_output(
+        &mut self,
+        primitive: PrimitiveType,
+        language: TargetLanguage,
+        spelling: impl Into<String>,
+    ) {
         self.output.insert((primitive, language), spelling.into());
     }
 
@@ -208,7 +365,10 @@ mod tests {
     #[test]
     fn clear_output_drops_only_the_targeted_pair() {
         let mut map = TypeMap::default();
-        assert_eq!(map.map("i128", TargetLanguage::Python), Some("int".to_string()));
+        assert_eq!(
+            map.map("i128", TargetLanguage::Python),
+            Some("int".to_string())
+        );
 
         map.clear_output(PrimitiveType::I128, TargetLanguage::Python);
 
@@ -216,6 +376,9 @@ mod tests {
         assert_eq!(map.map("i128", TargetLanguage::Python), None);
         // ...but recognition and other languages' outputs are untouched.
         assert_eq!(map.resolve("i128"), Some(PrimitiveType::I128));
-        assert_eq!(map.map("i128", TargetLanguage::Rust), Some("i128".to_string()));
+        assert_eq!(
+            map.map("i128", TargetLanguage::Rust),
+            Some("i128".to_string())
+        );
     }
 }

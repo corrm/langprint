@@ -1,6 +1,6 @@
 use super::{
-    CppField, CppFieldConversionOptions, CppFieldRenderOptions, CppFunction, CppFunctionConversionOptions,
-    CppFunctionRenderOptions, CppGenericArgument, CppVisibility,
+    CppField, CppFieldConversionOptions, CppFieldRenderOptions, CppFunction,
+    CppFunctionConversionOptions, CppFunctionRenderOptions, CppGenericArgument, CppVisibility,
 };
 use crate::ir::LanguageStructKind;
 use crate::type_map::TargetLanguage;
@@ -146,15 +146,22 @@ impl BackendItem for CppStruct {
         ConversionResult::with_log(lang_struct, result_log)
     }
 
-    fn from_ir(mut input: Self::IrType, options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
+    fn from_ir(
+        mut input: Self::IrType,
+        options: Option<&Self::ConversionOptions>,
+    ) -> ConversionResult<Self> {
         let mut result_log = ConversionLog::new();
-        let config = options.map(|options| options.config.clone()).unwrap_or_default();
+        let config = options
+            .map(|options| options.config.clone())
+            .unwrap_or_default();
         if let Some(hooks) = &config.hooks {
             hooks.before_from_ir_struct(&mut input);
         }
 
         // Convert fields using CppField's from_ir method
-        let field_options = CppFieldConversionOptions { config: config.clone() };
+        let field_options = CppFieldConversionOptions {
+            config: config.clone(),
+        };
         let mut fields = Vec::with_capacity(input.fields.len());
 
         for field in &input.fields {
@@ -169,7 +176,9 @@ impl BackendItem for CppStruct {
         }
 
         // Convert methods using CppFunction's from_ir method
-        let function_options = CppFunctionConversionOptions { config: config.clone() };
+        let function_options = CppFunctionConversionOptions {
+            config: config.clone(),
+        };
         let mut methods = Vec::with_capacity(input.methods.len());
 
         for method in &input.methods {
@@ -187,7 +196,8 @@ impl BackendItem for CppStruct {
         let mut bases = Vec::with_capacity(input.bases.len());
 
         for base in input.bases {
-            let visibility_result: ConversionResult<CppVisibility> = CppVisibility::from_ir(base.visibility, None);
+            let visibility_result: ConversionResult<CppVisibility> =
+                CppVisibility::from_ir(base.visibility, None);
 
             // Collect any warnings from visibility conversion
             if visibility_result.log.has_warnings() {
@@ -211,7 +221,8 @@ impl BackendItem for CppStruct {
         }
 
         // Convert visibility
-        let visibility_result: ConversionResult<CppVisibility> = CppVisibility::from_ir(input.visibility, None);
+        let visibility_result: ConversionResult<CppVisibility> =
+            CppVisibility::from_ir(input.visibility, None);
 
         // Collect any warnings from visibility conversion
         if visibility_result.log.has_warnings() {
@@ -236,7 +247,12 @@ impl BackendItem for CppStruct {
             }
         }
 
-        let name = rename_identifier(&config, &input.name, TargetLanguage::Cpp, IdentifierKind::Type);
+        let name = rename_identifier(
+            &config,
+            &input.name,
+            TargetLanguage::Cpp,
+            IdentifierKind::Type,
+        );
         result_log.add_warnings(name.log.warnings);
 
         let cpp_struct = CppStruct {

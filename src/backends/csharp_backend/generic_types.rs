@@ -28,19 +28,24 @@ impl BackendItem for CSharpGenericArgument {
         })
     }
 
-    fn from_ir(input: Self::IrType, _options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
+    fn from_ir(
+        input: Self::IrType,
+        _options: Option<&Self::ConversionOptions>,
+    ) -> ConversionResult<Self> {
         let mut log = ConversionLog::new();
 
         if input.default_value.is_some() {
             log.add_warning(ConversionWarning::UnsupportedFeature {
                 feature: format!("default on generic parameter `{}`", input.name),
-                resolution: "C# has no generic parameter defaults; the default was dropped".to_string(),
+                resolution: "C# has no generic parameter defaults; the default was dropped"
+                    .to_string(),
             });
         }
         if !input.keyword.is_empty() {
             log.add_warning(ConversionWarning::UnsupportedFeature {
                 feature: format!("`{}` generic parameter `{}`", input.keyword, input.name),
-                resolution: "C# has no lifetime/const-generic parameters; the kind was dropped".to_string(),
+                resolution: "C# has no lifetime/const-generic parameters; the kind was dropped"
+                    .to_string(),
             });
         }
 
@@ -59,7 +64,11 @@ pub(crate) fn render_generic_decls(params: &[CSharpGenericArgument]) -> String {
     if params.is_empty() {
         return String::new();
     }
-    let inner = params.iter().map(|p| p.name.clone()).collect::<Vec<_>>().join(", ");
+    let inner = params
+        .iter()
+        .map(|p| p.name.clone())
+        .collect::<Vec<_>>()
+        .join(", ");
     format!("<{}>", inner)
 }
 

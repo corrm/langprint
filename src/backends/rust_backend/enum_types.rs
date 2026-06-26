@@ -13,7 +13,17 @@ use super::attributes::rust_attribute_to_annotation;
 fn is_integral_repr(repr: &str) -> bool {
     matches!(
         repr,
-        "i8" | "u8" | "i16" | "u16" | "i32" | "u32" | "i64" | "u64" | "i128" | "u128" | "isize" | "usize"
+        "i8" | "u8"
+            | "i16"
+            | "u16"
+            | "i32"
+            | "u32"
+            | "i64"
+            | "u64"
+            | "i128"
+            | "u128"
+            | "isize"
+            | "usize"
     )
 }
 
@@ -123,14 +133,24 @@ impl BackendItem for RustEnum {
         ConversionResult::with_log(ir, log)
     }
 
-    fn from_ir(mut input: Self::IrType, options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
+    fn from_ir(
+        mut input: Self::IrType,
+        options: Option<&Self::ConversionOptions>,
+    ) -> ConversionResult<Self> {
         let mut log = ConversionLog::new();
-        let config = options.map(|options| options.config.clone()).unwrap_or_default();
+        let config = options
+            .map(|options| options.config.clone())
+            .unwrap_or_default();
         if let Some(hooks) = &config.hooks {
             hooks.before_from_ir_enum(&mut input);
         }
 
-        let name = rename_identifier(&config, &input.name, TargetLanguage::Rust, IdentifierKind::Type);
+        let name = rename_identifier(
+            &config,
+            &input.name,
+            TargetLanguage::Rust,
+            IdentifierKind::Type,
+        );
         log.add_warnings(name.log.warnings);
 
         let visibility = RustVisibility::from_ir(input.visibility, None);
@@ -145,7 +165,11 @@ impl BackendItem for RustEnum {
                 });
                 continue;
             }
-            if let Some(derive) = raw.text.strip_prefix("derive(").and_then(|rest| rest.strip_suffix(")")) {
+            if let Some(derive) = raw
+                .text
+                .strip_prefix("derive(")
+                .and_then(|rest| rest.strip_suffix(")"))
+            {
                 derives.push(derive.to_string());
             }
         }
@@ -161,7 +185,12 @@ impl BackendItem for RustEnum {
 
         let mut variants = Vec::with_capacity(input.variants.len());
         for variant in input.variants {
-            let variant_name = rename_identifier(&config, &variant.name, TargetLanguage::Rust, IdentifierKind::EnumMember);
+            let variant_name = rename_identifier(
+                &config,
+                &variant.name,
+                TargetLanguage::Rust,
+                IdentifierKind::EnumMember,
+            );
             log.add_warnings(variant_name.log.warnings);
             variants.push(RustEnumVariant {
                 name: variant_name.value,

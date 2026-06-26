@@ -11,11 +11,12 @@
 
 use langprint::backends::BackendItem;
 use langprint::backends::cpp_backend::{
-    CppBackend, CppBase, CppEnum, CppEnumVariant, CppField, CppFunction, CppParameter, CppStruct, CppStructKind,
-    CppVisibility, DocsStyle,
+    CppBackend, CppBase, CppEnum, CppEnumVariant, CppField, CppFunction, CppParameter, CppStruct,
+    CppStructKind, CppVisibility, DocsStyle,
 };
 use langprint::backends::csharp_backend::{
-    CSharpBackend, CSharpEnum, CSharpEnumMember, CSharpField, CSharpType, CSharpTypeKind, CSharpVisibility,
+    CSharpBackend, CSharpEnum, CSharpEnumMember, CSharpField, CSharpType, CSharpTypeKind,
+    CSharpVisibility,
 };
 use langprint::backends::rust_backend::{
     RustBackend, RustEnum, RustEnumVariant, RustEnumVariantValue, RustStruct, RustVisibility,
@@ -211,7 +212,10 @@ fn rust_enum_to_cpp() {
     let out = cpp()
         .render_enum::<&str>(&ce.value, None, None, None, &mut 0)
         .unwrap();
-    assert_eq!(out, "enum class Color: uint8_t\n{\n    Red = 0,\n    Green = 1,\n};\n");
+    assert_eq!(
+        out,
+        "enum class Color: uint8_t\n{\n    Red = 0,\n    Green = 1,\n};\n"
+    );
 }
 
 /// Rust data-carrying enum → IR → C#. The Tuple payload cannot exist in a C# enum, so `from_ir`
@@ -337,7 +341,10 @@ fn csharp_enum_to_cpp() {
     let out = cpp()
         .render_enum::<&str>(&ce.value, None, None, None, &mut 0)
         .unwrap();
-    assert_eq!(out, "enum class Color: uint8_t\n{\n    Red = 0,\n    Green = 1,\n};\n");
+    assert_eq!(
+        out,
+        "enum class Color: uint8_t\n{\n    Red = 0,\n    Green = 1,\n};\n"
+    );
 }
 
 /// Rust data-carrying enum → IR → C++. A C++ enum holds no per-variant data, so `from_ir` MUST
@@ -396,7 +403,11 @@ fn rust_struct_to_csharp_renders_struct_without_sealed() {
         name: "Vec3".to_string(),
         visibility: RustVisibility::Pub,
         generic_args: vec![],
-        fields: vec![rust_field("x", "f32"), rust_field("y", "f32"), rust_field("z", "f32")],
+        fields: vec![
+            rust_field("x", "f32"),
+            rust_field("y", "f32"),
+            rust_field("z", "f32"),
+        ],
         methods: vec![],
         derives: vec![],
         attributes: vec![],
@@ -482,7 +493,10 @@ fn enum_round_trips_across_all_three_backends() {
     let out = CSharpBackend::default()
         .render_enum::<&str>(&csharp, None, None, None, &mut 0)
         .unwrap();
-    assert_eq!(out, "private enum Color : byte\n{\n    Red = 0,\n    Green = 1,\n}\n");
+    assert_eq!(
+        out,
+        "private enum Color : byte\n{\n    Red = 0,\n    Green = 1,\n}\n"
+    );
 }
 // ── Cross-language constants ─────────────────────────────────────────────────
 

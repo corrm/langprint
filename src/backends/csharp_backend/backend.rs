@@ -1,16 +1,19 @@
 use std::io::{self, Write};
 
 use super::{
-    CSharpConstant, CSharpConstantRenderOptions, CSharpDefinition, CSharpDefinitionRenderOptions, CSharpEnum,
-    CSharpEnumRenderOptions, CSharpEnumVariantRenderOptions, CSharpField, CSharpFieldRenderOptions, CSharpMethod,
-    CSharpMethodRenderOptions, CSharpNamespace, CSharpNamespaceRenderOptions, CSharpProperty, CSharpType,
-    CSharpTypeRenderOptions,
+    CSharpConstant, CSharpConstantRenderOptions, CSharpDefinition, CSharpDefinitionRenderOptions,
+    CSharpEnum, CSharpEnumRenderOptions, CSharpEnumVariantRenderOptions, CSharpField,
+    CSharpFieldRenderOptions, CSharpMethod, CSharpMethodRenderOptions, CSharpNamespace,
+    CSharpNamespaceRenderOptions, CSharpProperty, CSharpType, CSharpTypeRenderOptions,
     generic_types::{render_generic_decls, render_where_clauses},
 };
 use crate::{
     backends::{BackendFeature, BackendMetadata},
     helper::indent,
-    renderers::{ConstantRenderer, DefinitionRenderer, EnumRenderer, FunctionRenderer, NamespaceRenderer, StructRenderer},
+    renderers::{
+        ConstantRenderer, DefinitionRenderer, EnumRenderer, FunctionRenderer, NamespaceRenderer,
+        StructRenderer,
+    },
     text::{IndentStyle, NewLineStyle},
 };
 
@@ -40,7 +43,12 @@ impl CSharpBackend {
         indent(level, self.indent_size, self.indent_style)
     }
 
-    fn write_docs(&self, docs: &[String], indent_level: i32, out: &mut impl Write) -> Result<(), io::Error> {
+    fn write_docs(
+        &self,
+        docs: &[String],
+        indent_level: i32,
+        out: &mut impl Write,
+    ) -> Result<(), io::Error> {
         for line in docs {
             write!(
                 out,
@@ -87,7 +95,12 @@ impl CSharpBackend {
             self.write_attributes(&field.attributes, indent_level, out)?;
         }
 
-        write!(out, "{}{}", self.indent(indent_level), field.visibility.prefix())?;
+        write!(
+            out,
+            "{}{}",
+            self.indent(indent_level),
+            field.visibility.prefix()
+        )?;
         if field.is_static {
             write!(out, "static ")?;
         }
@@ -114,7 +127,12 @@ impl CSharpBackend {
             self.write_docs(docs, indent_level, out)?;
         }
 
-        write!(out, "{}{}", self.indent(indent_level), property.visibility.prefix())?;
+        write!(
+            out,
+            "{}{}",
+            self.indent(indent_level),
+            property.visibility.prefix()
+        )?;
         if property.is_static {
             write!(out, "static ")?;
         }
@@ -141,12 +159,27 @@ impl CSharpBackend {
             self.new_line.as_str()
         )?;
         if property.has_getter {
-            self.write_accessor("get", property.getter_body.as_deref(), indent_level + 1, out)?;
+            self.write_accessor(
+                "get",
+                property.getter_body.as_deref(),
+                indent_level + 1,
+                out,
+            )?;
         }
         if property.has_setter {
-            self.write_accessor("set", property.setter_body.as_deref(), indent_level + 1, out)?;
+            self.write_accessor(
+                "set",
+                property.setter_body.as_deref(),
+                indent_level + 1,
+                out,
+            )?;
         }
-        write!(out, "{}}}{}", self.indent(indent_level), self.new_line.as_str())
+        write!(
+            out,
+            "{}}}{}",
+            self.indent(indent_level),
+            self.new_line.as_str()
+        )
     }
 
     fn write_accessor(
@@ -172,7 +205,12 @@ impl CSharpBackend {
                     keyword,
                     self.new_line.as_str()
                 )?;
-                write!(out, "{}{{{}", self.indent(indent_level), self.new_line.as_str())?;
+                write!(
+                    out,
+                    "{}{{{}",
+                    self.indent(indent_level),
+                    self.new_line.as_str()
+                )?;
                 for line in lines {
                     write!(
                         out,
@@ -182,7 +220,12 @@ impl CSharpBackend {
                         self.new_line.as_str()
                     )?;
                 }
-                write!(out, "{}}}{}", self.indent(indent_level), self.new_line.as_str())
+                write!(
+                    out,
+                    "{}}}{}",
+                    self.indent(indent_level),
+                    self.new_line.as_str()
+                )
             }
         }
     }
@@ -203,7 +246,12 @@ impl CSharpBackend {
             self.write_attributes(&method.attributes, indent_level, out)?;
         }
 
-        write!(out, "{}{}", self.indent(indent_level), method.visibility.prefix())?;
+        write!(
+            out,
+            "{}{}",
+            self.indent(indent_level),
+            method.visibility.prefix()
+        )?;
         if method.is_static {
             write!(out, "static ")?;
         }
@@ -226,10 +274,11 @@ impl CSharpBackend {
             write!(out, "async ")?;
         }
 
-        let return_type = method
-            .return_type
-            .as_deref()
-            .unwrap_or(if method.is_async { "Task" } else { "void" });
+        let return_type =
+            method
+                .return_type
+                .as_deref()
+                .unwrap_or(if method.is_async { "Task" } else { "void" });
         write!(
             out,
             "{} {}{}(",
@@ -268,7 +317,12 @@ impl CSharpBackend {
                         self.new_line.as_str()
                     )?;
                 }
-                write!(out, "{}}}{}", self.indent(indent_level), self.new_line.as_str())
+                write!(
+                    out,
+                    "{}}}{}",
+                    self.indent(indent_level),
+                    self.new_line.as_str()
+                )
             }
         }
     }
@@ -407,7 +461,12 @@ impl EnumRenderer for CSharpBackend {
             self.write_docs(docs, *indent_level, out)?;
         }
         if input.is_flags {
-            write!(out, "{}[Flags]{}", self.indent(*indent_level), self.new_line.as_str())?;
+            write!(
+                out,
+                "{}[Flags]{}",
+                self.indent(*indent_level),
+                self.new_line.as_str()
+            )?;
         }
         self.write_attributes(&input.attributes, *indent_level, out)?;
 
@@ -444,7 +503,12 @@ impl EnumRenderer for CSharpBackend {
         }
         *indent_level -= 1;
 
-        write!(out, "{}}}{}", self.indent(*indent_level), self.new_line.as_str())?;
+        write!(
+            out,
+            "{}}}{}",
+            self.indent(*indent_level),
+            self.new_line.as_str()
+        )?;
         if let Some(after) = after {
             write!(out, "{}", after.as_ref())?;
         }
@@ -563,7 +627,13 @@ impl NamespaceRenderer for CSharpBackend {
         }
         if let Some(namespaces) = &input.namespaces {
             for namespace in namespaces {
-                blocks.push(self.render_namespace(namespace, None::<&str>, None::<&str>, Some(options), &mut body_level)?);
+                blocks.push(self.render_namespace(
+                    namespace,
+                    None::<&str>,
+                    None::<&str>,
+                    Some(options),
+                    &mut body_level,
+                )?);
             }
         }
         *indent_level -= 1;
@@ -578,7 +648,12 @@ impl NamespaceRenderer for CSharpBackend {
             write!(out, "{}{}", body, self.new_line.as_str())?;
         }
 
-        write!(out, "{}}}{}", self.indent(*indent_level), self.new_line.as_str())?;
+        write!(
+            out,
+            "{}}}{}",
+            self.indent(*indent_level),
+            self.new_line.as_str()
+        )?;
 
         if let Some(after) = after {
             write!(out, "{}", after.as_ref())?;
@@ -616,7 +691,12 @@ impl StructRenderer for CSharpBackend {
             self.write_attributes(&input.attributes, *indent_level, out)?;
         }
 
-        write!(out, "{}{}", self.indent(*indent_level), input.visibility.prefix())?;
+        write!(
+            out,
+            "{}{}",
+            self.indent(*indent_level),
+            input.visibility.prefix()
+        )?;
         if input.is_static {
             write!(out, "static ")?;
         }
@@ -686,7 +766,12 @@ impl StructRenderer for CSharpBackend {
         }
         *indent_level -= 1;
 
-        write!(out, "{}}}{}", self.indent(*indent_level), self.new_line.as_str())?;
+        write!(
+            out,
+            "{}}}{}",
+            self.indent(*indent_level),
+            self.new_line.as_str()
+        )?;
         if let Some(after) = after {
             write!(out, "{}", after.as_ref())?;
         }

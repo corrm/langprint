@@ -39,7 +39,10 @@ fn renders_function_with_verbatim_body() {
         name: "add".to_string(),
         parameters: vec!["a".to_string(), "b".to_string()],
         doc: None,
-        body: Some(vec!["local result = a + b".to_string(), "return result".to_string()]),
+        body: Some(vec![
+            "local result = a + b".to_string(),
+            "return result".to_string(),
+        ]),
     };
 
     let mut level = 0;

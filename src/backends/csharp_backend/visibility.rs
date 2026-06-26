@@ -79,7 +79,10 @@ impl BackendItem for CSharpVisibility {
         ConversionResult::with_log(ir, log)
     }
 
-    fn from_ir(input: Self::IrType, _options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
+    fn from_ir(
+        input: Self::IrType,
+        _options: Option<&Self::ConversionOptions>,
+    ) -> ConversionResult<Self> {
         let mut log = ConversionLog::new();
         let value = match input {
             Visibility::Default => CSharpVisibility::Default,

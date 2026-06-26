@@ -1,7 +1,10 @@
 use crate::{
     backends::BackendItem,
-    conversion::{dropped_annotations_warning, dropped_feature_warning, ConversionLog, ConversionResult, ConversionWarning},
-    convert::{rename_identifier, ConversionConfig, IdentifierKind},
+    conversion::{
+        ConversionLog, ConversionResult, ConversionWarning, dropped_annotations_warning,
+        dropped_feature_warning,
+    },
+    convert::{ConversionConfig, IdentifierKind, rename_identifier},
     ir::{LanguageBase, LanguageField, LanguageStruct, LanguageStructKind, Visibility},
     type_map::TargetLanguage,
 };
@@ -99,18 +102,32 @@ impl BackendItem for JsClass {
         ConversionResult::with_log(ir, log)
     }
 
-    fn from_ir(mut input: Self::IrType, options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
+    fn from_ir(
+        mut input: Self::IrType,
+        options: Option<&Self::ConversionOptions>,
+    ) -> ConversionResult<Self> {
         let mut log = ConversionLog::new();
-        let config = options.map(|options| options.config.clone()).unwrap_or_default();
+        let config = options
+            .map(|options| options.config.clone())
+            .unwrap_or_default();
         if let Some(hooks) = &config.hooks {
             hooks.before_from_ir_struct(&mut input);
         }
 
-        let name = rename_identifier(&config, &input.name, TargetLanguage::Js, IdentifierKind::Type);
+        let name = rename_identifier(
+            &config,
+            &input.name,
+            TargetLanguage::Js,
+            IdentifierKind::Type,
+        );
         log.add_warnings(name.log.warnings);
 
         if !input.generic_args.is_empty() {
-            log.add_warning(dropped_feature_warning("generic arguments", &input.name, "JavaScript"));
+            log.add_warning(dropped_feature_warning(
+                "generic arguments",
+                &input.name,
+                "JavaScript",
+            ));
         }
 
         if !input.annotations.is_empty() || !input.raw_attributes.is_empty() {
@@ -123,12 +140,21 @@ impl BackendItem for JsClass {
         }
 
         if !input.fields.is_empty() {
-            log.add_warning(dropped_feature_warning("field values", &input.name, "JavaScript"));
+            log.add_warning(dropped_feature_warning(
+                "field values",
+                &input.name,
+                "JavaScript",
+            ));
         }
 
         let mut fields = Vec::with_capacity(input.fields.len());
         for field in input.fields {
-            let field_name = rename_identifier(&config, &field.name, TargetLanguage::Js, IdentifierKind::Field);
+            let field_name = rename_identifier(
+                &config,
+                &field.name,
+                TargetLanguage::Js,
+                IdentifierKind::Field,
+            );
             log.add_warnings(field_name.log.warnings);
             fields.push(JsField {
                 name: field_name.value,
@@ -137,7 +163,9 @@ impl BackendItem for JsClass {
             });
         }
 
-        let function_options = JsFunctionConversionOptions { config: config.clone() };
+        let function_options = JsFunctionConversionOptions {
+            config: config.clone(),
+        };
         let mut methods = Vec::with_capacity(input.methods.len());
         for method in input.methods {
             let result = JsFunction::from_ir(method, Some(&function_options));
@@ -148,7 +176,9 @@ impl BackendItem for JsClass {
         if input.bases.len() > 1 {
             log.add_warning(ConversionWarning::UnsupportedFeature {
                 feature: format!("{} base classes on `{}`", input.bases.len(), input.name),
-                resolution: "JavaScript has single inheritance; kept the first base, dropped the rest".to_string(),
+                resolution:
+                    "JavaScript has single inheritance; kept the first base, dropped the rest"
+                        .to_string(),
             });
         }
         let extends = input.bases.into_iter().next().map(|base| base.name);

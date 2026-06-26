@@ -55,9 +55,14 @@ impl BackendItem for RustParameter {
         })
     }
 
-    fn from_ir(input: Self::IrType, options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
+    fn from_ir(
+        input: Self::IrType,
+        options: Option<&Self::ConversionOptions>,
+    ) -> ConversionResult<Self> {
         let mut log = ConversionLog::new();
-        let config = options.map(|options| options.config.clone()).unwrap_or_default();
+        let config = options
+            .map(|options| options.config.clone())
+            .unwrap_or_default();
 
         if input.default_value.is_some() {
             log.add_warning(ConversionWarning::UnsupportedFeature {
@@ -127,19 +132,22 @@ impl BackendItem for RustFunction {
         if self.is_unsafe {
             log.add_warning(ConversionWarning::UnsupportedFeature {
                 feature: format!("`unsafe` on function `{}`", self.name),
-                resolution: "the `unsafe` qualifier is dropped from the language-agnostic IR".to_string(),
+                resolution: "the `unsafe` qualifier is dropped from the language-agnostic IR"
+                    .to_string(),
             });
         }
         if self.is_async {
             log.add_warning(ConversionWarning::UnsupportedFeature {
                 feature: format!("`async` on function `{}`", self.name),
-                resolution: "the `async` qualifier is dropped from the language-agnostic IR".to_string(),
+                resolution: "the `async` qualifier is dropped from the language-agnostic IR"
+                    .to_string(),
             });
         }
         if self.is_const {
             log.add_warning(ConversionWarning::UnsupportedFeature {
                 feature: format!("`const` on function `{}`", self.name),
-                resolution: "the `const fn` qualifier is dropped from the language-agnostic IR".to_string(),
+                resolution: "the `const fn` qualifier is dropped from the language-agnostic IR"
+                    .to_string(),
             });
         }
         if self.abi.is_some() {
@@ -166,7 +174,8 @@ impl BackendItem for RustFunction {
                     self.self_kind.render().unwrap_or("self"),
                     self.name
                 ),
-                resolution: "the IR carries only instance-vs-static; lowered to `&self`".to_string(),
+                resolution: "the IR carries only instance-vs-static; lowered to `&self`"
+                    .to_string(),
             });
         }
 
@@ -210,9 +219,14 @@ impl BackendItem for RustFunction {
         ConversionResult::with_log(ir, log)
     }
 
-    fn from_ir(mut input: Self::IrType, options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
+    fn from_ir(
+        mut input: Self::IrType,
+        options: Option<&Self::ConversionOptions>,
+    ) -> ConversionResult<Self> {
         let mut log = ConversionLog::new();
-        let config = options.map(|options| options.config.clone()).unwrap_or_default();
+        let config = options
+            .map(|options| options.config.clone())
+            .unwrap_or_default();
         if let Some(hooks) = &config.hooks {
             hooks.before_from_ir_function(&mut input);
         }
@@ -220,7 +234,8 @@ impl BackendItem for RustFunction {
         if input.is_virtual {
             log.add_warning(ConversionWarning::UnsupportedFeature {
                 feature: format!("virtual method `{}`", input.name),
-                resolution: "Rust has no virtual methods; lowered to an inherent method".to_string(),
+                resolution: "Rust has no virtual methods; lowered to an inherent method"
+                    .to_string(),
             });
         }
         if input.is_override {
@@ -242,13 +257,20 @@ impl BackendItem for RustFunction {
             });
         }
 
-        let name = rename_identifier(&config, &input.name, TargetLanguage::Rust, IdentifierKind::Function);
+        let name = rename_identifier(
+            &config,
+            &input.name,
+            TargetLanguage::Rust,
+            IdentifierKind::Function,
+        );
         log.add_warnings(name.log.warnings);
 
         let visibility = RustVisibility::from_ir(input.visibility, None);
         log.add_warnings(visibility.log.warnings);
 
-        let parameter_options = RustParameterConversionOptions { config: config.clone() };
+        let parameter_options = RustParameterConversionOptions {
+            config: config.clone(),
+        };
         let mut parameters = Vec::with_capacity(input.parameters.len());
         for parameter in input.parameters {
             let result = RustParameter::from_ir(parameter, Some(&parameter_options));
@@ -265,7 +287,11 @@ impl BackendItem for RustFunction {
 
         // A `void`/unit return is idiomatically expressed by omitting the return type in Rust.
         let return_type = match input.return_type {
-            Some(return_type) if config.type_map.resolve(&return_type) == Some(PrimitiveType::Void) => None,
+            Some(return_type)
+                if config.type_map.resolve(&return_type) == Some(PrimitiveType::Void) =>
+            {
+                None
+            }
             Some(return_type) => {
                 let mapped = map_type(&config, &return_type, TargetLanguage::Rust);
                 log.add_warnings(mapped.log.warnings);
@@ -282,7 +308,10 @@ impl BackendItem for RustFunction {
 
         let mut attributes = Vec::new();
         for annotation in &input.annotations {
-            if let Some(rendered) = config.annotation_map.resolve(TargetLanguage::Rust, annotation) {
+            if let Some(rendered) = config
+                .annotation_map
+                .resolve(TargetLanguage::Rust, annotation)
+            {
                 attributes.push(rendered);
             }
         }

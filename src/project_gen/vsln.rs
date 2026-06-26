@@ -72,8 +72,10 @@ impl ProjectGenerator for VslnGenerator {
         }
         let family = vs_common::ensure_supported(spec, "VslnGenerator")?;
         let guid = vs_common::deterministic_guid(&spec.name);
-        let source_filter_guid = vs_common::deterministic_guid(&format!("{}:Source Files", spec.name));
-        let header_filter_guid = vs_common::deterministic_guid(&format!("{}:Header Files", spec.name));
+        let source_filter_guid =
+            vs_common::deterministic_guid(&format!("{}:Source Files", spec.name));
+        let header_filter_guid =
+            vs_common::deterministic_guid(&format!("{}:Header Files", spec.name));
 
         super::write_file(
             output_dir,
@@ -134,10 +136,16 @@ impl ProjectGenerator for SlnxGenerator {
         }
         let family = vs_common::ensure_supported(spec, "SlnxGenerator")?;
         let guid = vs_common::deterministic_guid(&spec.name);
-        let source_filter_guid = vs_common::deterministic_guid(&format!("{}:Source Files", spec.name));
-        let header_filter_guid = vs_common::deterministic_guid(&format!("{}:Header Files", spec.name));
+        let source_filter_guid =
+            vs_common::deterministic_guid(&format!("{}:Source Files", spec.name));
+        let header_filter_guid =
+            vs_common::deterministic_guid(&format!("{}:Header Files", spec.name));
 
-        super::write_file(output_dir, &format!("{}.slnx", spec.name), &Self::render_slnx(spec))?;
+        super::write_file(
+            output_dir,
+            &format!("{}.slnx", spec.name),
+            &Self::render_slnx(spec),
+        )?;
         super::write_file(
             output_dir,
             &format!("{}.vcxproj", spec.name),
@@ -165,7 +173,10 @@ mod tests {
         ProjectSpec {
             name: "VampireSurvivors".to_string(),
             language_standard: LanguageStandard::Cpp17,
-            sources: vec![PathBuf::from("Assembly-CSharp.cpp"), PathBuf::from("UnityEngine.cpp")],
+            sources: vec![
+                PathBuf::from("Assembly-CSharp.cpp"),
+                PathBuf::from("UnityEngine.cpp"),
+            ],
             headers: vec![PathBuf::from("Headers/SDK.hpp")],
             include_dirs: vec![PathBuf::from("Headers")],
             defines: vec![
@@ -191,11 +202,17 @@ mod tests {
         assert!(a.starts_with('{') && a.ends_with('}'));
         let inner = &a[1..a.len() - 1];
         let groups: Vec<&str> = inner.split('-').collect();
-        assert_eq!(groups.iter().map(|g| g.len()).collect::<Vec<_>>(), vec![8, 4, 4, 4, 12]);
+        assert_eq!(
+            groups.iter().map(|g| g.len()).collect::<Vec<_>>(),
+            vec![8, 4, 4, 4, 12]
+        );
         assert!(inner.chars().all(|c| c == '-' || c.is_ascii_hexdigit()));
         // RFC 4122: version nibble 5, variant bits `10xx` (hex 8/9/A/B).
         assert!(groups[2].starts_with('5'));
-        assert!(matches!(groups[3].chars().next(), Some('8' | '9' | 'A' | 'B')));
+        assert!(matches!(
+            groups[3].chars().next(),
+            Some('8' | '9' | 'A' | 'B')
+        ));
     }
 
     #[test]
@@ -294,7 +311,8 @@ EndGlobal
     fn renders_full_filters() {
         let source_filter_guid = deterministic_guid("VampireSurvivors:Source Files");
         let header_filter_guid = deterministic_guid("VampireSurvivors:Header Files");
-        let contents = vs_common::render_filters(&sample_spec(), &source_filter_guid, &header_filter_guid);
+        let contents =
+            vs_common::render_filters(&sample_spec(), &source_filter_guid, &header_filter_guid);
         let expected = format!(
             "\
 <?xml version=\"1.0\" encoding=\"utf-8\"?>
@@ -478,7 +496,9 @@ EndGlobal
             ..sample_spec()
         };
         let dir = tempfile::tempdir().unwrap();
-        let err = VslnGenerator::new().generate(&spec, dir.path()).unwrap_err();
+        let err = VslnGenerator::new()
+            .generate(&spec, dir.path())
+            .unwrap_err();
         assert!(matches!(
             err,
             ProjectGenError::IncompatiblePlatform {
@@ -504,13 +524,23 @@ EndGlobal
         let spec = sample_spec();
         let vsln_dir = tempfile::tempdir().unwrap();
         let slnx_dir = tempfile::tempdir().unwrap();
-        VslnGenerator::new().generate(&spec, vsln_dir.path()).unwrap();
-        SlnxGenerator::new().generate(&spec, slnx_dir.path()).unwrap();
+        VslnGenerator::new()
+            .generate(&spec, vsln_dir.path())
+            .unwrap();
+        SlnxGenerator::new()
+            .generate(&spec, slnx_dir.path())
+            .unwrap();
 
-        for file in ["VampireSurvivors.vcxproj", "VampireSurvivors.vcxproj.filters"] {
+        for file in [
+            "VampireSurvivors.vcxproj",
+            "VampireSurvivors.vcxproj.filters",
+        ] {
             let from_vsln = std::fs::read_to_string(vsln_dir.path().join(file)).unwrap();
             let from_slnx = std::fs::read_to_string(slnx_dir.path().join(file)).unwrap();
-            assert_eq!(from_vsln, from_slnx, "{file} differs between the two VS generators");
+            assert_eq!(
+                from_vsln, from_slnx,
+                "{file} differs between the two VS generators"
+            );
         }
     }
 
@@ -557,7 +587,9 @@ EndGlobal
             ..sample_spec()
         };
         let dir = tempfile::tempdir().unwrap();
-        let err = SlnxGenerator::new().generate(&spec, dir.path()).unwrap_err();
+        let err = SlnxGenerator::new()
+            .generate(&spec, dir.path())
+            .unwrap_err();
         assert!(matches!(
             err,
             ProjectGenError::UnsupportedLanguage {
@@ -574,7 +606,9 @@ EndGlobal
             ..sample_spec()
         };
         let dir = tempfile::tempdir().unwrap();
-        let err = SlnxGenerator::new().generate(&spec, dir.path()).unwrap_err();
+        let err = SlnxGenerator::new()
+            .generate(&spec, dir.path())
+            .unwrap_err();
         assert!(matches!(
             err,
             ProjectGenError::IncompatiblePlatform {

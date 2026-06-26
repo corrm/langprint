@@ -1,7 +1,7 @@
 use crate::{
     backends::BackendItem,
-    conversion::{dropped_annotations_warning, ConversionLog, ConversionResult},
-    convert::{rename_identifier, ConversionConfig, IdentifierKind},
+    conversion::{ConversionLog, ConversionResult, dropped_annotations_warning},
+    convert::{ConversionConfig, IdentifierKind, rename_identifier},
     ir::{EnumVariant, EnumVariantValue, LanguageEnum, Visibility},
     type_map::TargetLanguage,
 };
@@ -61,14 +61,24 @@ impl BackendItem for PythonEnum {
         ConversionResult::new(ir)
     }
 
-    fn from_ir(mut input: Self::IrType, options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
+    fn from_ir(
+        mut input: Self::IrType,
+        options: Option<&Self::ConversionOptions>,
+    ) -> ConversionResult<Self> {
         let mut log = ConversionLog::new();
-        let config = options.map(|options| options.config.clone()).unwrap_or_default();
+        let config = options
+            .map(|options| options.config.clone())
+            .unwrap_or_default();
         if let Some(hooks) = &config.hooks {
             hooks.before_from_ir_enum(&mut input);
         }
 
-        let name = rename_identifier(&config, &input.name, TargetLanguage::Python, IdentifierKind::Type);
+        let name = rename_identifier(
+            &config,
+            &input.name,
+            TargetLanguage::Python,
+            IdentifierKind::Type,
+        );
         log.add_warnings(name.log.warnings);
 
         if !input.annotations.is_empty() || !input.raw_attributes.is_empty() {
@@ -87,7 +97,12 @@ impl BackendItem for PythonEnum {
                 EnumVariantValue::NoValue => index.to_string(),
                 EnumVariantValue::Tuple(_) | EnumVariantValue::Struct(_) => index.to_string(),
             };
-            let member_name = rename_identifier(&config, &variant.name, TargetLanguage::Python, IdentifierKind::EnumMember);
+            let member_name = rename_identifier(
+                &config,
+                &variant.name,
+                TargetLanguage::Python,
+                IdentifierKind::EnumMember,
+            );
             log.add_warnings(member_name.log.warnings);
             members.push(PythonEnumMember {
                 name: member_name.value,
@@ -127,5 +142,7 @@ impl Default for PythonEnumRenderOptions {
 }
 
 impl PythonEnumRenderOptions {
-    pub const DEFAULT: Self = Self { render_docstring: true };
+    pub const DEFAULT: Self = Self {
+        render_docstring: true,
+    };
 }

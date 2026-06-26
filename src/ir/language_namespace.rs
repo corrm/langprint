@@ -1,4 +1,7 @@
-use super::{LanguageConstant, LanguageDefinition, LanguageEnum, LanguageFunction, LanguageStruct, Visibility};
+use super::{
+    LanguageConstant, LanguageDefinition, LanguageEnum, LanguageFunction, LanguageStruct,
+    Visibility,
+};
 
 /// Represents a namespace/module in a language-agnostic way.
 #[derive(Debug, Clone, PartialEq)]

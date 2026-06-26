@@ -38,7 +38,12 @@ pub enum ConversionWarning {
 /// * `kind` - The item kind (e.g. `"struct"`, `"function"`, `"class"`).
 /// * `name` - The item's source name.
 /// * `language` - The target language with no attribute model.
-pub fn dropped_annotations_warning(count: usize, kind: &str, name: &str, language: &str) -> ConversionWarning {
+pub fn dropped_annotations_warning(
+    count: usize,
+    kind: &str,
+    name: &str,
+    language: &str,
+) -> ConversionWarning {
     ConversionWarning::UnsupportedFeature {
         feature: format!("{count} annotation(s) on {kind} `{name}`"),
         resolution: format!("{language} has no native attribute model; dropped"),
@@ -70,7 +75,9 @@ pub struct ConversionLog {
 impl ConversionLog {
     /// Create a new empty conversion log.
     pub fn new() -> Self {
-        Self { warnings: Vec::new() }
+        Self {
+            warnings: Vec::new(),
+        }
     }
 }
 
@@ -82,7 +89,10 @@ impl ConversionLog {
     }
 
     /// Add multiple warnings to the log.
-    pub fn add_warnings(&mut self, warnings: impl IntoIterator<Item = ConversionWarning>) -> &mut Self {
+    pub fn add_warnings(
+        &mut self,
+        warnings: impl IntoIterator<Item = ConversionWarning>,
+    ) -> &mut Self {
         self.warnings.extend(warnings);
         self
     }

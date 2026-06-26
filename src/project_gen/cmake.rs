@@ -8,7 +8,8 @@
 use std::{fmt::Write as _, path::Path};
 
 use super::{
-    LanguageFamily, OutputKind, ProjectGenError, ProjectGenerator, ProjectSpec, format_define, path_to_forward_slashes,
+    LanguageFamily, OutputKind, ProjectGenError, ProjectGenerator, ProjectSpec, format_define,
+    path_to_forward_slashes,
 };
 
 /// Default minimum CMake version. `3.20` is the first release where
@@ -55,10 +56,12 @@ impl CmakeGenerator {
         match spec.language_standard.family() {
             LanguageFamily::C => Ok("C"),
             LanguageFamily::Cpp => Ok("CXX"),
-            LanguageFamily::CSharp | LanguageFamily::Rust => Err(ProjectGenError::UnsupportedLanguage {
-                generator: "CmakeGenerator",
-                standard: spec.language_standard,
-            }),
+            LanguageFamily::CSharp | LanguageFamily::Rust => {
+                Err(ProjectGenError::UnsupportedLanguage {
+                    generator: "CmakeGenerator",
+                    standard: spec.language_standard,
+                })
+            }
         }
     }
 
@@ -68,7 +71,11 @@ impl CmakeGenerator {
         let name = &spec.name;
 
         let mut out = String::new();
-        let _ = writeln!(out, "cmake_minimum_required(VERSION {})", self.minimum_version);
+        let _ = writeln!(
+            out,
+            "cmake_minimum_required(VERSION {})",
+            self.minimum_version
+        );
         let _ = writeln!(out, "project({name} LANGUAGES {language})");
         out.push('\n');
 
@@ -143,13 +150,18 @@ mod tests {
     use std::path::PathBuf;
 
     use super::*;
-    use crate::project_gen::{Arch, ExceptionHandling, LanguageStandard, Platform, PrecompiledHeader};
+    use crate::project_gen::{
+        Arch, ExceptionHandling, LanguageStandard, Platform, PrecompiledHeader,
+    };
 
     fn sample_spec() -> ProjectSpec {
         ProjectSpec {
             name: "VampireSurvivors".to_string(),
             language_standard: LanguageStandard::Cpp17,
-            sources: vec![PathBuf::from("Assembly-CSharp.cpp"), PathBuf::from("UnityEngine.cpp")],
+            sources: vec![
+                PathBuf::from("Assembly-CSharp.cpp"),
+                PathBuf::from("UnityEngine.cpp"),
+            ],
             headers: Vec::new(),
             include_dirs: vec![PathBuf::from("Headers")],
             defines: vec![
@@ -212,7 +224,10 @@ target_compile_features(VampireSurvivors PUBLIC cxx_std_17)
     #[test]
     fn renders_exception_handling_and_precompiled_header() {
         let spec = ProjectSpec {
-            sources: vec![PathBuf::from("pch.cpp"), PathBuf::from("Assembly-CSharp.cpp")],
+            sources: vec![
+                PathBuf::from("pch.cpp"),
+                PathBuf::from("Assembly-CSharp.cpp"),
+            ],
             headers: vec![PathBuf::from("pch.h")],
             exception_handling: Some(ExceptionHandling::Asynchronous),
             precompiled_header: Some(PrecompiledHeader {
@@ -274,7 +289,9 @@ target_compile_features(VampireSurvivors PUBLIC cxx_std_17)
             ..sample_spec()
         };
         let dir = tempfile::tempdir().unwrap();
-        let err = CmakeGenerator::new().generate(&spec, dir.path()).unwrap_err();
+        let err = CmakeGenerator::new()
+            .generate(&spec, dir.path())
+            .unwrap_err();
         assert!(matches!(err, ProjectGenError::NoSources(name) if name == "VampireSurvivors"));
     }
 
@@ -285,7 +302,9 @@ target_compile_features(VampireSurvivors PUBLIC cxx_std_17)
             ..sample_spec()
         };
         let dir = tempfile::tempdir().unwrap();
-        let err = CmakeGenerator::new().generate(&spec, dir.path()).unwrap_err();
+        let err = CmakeGenerator::new()
+            .generate(&spec, dir.path())
+            .unwrap_err();
         assert!(matches!(err, ProjectGenError::InvalidName { name, .. } if name == "Bad Name"));
     }
 }

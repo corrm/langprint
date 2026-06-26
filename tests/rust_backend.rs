@@ -5,13 +5,16 @@ use langprint::{
     backends::{
         BackendItem,
         rust_backend::{
-            RustBackend, RustConstant, RustDefinition, RustEnum, RustEnumVariant, RustEnumVariantValue, RustField,
-            RustFunction, RustParameter, RustSelfKind, RustStruct, RustVisibility,
+            RustBackend, RustConstant, RustDefinition, RustEnum, RustEnumVariant,
+            RustEnumVariantValue, RustField, RustFunction, RustParameter, RustSelfKind, RustStruct,
+            RustVisibility,
         },
     },
     conversion::ConversionWarning,
     ir::{Annotation, RawAttribute, Visibility},
-    renderers::{ConstantRenderer, DefinitionRenderer, EnumRenderer, FunctionRenderer, StructRenderer},
+    renderers::{
+        ConstantRenderer, DefinitionRenderer, EnumRenderer, FunctionRenderer, StructRenderer,
+    },
     type_map::TargetLanguage,
 };
 
@@ -37,7 +40,10 @@ fn renders_constant_with_docs() {
         .render_constant(&constant, None::<&str>, None::<&str>, None, &mut level)
         .unwrap();
 
-    assert_eq!(rendered, "/// The maximum value.\npub const MAX: u32 = 100;\n");
+    assert_eq!(
+        rendered,
+        "/// The maximum value.\npub const MAX: u32 = 100;\n"
+    );
 }
 
 #[test]
@@ -150,7 +156,10 @@ fn renders_free_function() {
         .render_function(&function, None::<&str>, None::<&str>, None, &mut level)
         .unwrap();
 
-    assert_eq!(rendered, "pub fn add(a: i32, b: i32) -> i32 {\n    a + b\n}\n");
+    assert_eq!(
+        rendered,
+        "pub fn add(a: i32, b: i32) -> i32 {\n    a + b\n}\n"
+    );
 }
 
 #[test]
@@ -236,7 +245,10 @@ fn renders_declaration_only_function_when_body_is_none() {
         .unwrap();
 
     assert_eq!(rendered, "pub fn callback(x: i32) -> i32;\n");
-    assert!(!rendered.contains('{'), "declaration must have no body block: {rendered}");
+    assert!(
+        !rendered.contains('{'),
+        "declaration must have no body block: {rendered}"
+    );
 }
 
 #[test]
@@ -327,7 +339,11 @@ fn enum_variant_payloads_round_trip_through_ir() {
     let ir = original.clone().to_ir(None).value;
     let round_tripped = RustEnum::from_ir(ir, None).value;
 
-    let values: Vec<RustEnumVariantValue> = round_tripped.variants.iter().map(|v| v.value.clone()).collect();
+    let values: Vec<RustEnumVariantValue> = round_tripped
+        .variants
+        .iter()
+        .map(|v| v.value.clone())
+        .collect();
     assert_eq!(
         values,
         vec![

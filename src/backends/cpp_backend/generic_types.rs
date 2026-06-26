@@ -35,13 +35,18 @@ impl BackendItem for CppGenericArgument {
         })
     }
 
-    fn from_ir(input: Self::IrType, _options: Option<&Self::ConversionOptions>) -> ConversionResult<Self> {
+    fn from_ir(
+        input: Self::IrType,
+        _options: Option<&Self::ConversionOptions>,
+    ) -> ConversionResult<Self> {
         let mut log = ConversionLog::new();
 
         if input.where_clause.is_some() {
             log.add_warning(ConversionWarning::UnsupportedFeature {
                 feature: format!("`where` clause on template parameter `{}`", input.name),
-                resolution: "C++ has no `where` clauses on template parameters; the constraint was dropped".to_string(),
+                resolution:
+                    "C++ has no `where` clauses on template parameters; the constraint was dropped"
+                        .to_string(),
             });
         }
 

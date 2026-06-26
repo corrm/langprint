@@ -7,12 +7,14 @@
 
 use langprint::backends::BackendItem;
 use langprint::backends::cpp_backend::{CppBackend, CppEnum, CppStruct, CppStructKind, DocsStyle};
-use langprint::backends::csharp_backend::{CSharpBackend, CSharpType, CSharpTypeKind, CSharpVisibility};
+use langprint::backends::csharp_backend::{
+    CSharpBackend, CSharpType, CSharpTypeKind, CSharpVisibility,
+};
 use langprint::backends::rust_backend::{RustBackend, RustStruct, RustVisibility};
 use langprint::conversion::ConversionWarning;
 use langprint::ir::{
-    Annotation, EnumVariant, EnumVariantValue, LanguageEnum, LanguageField, LanguageStruct, LanguageStructKind,
-    RawAttribute, Visibility,
+    Annotation, EnumVariant, EnumVariantValue, LanguageEnum, LanguageField, LanguageStruct,
+    LanguageStructKind, RawAttribute, Visibility,
 };
 use langprint::renderers::StructRenderer;
 use langprint::text::{IndentStyle, NewLineStyle};

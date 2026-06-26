@@ -1,9 +1,9 @@
-# Git hooks. No `cargo fmt` — this repo is deliberately not rustfmt-formatted.
-
-# Commit time: fast lint + compile, only when Rust sources change.
-# clippy --all-targets compiles every target, so a separate build step is redundant.
 pre-commit:
+  parallel: true
   commands:
+    fmt:
+      glob: "*.rs"
+      run: cargo fmt --check
     clippy:
       glob: "*.rs"
       run: cargo clippy --all-targets -- -D warnings

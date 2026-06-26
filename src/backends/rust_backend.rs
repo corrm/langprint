@@ -14,10 +14,12 @@ pub mod visibility;
 
 pub use backend::RustBackend;
 pub use constant_types::{RustConstant, RustConstantConversionOptions, RustConstantRenderOptions};
-pub use define_types::{RustDefinition, RustDefinitionConversionOptions, RustDefinitionRenderOptions};
+pub use define_types::{
+    RustDefinition, RustDefinitionConversionOptions, RustDefinitionRenderOptions,
+};
 pub use enum_types::{
-    RustEnum, RustEnumConversionOptions, RustEnumRenderOptions, RustEnumVariant, RustEnumVariantRenderOptions,
-    RustEnumVariantValue,
+    RustEnum, RustEnumConversionOptions, RustEnumRenderOptions, RustEnumVariant,
+    RustEnumVariantRenderOptions, RustEnumVariantValue,
 };
 pub use field_types::{RustField, RustFieldConversionOptions, RustFieldRenderOptions};
 pub use function_types::{

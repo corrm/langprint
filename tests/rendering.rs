@@ -1,8 +1,8 @@
 //! Exact-output render tests for the C++ backend.
 
 use langprint::backends::cpp_backend::{
-    CppBackend, CppBase, CppConstant, CppEnum, CppEnumVariant, CppField, CppFunction, CppFunctionRenderOptions,
-    CppParameter, CppStruct, CppStructKind, CppVisibility, DocsStyle,
+    CppBackend, CppBase, CppConstant, CppEnum, CppEnumVariant, CppField, CppFunction,
+    CppFunctionRenderOptions, CppParameter, CppStruct, CppStructKind, CppVisibility, DocsStyle,
 };
 use langprint::renderers::{ConstantRenderer, EnumRenderer, FunctionRenderer, StructRenderer};
 use langprint::text::{IndentStyle, NewLineStyle};
@@ -116,7 +116,10 @@ fn renders_unscoped_enum() {
     let rendered = be
         .render_enum::<&str>(&cpp_enum, None, None, None, &mut indent)
         .unwrap();
-    assert_eq!(rendered, "enum Color: uint8_t\n{\n    Red = 0,\n    Green = 1,\n};\n");
+    assert_eq!(
+        rendered,
+        "enum Color: uint8_t\n{\n    Red = 0,\n    Green = 1,\n};\n"
+    );
 }
 
 /// A no-value enumerator must still be indented and comma-terminated — otherwise the emitted enum
@@ -146,7 +149,10 @@ fn renders_enum_with_no_value_variants() {
     let rendered = be
         .render_enum::<&str>(&cpp_enum, None, None, None, &mut indent)
         .unwrap();
-    assert_eq!(rendered, "enum class Direction\n{\n    North,\n    South,\n};\n");
+    assert_eq!(
+        rendered,
+        "enum class Direction\n{\n    North,\n    South,\n};\n"
+    );
 }
 
 #[test]

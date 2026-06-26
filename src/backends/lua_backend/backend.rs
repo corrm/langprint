@@ -40,9 +40,20 @@ impl LuaBackend {
         indent(level, self.indent_size, self.indent_style)
     }
 
-    fn write_doc(&self, doc: &str, indent_level: i32, out: &mut impl Write) -> Result<(), io::Error> {
+    fn write_doc(
+        &self,
+        doc: &str,
+        indent_level: i32,
+        out: &mut impl Write,
+    ) -> Result<(), io::Error> {
         for line in doc.split('\n') {
-            write!(out, "{}-- {}{}", self.indent(indent_level), line, self.new_line.as_str())?;
+            write!(
+                out,
+                "{}-- {}{}",
+                self.indent(indent_level),
+                line,
+                self.new_line.as_str()
+            )?;
         }
         Ok(())
     }
@@ -72,11 +83,22 @@ impl LuaBackend {
 
         if let Some(lines) = &input.body {
             for line in lines {
-                write!(out, "{}{}{}", self.indent(indent_level + 1), line, self.new_line.as_str())?;
+                write!(
+                    out,
+                    "{}{}{}",
+                    self.indent(indent_level + 1),
+                    line,
+                    self.new_line.as_str()
+                )?;
             }
         }
 
-        write!(out, "{}end{}", self.indent(indent_level), self.new_line.as_str())
+        write!(
+            out,
+            "{}end{}",
+            self.indent(indent_level),
+            self.new_line.as_str()
+        )
     }
 }
 
