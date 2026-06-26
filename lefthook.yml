@@ -1,0 +1,15 @@
+# Enforces the full green gate before code leaves the machine.
+# No `cargo fmt` step — this repo is deliberately not rustfmt-formatted.
+pre-push:
+  parallel: true
+  commands:
+    build:
+      run: cargo build --all-targets
+    test:
+      run: cargo test
+    clippy:
+      run: cargo clippy --all-targets -- -D warnings
+    doc:
+      run: cargo doc --no-deps
+      env:
+        RUSTDOCFLAGS: "-D warnings"
