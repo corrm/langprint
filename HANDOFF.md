@@ -1,7 +1,8 @@
 # Session Handoff — langprint emitter for polyplugc
 
-**Branch:** all work lives on `main` (there is no `feat/langprint-emitter` branch — that model never materialized; every commit landed on `main`). NOT published — held for explicit owner approval.
-**Gate:** 285 tests pass · `cargo build` clean · `cargo doc --no-deps` = **0 warnings** · `cargo clippy --all-targets -- -D warnings` = **1 lint only**: `renderers.rs:271` 8-arg `EnumRenderer` signature (owner-pending API decision, HANDOFF items A/C/D — do NOT band-aid).
+**Branch:** all work lives on `main` (there is no `feat/langprint-emitter` branch — that model never materialized; every commit landed on `main`). `main` pushed to `origin`.
+**Published:** **`0.2.0` is live on crates.io** (tag `v0.2.0` pushed → publish workflow ran build+test+`cargo publish`, all green; index confirms 0.1.0/0.1.1/0.2.0). Publish path is owner-configured: pushing a `v*` tag triggers `.github/workflows/publish.yml`.
+**Gate:** 285 tests pass · `cargo build` clean · `cargo doc --no-deps` = **0 warnings** · `cargo clippy --all-targets -- -D warnings` = **fully clean** (the former `renderers.rs:271` 8-arg `EnumRenderer` lint is resolved — variant render options nested into `RenderOptions.variant`).
 
 **Formatting convention:** this repo is deliberately NOT rustfmt-formatted (no `rustfmt.toml`, no fmt in CI; clean HEAD is fmt-dirty in 400+ spots). Do NOT run `cargo fmt` repo-wide — it reformats 80+ files (import-sorting + line-wrapping) and buries real changes. Match the existing compact style by hand.
 
@@ -26,7 +27,10 @@ Reviewer's two by-design notes (C++ `ReprC` emits nothing; C# `Aligned` no nativ
 1. **Test-coverage pass — DONE** (commit `8049bc7`, 276 tests): FFI non-default round-trip, all 6 hook points + untyped-path hook, KeywordMap Rust non-rawable fallback, Tier-1 Packed/Aligned cross-language, Tier-2 C#→Rust opaque drop, Rust `body: None`, untyped `body: Some`, robust warning-variant matching.
 2. **`examples/thin_backends.rs` — DONE** (commit `8049bc7`): renders Python/Lua/JS + ctypes via `type_override`.
 3. **Deferred design notes** (documented scope boundaries, build only if a consumer needs them): per-field/per-parameter `annotations` (add `LanguageFunctionParameter.annotations`); IR field initializers; docstring-style config; `ConversionConfig` builder; auto-wiring `ImportSet` into render paths. Do NOT add a shared `Map` trait (reviewer + owner: convention over trait here).
-4. **Release prep — DONE:** bumped to `0.2.0` in `Cargo.toml` and wrote `CHANGELOG.md` (the emitter release; breaking changes vs 0.1.1 documented: `builtin()` removed, `EnumRenderer` variant-options nested, `CtypeMap`→`ctypes_type_map()`, ctypes i128/u128 now warn). **STOP before `cargo publish`** — `cargo publish` / tagging `v0.2.0` await explicit owner go.
+4. **Release — DONE & PUBLISHED:** `0.2.0` shipped to crates.io via the `v0.2.0` tag + publish workflow. `CHANGELOG.md` documents the emitter release and its breaking changes vs 0.1.1.
+
+## Next milestone
+**polyplugc integration** — langprint owns FORM (declarations + body slots), the consumer owns LOGIC. Wiring polyplugc onto langprint is the real test of the design and will reveal which deferred design notes (item 3) are actually needed. Nothing in langprint is blocking it.
 
 ## Conventions in force
 Maps follow the configurable-table pattern (Default/clone/insert/extend/clear/resolve — see memory `mapping-tables-user-configurable`). No hardcoded mapping matches. Owner reviews/approves merges and all publishes.
