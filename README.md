@@ -134,7 +134,7 @@ or clear it:
 ```rust
 use langprint::{ConversionConfig, PrimitiveType, TargetLanguage, TypeMap};
 
-let mut type_map = TypeMap::builtin();
+let mut type_map = TypeMap::default();
 type_map.insert_spelling("FString", PrimitiveType::Str);          // recognize a game type
 type_map.set_output(PrimitiveType::Str, TargetLanguage::CSharp, "string"); // override output
 // type_map.clear();                                              // start from nothing
@@ -170,7 +170,7 @@ Set `rename: false` to keep identifiers exactly as written.
 use langprint::{CaseStyle, ConversionConfig, NamingMap, TargetLanguage};
 use langprint::convert::IdentifierKind;
 
-let mut naming_map = NamingMap::builtin();
+let mut naming_map = NamingMap::default();
 naming_map.insert(TargetLanguage::Python, IdentifierKind::Function, CaseStyle::Pascal);
 let config = ConversionConfig { naming_map, ..ConversionConfig::default() };
 ```
@@ -182,7 +182,7 @@ issue. A field named `class` becomes `class_` in Python; extend the set for your
 ```rust
 use langprint::{ConversionConfig, KeywordMap, TargetLanguage};
 
-let mut keyword_map = KeywordMap::builtin();
+let mut keyword_map = KeywordMap::default();
 keyword_map.insert(TargetLanguage::Python, "mykw");   // also escape `mykw` → `mykw_`
 let config = ConversionConfig { keyword_map, ..ConversionConfig::default() };
 ```
@@ -196,7 +196,7 @@ stays absent). C++ alignment is numeric (`alignas(n)`) and is not part of this t
 ```rust
 use langprint::{AnnotationKind, AnnotationMap, ConversionConfig, TargetLanguage};
 
-let mut annotation_map = AnnotationMap::builtin();
+let mut annotation_map = AnnotationMap::default();
 annotation_map.insert(TargetLanguage::Rust, AnnotationKind::ReprC, "repr(C, packed)"); // override
 annotation_map.insert(TargetLanguage::CSharp, AnnotationKind::Aligned, "StructLayout(LayoutKind.Sequential, Size = {n})"); // add
 let config = ConversionConfig { annotation_map, ..ConversionConfig::default() };
