@@ -250,13 +250,10 @@ pub trait FunctionRenderer: BackendMetadata {
 pub trait EnumRenderer: BackendMetadata {
     /// The enum type for this renderer.
     type EnumType: BackendItem;
-    /// The variant render options type for this renderer.
-    type EnumVariantRenderOptions: Default;
-    /// The render options type for this renderer.
+    /// The render options type for this renderer. Variant render options are nested within it.
     type RenderOptions: Default;
 
     fn default_options() -> Self::RenderOptions { Self::RenderOptions::default() }
-    fn default_variant_options() -> Self::EnumVariantRenderOptions { Self::EnumVariantRenderOptions::default() }
 
     /// Render a language-specific enum to a writer.
     ///
@@ -265,8 +262,8 @@ pub trait EnumRenderer: BackendMetadata {
     /// * `input` - The enum to render.
     /// * `before` - The string to prepend to the enum.
     /// * `after` - The string to append to the enum.
-    /// * `options` - The render options to use, if None, default options will be used.
-    /// * `variant_options` - The variant render options to use, if None, default options will be used.
+    /// * `options` - The render options to use, if None, default options will be used. Variant
+    ///   render options are nested within it.
     /// * `out` - The writer to render to.
     fn render_enum_to<S: AsRef<str>>(
         &self,
@@ -274,7 +271,6 @@ pub trait EnumRenderer: BackendMetadata {
         before: Option<S>,
         after: Option<S>,
         options: Option<&Self::RenderOptions>,
-        variant_options: Option<&Self::EnumVariantRenderOptions>,
         indent_level: &mut i32,
         out: &mut impl io::Write,
     ) -> Result<(), io::Error>;
@@ -286,8 +282,8 @@ pub trait EnumRenderer: BackendMetadata {
     /// * `input` - The enum to render.
     /// * `before` - The string to prepend to the enum.
     /// * `after` - The string to append to the enum.
-    /// * `options` - The render options to use, if None, default options will be used.
-    /// * `variant_options` - The variant render options to use, if None, default options will be used.
+    /// * `options` - The render options to use, if None, default options will be used. Variant
+    ///   render options are nested within it.
     ///
     /// # Returns
     ///
@@ -298,10 +294,9 @@ pub trait EnumRenderer: BackendMetadata {
         before: Option<S>,
         after: Option<S>,
         options: Option<&Self::RenderOptions>,
-        variant_options: Option<&Self::EnumVariantRenderOptions>,
         indent_level: &mut i32,
     ) -> Result<String, io::Error> {
-        render_to_string(|out| self.render_enum_to(input, before, after, options, variant_options, indent_level, out))
+        render_to_string(|out| self.render_enum_to(input, before, after, options, indent_level, out))
     }
 }
 

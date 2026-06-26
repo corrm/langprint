@@ -270,7 +270,6 @@ impl ConstantRenderer for RustBackend {
 
 impl EnumRenderer for RustBackend {
     type EnumType = RustEnum;
-    type EnumVariantRenderOptions = RustEnumVariantRenderOptions;
     type RenderOptions = RustEnumRenderOptions;
 
     fn render_enum_to<S: AsRef<str>>(
@@ -279,14 +278,12 @@ impl EnumRenderer for RustBackend {
         before: Option<S>,
         after: Option<S>,
         options: Option<&Self::RenderOptions>,
-        variant_options: Option<&Self::EnumVariantRenderOptions>,
         indent_level: &mut i32,
         out: &mut impl Write,
     ) -> Result<(), io::Error> {
         let binding = <RustBackend as EnumRenderer>::default_options();
         let options: &RustEnumRenderOptions = options.unwrap_or(&binding);
-        let variant_binding = <RustBackend as EnumRenderer>::default_variant_options();
-        let variant_options: &RustEnumVariantRenderOptions = variant_options.unwrap_or(&variant_binding);
+        let variant_options: &RustEnumVariantRenderOptions = &options.variant;
 
         if let Some(before) = before {
             write!(out, "{}", before.as_ref())?;
@@ -444,7 +441,6 @@ impl NamespaceRenderer for RustBackend {
                     None::<&str>,
                     None::<&str>,
                     Some(&options.enum_options),
-                    Some(&options.enum_variant_options),
                     &mut body_level,
                 )?);
             }

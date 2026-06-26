@@ -8,7 +8,7 @@ use crate::{
 
 use super::{
     CppConstant, CppConstantRenderOptions, CppDefinition, CppDefinitionRenderOptions, CppEnum, CppEnumConversionOptions,
-    CppEnumRenderOptions, CppEnumVariantRenderOptions, CppFunction, CppFunctionConversionOptions,
+    CppEnumRenderOptions, CppFunction, CppFunctionConversionOptions,
     CppFunctionRenderOptions, CppStruct, CppStructConversionOptions, CppStructRenderOptions,
 };
 
@@ -152,7 +152,6 @@ pub struct CppNamespaceRenderOptions {
     pub define_options: CppDefinitionRenderOptions,
     pub constant_options: CppConstantRenderOptions,
     pub enum_options: CppEnumRenderOptions,
-    pub enum_variant_options: CppEnumVariantRenderOptions,
     pub struct_options: CppStructRenderOptions,
     pub function_options: CppFunctionRenderOptions,
 }
@@ -168,7 +167,6 @@ impl CppNamespaceRenderOptions {
         define_options: CppDefinitionRenderOptions::DEFAULT,
         constant_options: CppConstantRenderOptions::DEFAULT,
         enum_options: CppEnumRenderOptions::DEFAULT,
-        enum_variant_options: CppEnumVariantRenderOptions::DEFAULT,
         struct_options: CppStructRenderOptions::DEFAULT,
         function_options: CppFunctionRenderOptions::DEFAULT,
     };

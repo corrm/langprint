@@ -163,7 +163,7 @@ fn renders_flags_enum() {
     };
 
     let rendered = backend()
-        .render_enum::<&str>(&enum_, None, None, None, None, &mut 0)
+        .render_enum::<&str>(&enum_, None, None, None, &mut 0)
         .unwrap();
     assert_eq!(
         rendered,

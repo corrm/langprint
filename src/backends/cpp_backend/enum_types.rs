@@ -230,6 +230,8 @@ impl Default for CppEnumConversionOptions {
 pub struct CppEnumRenderOptions {
     /// Whether to render documentation comments.
     pub render_docs: bool,
+    /// Render options for the enum's variants.
+    pub variant: CppEnumVariantRenderOptions,
 }
 
 impl Default for CppEnumRenderOptions {
@@ -239,5 +241,8 @@ impl Default for CppEnumRenderOptions {
 }
 
 impl CppEnumRenderOptions {
-    pub const DEFAULT: Self = Self { render_docs: true };
+    pub const DEFAULT: Self = Self {
+        render_docs: true,
+        variant: CppEnumVariantRenderOptions::DEFAULT,
+    };
 }

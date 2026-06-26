@@ -1,7 +1,7 @@
 use std::io::{self, Write};
 
 use super::{
-    PythonClass, PythonClassRenderOptions, PythonEnum, PythonEnumMemberRenderOptions, PythonEnumRenderOptions,
+    PythonClass, PythonClassRenderOptions, PythonEnum, PythonEnumRenderOptions,
     PythonFunction, PythonFunctionRenderOptions, PythonStruct, PythonStructRenderOptions,
 };
 use crate::{
@@ -210,7 +210,6 @@ impl StructRenderer for PythonBackend {
 
 impl EnumRenderer for PythonBackend {
     type EnumType = PythonEnum;
-    type EnumVariantRenderOptions = PythonEnumMemberRenderOptions;
     type RenderOptions = PythonEnumRenderOptions;
 
     fn render_enum_to<S: AsRef<str>>(
@@ -219,7 +218,6 @@ impl EnumRenderer for PythonBackend {
         before: Option<S>,
         after: Option<S>,
         options: Option<&Self::RenderOptions>,
-        _variant_options: Option<&Self::EnumVariantRenderOptions>,
         indent_level: &mut i32,
         out: &mut impl Write,
     ) -> Result<(), io::Error> {

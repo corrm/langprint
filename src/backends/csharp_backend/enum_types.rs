@@ -200,6 +200,8 @@ impl CSharpEnumVariantRenderOptions {
 pub struct CSharpEnumRenderOptions {
     /// Whether to render documentation comments.
     pub render_docs: bool,
+    /// Render options for the enum's members.
+    pub variant: CSharpEnumVariantRenderOptions,
 }
 
 impl Default for CSharpEnumRenderOptions {
@@ -209,5 +211,8 @@ impl Default for CSharpEnumRenderOptions {
 }
 
 impl CSharpEnumRenderOptions {
-    pub const DEFAULT: Self = Self { render_docs: true };
+    pub const DEFAULT: Self = Self {
+        render_docs: true,
+        variant: CSharpEnumVariantRenderOptions::DEFAULT,
+    };
 }

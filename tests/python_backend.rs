@@ -158,7 +158,7 @@ fn renders_int_enum() {
 
     let mut level = 0;
     let rendered = backend
-        .render_enum(&value, None::<&str>, None::<&str>, None, None, &mut level)
+        .render_enum(&value, None::<&str>, None::<&str>, None, &mut level)
         .unwrap();
 
     assert_eq!(

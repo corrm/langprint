@@ -113,11 +113,6 @@ pub struct PythonEnumConversionOptions {
     pub config: ConversionConfig,
 }
 
-/// Render options for Python enum members. `enum.IntEnum` members are bare
-/// `NAME = value` assignments with no per-member rendering knobs.
-#[derive(Debug, Clone, Default)]
-pub struct PythonEnumMemberRenderOptions;
-
 /// Render options for Python enums.
 #[derive(Debug, Clone)]
 pub struct PythonEnumRenderOptions {

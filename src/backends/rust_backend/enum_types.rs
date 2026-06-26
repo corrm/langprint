@@ -220,6 +220,8 @@ pub struct RustEnumRenderOptions {
     pub render_docs: bool,
     /// Whether to render derives and the `#[repr(...)]` attribute.
     pub render_attributes: bool,
+    /// Render options for the enum's variants.
+    pub variant: RustEnumVariantRenderOptions,
 }
 
 impl Default for RustEnumRenderOptions {
@@ -232,5 +234,6 @@ impl RustEnumRenderOptions {
     pub const DEFAULT: Self = Self {
         render_docs: true,
         render_attributes: true,
+        variant: RustEnumVariantRenderOptions::DEFAULT,
     };
 }

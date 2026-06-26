@@ -18,7 +18,7 @@ pub use class_types::{
     PythonClass, PythonClassConversionOptions, PythonClassField, PythonClassRenderOptions,
 };
 pub use enum_types::{
-    PythonEnum, PythonEnumConversionOptions, PythonEnumMember, PythonEnumMemberRenderOptions, PythonEnumRenderOptions,
+    PythonEnum, PythonEnumConversionOptions, PythonEnumMember, PythonEnumRenderOptions,
 };
 pub use function_types::{
     PythonFunction, PythonFunctionConversionOptions, PythonFunctionRenderOptions, PythonParameter,

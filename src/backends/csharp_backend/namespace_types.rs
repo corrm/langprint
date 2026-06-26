@@ -8,7 +8,7 @@ use crate::{
 
 use super::{
     CSharpConstant, CSharpConstantRenderOptions, CSharpDefinition, CSharpDefinitionRenderOptions, CSharpEnum,
-    CSharpEnumConversionOptions, CSharpEnumRenderOptions, CSharpEnumVariantRenderOptions, CSharpType,
+    CSharpEnumConversionOptions, CSharpEnumRenderOptions, CSharpType,
     CSharpTypeConversionOptions, CSharpTypeRenderOptions,
 };
 
@@ -148,6 +148,5 @@ pub struct CSharpNamespaceRenderOptions {
     pub define_options: CSharpDefinitionRenderOptions,
     pub constant_options: CSharpConstantRenderOptions,
     pub enum_options: CSharpEnumRenderOptions,
-    pub enum_variant_options: CSharpEnumVariantRenderOptions,
     pub type_options: CSharpTypeRenderOptions,
 }

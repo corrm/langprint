@@ -209,7 +209,7 @@ fn rust_enum_to_cpp() {
     assert!(!ce.log.has_warnings());
 
     let out = cpp()
-        .render_enum::<&str>(&ce.value, None, None, None, None, &mut 0)
+        .render_enum::<&str>(&ce.value, None, None, None, &mut 0)
         .unwrap();
     assert_eq!(out, "enum class Color: uint8_t\n{\n    Red = 0,\n    Green = 1,\n};\n");
 }
@@ -247,7 +247,7 @@ fn rust_data_enum_to_csharp_warns_on_payload() {
     assert_eq!(cs.log.warnings.len(), 1);
 
     let out = CSharpBackend::default()
-        .render_enum::<&str>(&cs.value, None, None, None, None, &mut 0)
+        .render_enum::<&str>(&cs.value, None, None, None, &mut 0)
         .unwrap();
     assert_eq!(out, "public enum Shape\n{\n    None,\n    Circle,\n}\n");
 }
@@ -335,7 +335,7 @@ fn csharp_enum_to_cpp() {
     assert!(!ce.log.has_warnings());
 
     let out = cpp()
-        .render_enum::<&str>(&ce.value, None, None, None, None, &mut 0)
+        .render_enum::<&str>(&ce.value, None, None, None, &mut 0)
         .unwrap();
     assert_eq!(out, "enum class Color: uint8_t\n{\n    Red = 0,\n    Green = 1,\n};\n");
 }
@@ -381,7 +381,7 @@ fn rust_data_enum_to_cpp_warns_on_payload() {
     );
 
     let out = cpp()
-        .render_enum::<&str>(&ce.value, None, None, None, None, &mut 0)
+        .render_enum::<&str>(&ce.value, None, None, None, &mut 0)
         .unwrap();
     assert_eq!(out, "enum class Shape\n{\n    Circle,\n    Rect,\n};\n");
 }
@@ -480,7 +480,7 @@ fn enum_round_trips_across_all_three_backends() {
     assert_eq!(csharp.underlying_type, Some("byte".to_string()));
 
     let out = CSharpBackend::default()
-        .render_enum::<&str>(&csharp, None, None, None, None, &mut 0)
+        .render_enum::<&str>(&csharp, None, None, None, &mut 0)
         .unwrap();
     assert_eq!(out, "private enum Color : byte\n{\n    Red = 0,\n    Green = 1,\n}\n");
 }

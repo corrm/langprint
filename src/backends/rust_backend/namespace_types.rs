@@ -8,7 +8,7 @@ use crate::{
 
 use super::{
     RustConstant, RustConstantRenderOptions, RustDefinition, RustDefinitionRenderOptions, RustEnum,
-    RustEnumConversionOptions, RustEnumRenderOptions, RustEnumVariantRenderOptions, RustFunction,
+    RustEnumConversionOptions, RustEnumRenderOptions, RustFunction,
     RustFunctionConversionOptions, RustFunctionRenderOptions, RustStruct, RustStructConversionOptions,
     RustStructRenderOptions, RustVisibility,
 };
@@ -141,7 +141,6 @@ pub struct RustModuleRenderOptions {
     pub define_options: RustDefinitionRenderOptions,
     pub constant_options: RustConstantRenderOptions,
     pub enum_options: RustEnumRenderOptions,
-    pub enum_variant_options: RustEnumVariantRenderOptions,
     pub struct_options: RustStructRenderOptions,
     pub function_options: RustFunctionRenderOptions,
 }

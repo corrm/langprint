@@ -83,7 +83,7 @@ fn renders_scoped_enum() {
         docs: None,
     };
     let rendered = be
-        .render_enum::<&str>(&cpp_enum, None, None, None, None, &mut indent)
+        .render_enum::<&str>(&cpp_enum, None, None, None, &mut indent)
         .unwrap();
     assert_eq!(
         rendered,
@@ -114,7 +114,7 @@ fn renders_unscoped_enum() {
         docs: None,
     };
     let rendered = be
-        .render_enum::<&str>(&cpp_enum, None, None, None, None, &mut indent)
+        .render_enum::<&str>(&cpp_enum, None, None, None, &mut indent)
         .unwrap();
     assert_eq!(rendered, "enum Color: uint8_t\n{\n    Red = 0,\n    Green = 1,\n};\n");
 }
@@ -144,7 +144,7 @@ fn renders_enum_with_no_value_variants() {
         docs: None,
     };
     let rendered = be
-        .render_enum::<&str>(&cpp_enum, None, None, None, None, &mut indent)
+        .render_enum::<&str>(&cpp_enum, None, None, None, &mut indent)
         .unwrap();
     assert_eq!(rendered, "enum class Direction\n{\n    North,\n    South,\n};\n");
 }

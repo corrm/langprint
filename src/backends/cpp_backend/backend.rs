@@ -153,7 +153,6 @@ impl ConstantRenderer for CppBackend {
 
 impl EnumRenderer for CppBackend {
     type EnumType = CppEnum;
-    type EnumVariantRenderOptions = CppEnumVariantRenderOptions;
     type RenderOptions = CppEnumRenderOptions;
 
     fn render_enum_to<S: AsRef<str>>(
@@ -162,15 +161,12 @@ impl EnumRenderer for CppBackend {
         before: Option<S>,
         after: Option<S>,
         options: Option<&Self::RenderOptions>,
-        variant_options: Option<&Self::EnumVariantRenderOptions>,
         indent_level: &mut i32,
         out: &mut impl Write,
     ) -> Result<(), io::Error> {
         let binding = <CppBackend as EnumRenderer>::default_options();
         let options: &CppEnumRenderOptions = options.unwrap_or(&binding);
-
-        let variant_binding = <CppBackend as EnumRenderer>::default_variant_options();
-        let variant_options: &CppEnumVariantRenderOptions = variant_options.unwrap_or(&variant_binding);
+        let variant_options: &CppEnumVariantRenderOptions = &options.variant;
 
         // Add documentation if available and render_docs is enabled
         if options.render_docs
@@ -348,7 +344,6 @@ impl NamespaceRenderer for CppBackend {
                     None::<&str>,
                     None::<&str>,
                     Some(&options.enum_options),
-                    Some(&options.enum_variant_options),
                     &mut body_level,
                 )?);
             }
