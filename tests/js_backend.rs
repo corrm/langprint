@@ -3,7 +3,9 @@
 use langprint::{
     AVAILABLE_BACKENDS,
     backends::BackendItem,
-    backends::js_backend::{JsBackend, JsClass, JsField, JsFunction, JsParameter},
+    backends::js_backend::{
+        JsBackend, JsClass, JsField, JsFunction, JsFunctionRenderOptions, JsParameter,
+    },
     conversion::ConversionWarning,
     ir::{
         LanguageFunction, LanguageGenericArgument, LanguageStruct, LanguageStructKind, Visibility,
@@ -259,4 +261,122 @@ fn class_from_ir_warns_on_dropped_generics() {
 
     let result = JsClass::from_ir(class, None);
     assert!(warns_generic_arguments(&result.log.warnings));
+}
+
+#[test]
+fn typescript_mode_emits_inline_param_and_return_types() {
+    let backend = JsBackend::default();
+    let function = JsFunction {
+        name: "decode_abi".to_string(),
+        parameters: vec![
+            JsParameter {
+                name: "impl".to_string(),
+                default: None,
+                type_doc: Some("any".to_string()),
+            },
+            JsParameter {
+                name: "args_ptr".to_string(),
+                default: None,
+                type_doc: Some("number".to_string()),
+            },
+        ],
+        return_type: Some("number".to_string()),
+        doc: None,
+        is_static: false,
+        body: Some(vec!["return 0;".to_string()]),
+    };
+
+    let options = JsFunctionRenderOptions {
+        render_jsdoc: false,
+        typescript: true,
+    };
+    let mut level = 0;
+    let rendered = backend
+        .render_function(
+            &function,
+            None::<&str>,
+            None::<&str>,
+            Some(&options),
+            &mut level,
+        )
+        .unwrap();
+
+    assert_eq!(
+        rendered,
+        "function decode_abi(impl: any, args_ptr: number): number {\n  return 0;\n}\n"
+    );
+}
+
+#[test]
+fn typescript_mode_export_via_before_and_typed_default() {
+    let backend = JsBackend::default();
+    let function = JsFunction {
+        name: "make".to_string(),
+        parameters: vec![JsParameter {
+            name: "count".to_string(),
+            default: Some("0".to_string()),
+            type_doc: Some("number".to_string()),
+        }],
+        return_type: Some("void".to_string()),
+        doc: None,
+        is_static: false,
+        body: None,
+    };
+
+    let options = JsFunctionRenderOptions {
+        render_jsdoc: false,
+        typescript: true,
+    };
+    let mut level = 0;
+    let rendered = backend
+        .render_function(
+            &function,
+            Some("export "),
+            None::<&str>,
+            Some(&options),
+            &mut level,
+        )
+        .unwrap();
+
+    // `export` rides the `before` slot; the typed default renders `name: type = value`.
+    assert_eq!(
+        rendered,
+        "export function make(count: number = 0): void {}\n"
+    );
+}
+
+#[test]
+fn typescript_flag_off_keeps_untyped_javascript_signature() {
+    let backend = JsBackend::default();
+    let function = JsFunction {
+        name: "decode_abi".to_string(),
+        parameters: vec![JsParameter {
+            name: "impl".to_string(),
+            default: None,
+            type_doc: Some("any".to_string()),
+        }],
+        return_type: Some("number".to_string()),
+        doc: None,
+        is_static: false,
+        body: Some(vec!["return 0;".to_string()]),
+    };
+
+    // Default options (typescript = false): the type strings stay JSDoc-only and
+    // the signature is untyped, exactly as before this feature.
+    let options = JsFunctionRenderOptions {
+        render_jsdoc: false,
+        typescript: false,
+    };
+    let mut level = 0;
+    let rendered = backend
+        .render_function(
+            &function,
+            None::<&str>,
+            None::<&str>,
+            Some(&options),
+            &mut level,
+        )
+        .unwrap();
+
+    assert_eq!(rendered, "function decode_abi(impl) {\n  return 0;\n}\n");
 }

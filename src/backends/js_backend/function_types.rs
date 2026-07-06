@@ -229,6 +229,13 @@ pub struct JsFunctionRenderOptions {
     /// (any param `type_doc`, a `return_type`, or a `doc` string). When no such
     /// information exists, no JSDoc is synthesised regardless of this flag.
     pub render_jsdoc: bool,
+    /// TypeScript mode. When `true`, the type strings that JavaScript keeps for
+    /// JSDoc only — each param `type_doc` and the function `return_type` — are
+    /// emitted inline in the signature instead (`name: type`, `): return_type`),
+    /// producing a TypeScript declaration. `false` (the default) keeps the
+    /// untyped JavaScript signature. Orthogonal to `render_jsdoc`; a TypeScript
+    /// consumer typically sets `render_jsdoc = false`.
+    pub typescript: bool,
 }
 
 impl Default for JsFunctionRenderOptions {
@@ -238,5 +245,8 @@ impl Default for JsFunctionRenderOptions {
 }
 
 impl JsFunctionRenderOptions {
-    pub const DEFAULT: Self = Self { render_jsdoc: true };
+    pub const DEFAULT: Self = Self {
+        render_jsdoc: true,
+        typescript: false,
+    };
 }

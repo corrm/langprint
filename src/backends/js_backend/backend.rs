@@ -112,12 +112,22 @@ impl JsBackend {
                 write!(out, ", ")?;
             }
             write!(out, "{}", param.name)?;
+            if options.typescript
+                && let Some(type_annotation) = &param.type_doc
+            {
+                write!(out, ": {type_annotation}")?;
+            }
             if let Some(default) = &param.default {
                 write!(out, " = {default}")?;
             }
             first = false;
         }
         write!(out, ")")?;
+        if options.typescript
+            && let Some(return_type) = &input.return_type
+        {
+            write!(out, ": {return_type}")?;
+        }
 
         match &input.body {
             None => write!(out, " {{}}{nl}"),
@@ -221,6 +231,7 @@ impl JsBackend {
 
         let method_options = JsFunctionRenderOptions {
             render_jsdoc: options.render_jsdoc,
+            typescript: options.typescript,
         };
         for (index, method) in input.methods.iter().enumerate() {
             if !input.fields.is_empty() || index > 0 {

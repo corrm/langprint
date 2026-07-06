@@ -209,6 +209,10 @@ pub struct JsClassRenderOptions {
     /// Whether to render a JSDoc block for the class and its methods when type
     /// information is present.
     pub render_jsdoc: bool,
+    /// TypeScript mode, propagated to every method's signature: when `true`,
+    /// method params and return types carry inline type annotations (see
+    /// [`super::JsFunctionRenderOptions::typescript`]).
+    pub typescript: bool,
 }
 
 impl Default for JsClassRenderOptions {
@@ -218,5 +222,8 @@ impl Default for JsClassRenderOptions {
 }
 
 impl JsClassRenderOptions {
-    pub const DEFAULT: Self = Self { render_jsdoc: true };
+    pub const DEFAULT: Self = Self {
+        render_jsdoc: true,
+        typescript: false,
+    };
 }
