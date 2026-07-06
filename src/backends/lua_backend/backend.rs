@@ -1,10 +1,13 @@
 use std::io::{self, Write};
 
-use super::{LuaFunction, LuaFunctionRenderOptions, LuaModule, LuaModuleRenderOptions};
+use super::{
+    LuaEnum, LuaEnumRenderOptions, LuaFunction, LuaFunctionRenderOptions, LuaModule,
+    LuaModuleRenderOptions,
+};
 use crate::{
     backends::{BackendFeature, BackendMetadata},
     helper::indent,
-    renderers::FunctionRenderer,
+    renderers::{EnumRenderer, FunctionRenderer},
     text::{IndentStyle, NewLineStyle},
 };
 
@@ -108,7 +111,57 @@ impl BackendMetadata for LuaBackend {
     }
 
     fn supported_features(&self) -> &'static [BackendFeature] {
-        &[BackendFeature::Function, BackendFeature::Namespace]
+        &[
+            BackendFeature::Function,
+            BackendFeature::Namespace,
+            BackendFeature::Enum,
+        ]
+    }
+}
+
+impl EnumRenderer for LuaBackend {
+    type EnumType = LuaEnum;
+    type RenderOptions = LuaEnumRenderOptions;
+
+    fn render_enum_to<S: AsRef<str>>(
+        &self,
+        input: &Self::EnumType,
+        before: Option<S>,
+        after: Option<S>,
+        options: Option<&Self::RenderOptions>,
+        indent_level: &mut i32,
+        out: &mut impl Write,
+    ) -> Result<(), io::Error> {
+        let binding = <LuaBackend as EnumRenderer>::default_options();
+        let options: &LuaEnumRenderOptions = options.unwrap_or(&binding);
+        let pad = self.indent(*indent_level);
+        let nl = self.new_line.as_str();
+
+        if let Some(before) = before {
+            write!(out, "{}", before.as_ref())?;
+        }
+        if options.render_doc
+            && let Some(doc) = &input.doc
+        {
+            for line in doc.split('\n') {
+                write!(out, "{pad}--- {line}{nl}")?;
+            }
+        }
+        write!(out, "{pad}local {} = {{{nl}", input.name)?;
+        for member in &input.members {
+            write!(
+                out,
+                "{}{} = {},{nl}",
+                self.indent(*indent_level + 1),
+                member.name,
+                member.value
+            )?;
+        }
+        write!(out, "{pad}}}{nl}")?;
+        if let Some(after) = after {
+            write!(out, "{}", after.as_ref())?;
+        }
+        Ok(())
     }
 }
 

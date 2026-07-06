@@ -3,10 +3,10 @@
 use langprint::{
     AVAILABLE_BACKENDS,
     backends::BackendItem,
-    backends::lua_backend::{LuaBackend, LuaField, LuaFunction, LuaModule},
+    backends::lua_backend::{LuaBackend, LuaEnum, LuaEnumMember, LuaField, LuaFunction, LuaModule},
     conversion::ConversionWarning,
     ir::{LanguageConstant, LanguageEnum, LanguageNamespace, Visibility},
-    renderers::FunctionRenderer,
+    renderers::{EnumRenderer, FunctionRenderer},
 };
 
 #[test]
@@ -163,4 +163,37 @@ fn module_from_ir_warns_on_dropped_namespace_members() {
         warning,
         ConversionWarning::UnsupportedFeature { feature, .. } if feature.contains("nested enums")
     )));
+}
+
+#[test]
+fn renders_constant_table_enum() {
+    // 4-space indent to match a polyplug-style consumer.
+    let backend = LuaBackend {
+        indent_size: 4,
+        ..LuaBackend::default()
+    };
+    let value = LuaEnum {
+        name: "LogLevel".to_string(),
+        members: vec![
+            LuaEnumMember {
+                name: "Debug".to_string(),
+                value: "0".to_string(),
+            },
+            LuaEnumMember {
+                name: "Info".to_string(),
+                value: "1".to_string(),
+            },
+        ],
+        doc: Some("Enum LogLevel".to_string()),
+    };
+
+    let mut level = 0;
+    let rendered = backend
+        .render_enum::<&str>(&value, None, None, None, &mut level)
+        .unwrap();
+
+    assert_eq!(
+        rendered,
+        "--- Enum LogLevel\nlocal LogLevel = {\n    Debug = 0,\n    Info = 1,\n}\n"
+    );
 }

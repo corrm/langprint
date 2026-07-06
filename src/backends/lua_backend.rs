@@ -6,9 +6,11 @@
 //! free-form field assignments.
 
 pub mod backend;
+pub mod enum_types;
 pub mod function_types;
 pub mod module_types;
 
 pub use backend::LuaBackend;
+pub use enum_types::{LuaEnum, LuaEnumConversionOptions, LuaEnumMember, LuaEnumRenderOptions};
 pub use function_types::{LuaFunction, LuaFunctionConversionOptions, LuaFunctionRenderOptions};
 pub use module_types::{LuaField, LuaModule, LuaModuleConversionOptions, LuaModuleRenderOptions};
