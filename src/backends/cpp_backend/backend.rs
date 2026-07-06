@@ -511,7 +511,9 @@ impl FunctionRenderer for CppBackend {
         }
 
         // Write function modifiers. `friend`/`static`/`virtual`/`inline` are written
-        // only for declarations (an out-of-line definition may not repeat them).
+        // only for declarations (a member's out-of-line definition may not repeat
+        // them). A FREE function is the exception: `static` (internal linkage) and
+        // `inline` are part of its definition and must be preserved.
         if !options.render_definition {
             if input.is_friend {
                 write!(out, "friend ")?;
@@ -527,6 +529,14 @@ impl FunctionRenderer for CppBackend {
 
             if input.is_virtual {
                 write!(out, "virtual ")?;
+            }
+        } else if input.parent_name.is_none() {
+            // Free-function definition: keep the linkage/inline specifiers.
+            if input.is_static {
+                write!(out, "static ")?;
+            }
+            if input.is_inline || options.inline_definition {
+                write!(out, "inline ")?;
             }
         } else if options.inline_definition {
             // An out-of-line member-template definition emitted into a header must be
@@ -618,10 +628,14 @@ impl FunctionRenderer for CppBackend {
                     write!(out, " {{{0}", self.new_line.as_str())?
                 }
 
-                // Process each line of the body with proper indentation
-                // Increase indent level for function body
-                let body_indent_str: String =
-                    indent(*indent_level + 1, self.indent_size, self.indent_style);
+                // Process each line of the body with proper indentation.
+                // In verbatim mode the caller owns every byte, so no indent is
+                // added; otherwise each non-empty line is indented one level.
+                let body_indent_str: String = if options.verbatim_body {
+                    String::new()
+                } else {
+                    indent(*indent_level + 1, self.indent_size, self.indent_style)
+                };
 
                 for line in body_lines {
                     if !line.trim().is_empty() {

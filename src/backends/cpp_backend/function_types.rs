@@ -315,6 +315,12 @@ pub struct CppFunctionRenderOptions {
     pub inline_definition: bool,
     /// Whether to use `typename` as the default keyword for type parameters.
     pub use_typename_default: bool,
+    /// Whether to emit each body line exactly as given, with no added
+    /// indentation. `false` (default) indents each line one level under the
+    /// signature. `true` makes the consumer own every byte of the body — the
+    /// correct seam for languages with no post-hoc formatter, where the caller
+    /// bakes exact whitespace into each line.
+    pub verbatim_body: bool,
 }
 
 impl Default for CppFunctionRenderOptions {
@@ -333,5 +339,6 @@ impl CppFunctionRenderOptions {
         render_body_if_friend: true,
         inline_definition: false,
         use_typename_default: true,
+        verbatim_body: false,
     };
 }
