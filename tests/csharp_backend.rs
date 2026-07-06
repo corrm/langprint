@@ -183,6 +183,19 @@ fn renders_flags_enum() {
         rendered,
         "[Flags]\npublic enum Access : byte\n{\n    None = 0,\n    Read = 1,\n    Write = 2,\n}\n"
     );
+
+    // K&R: opening brace hugs the header line instead of dropping to its own.
+    let kr = CSharpBackend {
+        open_brace_on_new_line: false,
+        ..CSharpBackend::default()
+    };
+    let rendered_kr = kr
+        .render_enum::<&str>(&enum_, None, None, None, &mut 0)
+        .unwrap();
+    assert_eq!(
+        rendered_kr,
+        "[Flags]\npublic enum Access : byte {\n    None = 0,\n    Read = 1,\n    Write = 2,\n}\n"
+    );
 }
 
 #[test]

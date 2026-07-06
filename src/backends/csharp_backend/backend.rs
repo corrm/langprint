@@ -26,6 +26,11 @@ pub struct CSharpBackend {
     pub indent_style: IndentStyle,
     /// The number of spaces per indentation level (when using spaces).
     pub indent_size: i32,
+    /// Whether a block's opening `{` goes on its own line (Allman, `true`,
+    /// the C# convention) or is appended to the header line (K&R, `false`).
+    /// Applies to enum/struct/class, method, namespace, and property/accessor
+    /// bodies.
+    pub open_brace_on_new_line: bool,
 }
 
 impl Default for CSharpBackend {
@@ -34,6 +39,7 @@ impl Default for CSharpBackend {
             new_line: NewLineStyle::LF,
             indent_style: IndentStyle::Spaces,
             indent_size: 4,
+            open_brace_on_new_line: true,
         }
     }
 }
@@ -41,6 +47,22 @@ impl Default for CSharpBackend {
 impl CSharpBackend {
     fn indent(&self, level: i32) -> String {
         indent(level, self.indent_size, self.indent_style)
+    }
+
+    /// The opening brace for a block whose header line has just been written
+    /// (with no trailing newline). Allman emits a newline, the block indent,
+    /// then `{`; K&R appends ` {` to the header. Both terminate with a newline.
+    fn open_brace(&self, indent_level: i32) -> String {
+        if self.open_brace_on_new_line {
+            format!(
+                "{}{}{{{}",
+                self.new_line.as_str(),
+                self.indent(indent_level),
+                self.new_line.as_str()
+            )
+        } else {
+            format!(" {{{}", self.new_line.as_str())
+        }
     }
 
     fn write_docs(
@@ -151,13 +173,7 @@ impl CSharpBackend {
             return Ok(());
         }
 
-        write!(
-            out,
-            "{}{}{{{}",
-            self.new_line.as_str(),
-            self.indent(indent_level),
-            self.new_line.as_str()
-        )?;
+        write!(out, "{}", self.open_brace(indent_level))?;
         if property.has_getter {
             self.write_accessor(
                 "get",
@@ -198,19 +214,8 @@ impl CSharpBackend {
                 self.new_line.as_str()
             ),
             Some(lines) => {
-                write!(
-                    out,
-                    "{}{}{}",
-                    self.indent(indent_level),
-                    keyword,
-                    self.new_line.as_str()
-                )?;
-                write!(
-                    out,
-                    "{}{{{}",
-                    self.indent(indent_level),
-                    self.new_line.as_str()
-                )?;
+                write!(out, "{}{}", self.indent(indent_level), keyword)?;
+                write!(out, "{}", self.open_brace(indent_level))?;
                 for line in lines {
                     write!(
                         out,
@@ -301,13 +306,7 @@ impl CSharpBackend {
         match &method.body {
             None => write!(out, ";{}", self.new_line.as_str()),
             Some(lines) => {
-                write!(
-                    out,
-                    "{}{}{{{}",
-                    self.new_line.as_str(),
-                    self.indent(indent_level),
-                    self.new_line.as_str()
-                )?;
+                write!(out, "{}", self.open_brace(indent_level))?;
                 for line in lines {
                     write!(
                         out,
@@ -480,13 +479,7 @@ impl EnumRenderer for CSharpBackend {
         if let Some(underlying) = &input.underlying_type {
             write!(out, " : {}", underlying)?;
         }
-        write!(
-            out,
-            "{}{}{{{}",
-            self.new_line.as_str(),
-            self.indent(*indent_level),
-            self.new_line.as_str()
-        )?;
+        write!(out, "{}", self.open_brace(*indent_level))?;
 
         *indent_level += 1;
         for member in &input.members {
@@ -566,16 +559,13 @@ impl NamespaceRenderer for CSharpBackend {
             self.write_docs(docs, *indent_level, out)?;
         }
 
-        let indent_str = self.indent(*indent_level);
         write!(
             out,
-            "{}namespace {}{}{}{{{}",
-            indent_str,
-            input.name,
-            self.new_line.as_str(),
-            indent_str,
-            self.new_line.as_str()
+            "{}namespace {}",
+            self.indent(*indent_level),
+            input.name
         )?;
+        write!(out, "{}", self.open_brace(*indent_level))?;
 
         *indent_level += 1;
         let mut body_level: i32 = *indent_level;
@@ -730,13 +720,7 @@ impl StructRenderer for CSharpBackend {
         }
         write!(out, "{}", render_where_clauses(&input.generic_args))?;
 
-        write!(
-            out,
-            "{}{}{{{}",
-            self.new_line.as_str(),
-            self.indent(*indent_level),
-            self.new_line.as_str()
-        )?;
+        write!(out, "{}", self.open_brace(*indent_level))?;
 
         *indent_level += 1;
         let field_options = CSharpFieldRenderOptions::DEFAULT;
