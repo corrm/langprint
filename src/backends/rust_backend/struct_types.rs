@@ -247,6 +247,12 @@ pub struct RustStructRenderOptions {
     pub render_attributes: bool,
     /// Whether to render an `impl` block for the methods.
     pub render_impl: bool,
+    /// Emit `attributes` (e.g. `#[repr(C)]`) *before* `derives` instead of after.
+    /// `false` (default) keeps the idiomatic `#[derive(...)]` then `#[repr(...)]`
+    /// order; `true` leads with the layout/other attributes — the common
+    /// convention for FFI `#[repr(C)]` types. rustfmt does not reorder attributes,
+    /// so this is the only way to control their emitted order.
+    pub attributes_before_derives: bool,
 }
 
 impl Default for RustStructRenderOptions {
@@ -260,5 +266,6 @@ impl RustStructRenderOptions {
         render_docs: true,
         render_attributes: true,
         render_impl: true,
+        attributes_before_derives: false,
     };
 }

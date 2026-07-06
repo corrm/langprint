@@ -249,6 +249,11 @@ pub struct RustEnumRenderOptions {
     pub render_docs: bool,
     /// Whether to render derives and the `#[repr(...)]` attribute.
     pub render_attributes: bool,
+    /// Emit `#[repr(...)]` *before* the `#[derive(...)]` line instead of after.
+    /// `false` (default) keeps `#[derive(...)]` then `#[repr(...)]`; `true` leads
+    /// with `#[repr(...)]`, the common convention for FFI enums. rustfmt does not
+    /// reorder attributes, so this controls the emitted order.
+    pub attributes_before_derives: bool,
     /// Render options for the enum's variants.
     pub variant: RustEnumVariantRenderOptions,
 }
@@ -263,6 +268,7 @@ impl RustEnumRenderOptions {
     pub const DEFAULT: Self = Self {
         render_docs: true,
         render_attributes: true,
+        attributes_before_derives: false,
         variant: RustEnumVariantRenderOptions::DEFAULT,
     };
 }

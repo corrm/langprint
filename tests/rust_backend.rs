@@ -5,9 +5,9 @@ use langprint::{
     backends::{
         BackendItem,
         rust_backend::{
-            RustBackend, RustConstant, RustDefinition, RustEnum, RustEnumVariant,
-            RustEnumVariantValue, RustField, RustFunction, RustParameter, RustSelfKind, RustStruct,
-            RustVisibility,
+            RustBackend, RustConstant, RustDefinition, RustEnum, RustEnumRenderOptions,
+            RustEnumVariant, RustEnumVariantValue, RustField, RustFunction, RustParameter,
+            RustSelfKind, RustStruct, RustStructRenderOptions, RustVisibility,
         },
     },
     conversion::ConversionWarning,
@@ -428,4 +428,91 @@ fn parameter_default_value_is_dropped_with_warning() {
         result.log.warnings[0],
         ConversionWarning::UnsupportedFeature { .. }
     ));
+}
+
+#[test]
+fn struct_attributes_before_derives_leads_with_repr() {
+    let backend = RustBackend::default();
+    let value = RustStruct {
+        name: "Args".to_string(),
+        visibility: RustVisibility::Pub,
+        generic_args: vec![],
+        fields: vec![RustField {
+            name: "level".to_string(),
+            field_type: "u32".to_string(),
+            visibility: RustVisibility::Pub,
+            attributes: vec![],
+            docs: None,
+        }],
+        methods: vec![],
+        derives: vec!["Debug".to_string(), "Clone".to_string()],
+        attributes: vec!["repr(C)".to_string()],
+        is_tuple: false,
+        docs: None,
+    };
+
+    let options = RustStructRenderOptions {
+        attributes_before_derives: true,
+        ..RustStructRenderOptions::default()
+    };
+    let mut level = 0;
+    let rendered = backend
+        .render_struct(
+            &value,
+            None::<&str>,
+            None::<&str>,
+            Some(&options),
+            &mut level,
+        )
+        .unwrap();
+
+    // `#[repr(C)]` leads, then the derive — the FFI convention.
+    assert_eq!(
+        rendered,
+        "#[repr(C)]\n#[derive(Debug, Clone)]\npub struct Args {\n    pub level: u32,\n}\n"
+    );
+}
+
+#[test]
+fn enum_attributes_before_derives_leads_with_repr() {
+    let backend = RustBackend::default();
+    let value = RustEnum {
+        name: "LogLevel".to_string(),
+        visibility: RustVisibility::Pub,
+        variants: vec![
+            RustEnumVariant {
+                name: "Debug".to_string(),
+                value: RustEnumVariantValue::Discriminant("0".to_string()),
+                docs: None,
+            },
+            RustEnumVariant {
+                name: "Info".to_string(),
+                value: RustEnumVariantValue::Discriminant("1".to_string()),
+                docs: None,
+            },
+        ],
+        repr: Some("u32".to_string()),
+        derives: vec!["Debug".to_string(), "Clone".to_string(), "Copy".to_string()],
+        docs: None,
+    };
+
+    let options = RustEnumRenderOptions {
+        attributes_before_derives: true,
+        ..RustEnumRenderOptions::default()
+    };
+    let mut level = 0;
+    let rendered = backend
+        .render_enum(
+            &value,
+            None::<&str>,
+            None::<&str>,
+            Some(&options),
+            &mut level,
+        )
+        .unwrap();
+
+    assert_eq!(
+        rendered,
+        "#[repr(u32)]\n#[derive(Debug, Clone, Copy)]\npub enum LogLevel {\n    Debug = 0,\n    Info = 1,\n}\n"
+    );
 }

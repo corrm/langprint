@@ -458,15 +458,24 @@ impl EnumRenderer for RustBackend {
             self.write_docs(docs, *indent_level, out)?;
         }
         if options.render_attributes {
-            self.write_derives(&input.derives, *indent_level, out)?;
-            if let Some(repr) = &input.repr {
-                write!(
-                    out,
-                    "{}#[repr({})]{}",
-                    self.indent(*indent_level),
-                    repr,
-                    self.new_line.as_str()
-                )?;
+            let write_repr = |out: &mut dyn Write| -> Result<(), io::Error> {
+                if let Some(repr) = &input.repr {
+                    write!(
+                        out,
+                        "{}#[repr({})]{}",
+                        self.indent(*indent_level),
+                        repr,
+                        self.new_line.as_str()
+                    )?;
+                }
+                Ok(())
+            };
+            if options.attributes_before_derives {
+                write_repr(out)?;
+                self.write_derives(&input.derives, *indent_level, out)?;
+            } else {
+                self.write_derives(&input.derives, *indent_level, out)?;
+                write_repr(out)?;
             }
         }
 
@@ -699,8 +708,13 @@ impl StructRenderer for RustBackend {
             self.write_docs(docs, *indent_level, out)?;
         }
         if options.render_attributes {
-            self.write_derives(&input.derives, *indent_level, out)?;
-            self.write_attributes(&input.attributes, *indent_level, out)?;
+            if options.attributes_before_derives {
+                self.write_attributes(&input.attributes, *indent_level, out)?;
+                self.write_derives(&input.derives, *indent_level, out)?;
+            } else {
+                self.write_derives(&input.derives, *indent_level, out)?;
+                self.write_attributes(&input.attributes, *indent_level, out)?;
+            }
         }
 
         let generics = render_generic_decls(&input.generic_args);
