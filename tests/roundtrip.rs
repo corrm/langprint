@@ -219,6 +219,7 @@ fn clean_rust_function() -> RustFunction {
         body: None,
         attributes: Vec::new(),
         docs: None,
+        comments: Vec::new(),
     }
 }
 

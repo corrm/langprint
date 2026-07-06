@@ -120,6 +120,9 @@ pub struct RustFunction {
     pub attributes: Vec<String>,
     /// Optional documentation for the function.
     pub docs: Option<Vec<String>>,
+    /// Bare `//` line comments emitted between the docs and the attributes (each without the
+    /// leading `//`). Distinct from `docs`, which render as `///`.
+    pub comments: Vec<String>,
 }
 
 impl BackendItem for RustFunction {
@@ -154,6 +157,13 @@ impl BackendItem for RustFunction {
             log.add_warning(ConversionWarning::UnsupportedFeature {
                 feature: format!("extern \"C\" ABI on function `{}`", self.name),
                 resolution: "dropped from the language-agnostic IR".to_string(),
+            });
+        }
+        if !self.comments.is_empty() {
+            log.add_warning(ConversionWarning::UnsupportedFeature {
+                feature: format!("bare `//` comments on function `{}`", self.name),
+                resolution: "the IR carries only `///` docs; line comments were dropped"
+                    .to_string(),
             });
         }
         let mut annotations = Vec::new();
@@ -341,6 +351,7 @@ impl BackendItem for RustFunction {
                 body: input.body,
                 attributes,
                 docs: input.docs,
+                comments: Vec::new(),
             },
             log,
         )

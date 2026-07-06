@@ -99,6 +99,7 @@ fn native_function(name: &str) -> RustFunction {
         body: Some(vec!["()".to_string()]),
         attributes: Vec::new(),
         docs: None,
+        comments: Vec::new(),
     }
 }
 

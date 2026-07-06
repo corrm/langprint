@@ -149,6 +149,7 @@ fn renders_free_function() {
         body: Some(vec!["a + b".to_string()]),
         attributes: vec![],
         docs: None,
+        comments: Vec::new(),
     };
 
     let mut level = 0;
@@ -179,6 +180,7 @@ fn renders_unsafe_extern_c_function() {
         body: Some(vec![]),
         attributes: vec![],
         docs: None,
+        comments: Vec::new(),
     };
 
     let mut level = 0;
@@ -206,6 +208,7 @@ fn non_extern_function_omits_extern_specifier() {
         body: Some(vec![]),
         attributes: vec![],
         docs: None,
+        comments: Vec::new(),
     };
 
     let mut level = 0;
@@ -237,6 +240,7 @@ fn renders_declaration_only_function_when_body_is_none() {
         body: None,
         attributes: vec![],
         docs: None,
+        comments: Vec::new(),
     };
 
     let mut level = 0;
@@ -291,6 +295,7 @@ fn renders_struct_with_impl_block() {
             body: Some(vec!["self.health += amount;".to_string()]),
             attributes: vec![],
             docs: None,
+            comments: Vec::new(),
         }],
         derives: vec!["Debug".to_string()],
         attributes: vec!["repr(C)".to_string()],

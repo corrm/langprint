@@ -161,6 +161,7 @@ fn rust_module_renders() {
             body: Some(vec!["// body".to_string()]),
             attributes: vec![],
             docs: None,
+            comments: Vec::new(),
         }]),
         modules: None,
         docs: None,

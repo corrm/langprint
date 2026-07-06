@@ -1,9 +1,10 @@
 # Spike: the langprint ⇄ polyplugc seam
 
-**Slice:** ONE contract (`pipeline.Decoder::decode`), ONE language (Rust, guest side), end to end.
-**Goal:** prove "langprint owns FORM, polyplugc owns LOGIC" on the narrowest real function
-before any multi-language build-out. **Status: seam is clean on this slice** (byte-faithful FORM),
-with three named gaps that bound how far it generalizes.
+**Scope:** the FULL `pipeline.Decoder` contract, ONE language (Rust, guest side), end to end.
+**Goal:** prove "langprint owns FORM, polyplugc owns LOGIC" and complete langprint's Rust FORM
+surface before any multi-language build-out. **Status: Rust FORM is complete** — the entire guest
+contract (trait + method + author-factory extern block + ABI wrapper) reproduces polyplugc's golden
+output **byte-for-byte**; the three gaps found in the first slice are closed. Hand-off trigger reached.
 
 Reproduce: `cargo run --example polyplug_seam_spike` (in this repo).
 
@@ -64,36 +65,51 @@ The integration hypothesis this spike proves out: **polyplugc delegates FORM emi
 (build a `RustFunction`, call `render_function`) and keeps computing only the body `Vec<String>`.
 That deletes the signature/scaffold half of every `out.push_str` in those generators.
 
-## 5. Gaps found (what bounds generalization)
+## 5. Gaps — all closed
 
-The `decode_abi` **free function** seam is clean. The rest of the contract surface needs FORM types
-langprint does not have yet:
+The three gaps that bounded generalization are now closed in langprint, so the **entire** guest-side
+Rust FORM of a contract is expressible:
 
-1. **No Rust trait declaration.** The guest contract trait
-   `pub trait PipelineDecoderGuestContract { fn decode(&self, input: StringView) -> Result<StringView, GuestError>; }`
-   is pure FORM, but langprint's Rust backend has no `RustTrait` type and does not implement
-   `InterfaceRenderer` for Rust (it exists for other backends). **Add `RustTrait` FORM before widening.**
-2. **No extern block.** The author-factory forward decl
-   `unsafe extern "Rust" { fn polyplug_create_decoder(host: HostContext) -> Box<dyn …>; }`
-   has no langprint representation (a foreign-fn decl inside an `extern` block, distinct from a fn
-   carrying `abi`). **Add an extern-block FORM item before widening.**
-3. **Minor fidelity:** the real wrapper carries a free-standing `// SAFETY: …` line comment between
-   doc and attribute. langprint emits only `///` docs, not bare `//` comments on an item. Fold it into
-   `docs` or the LOGIC body's first line — not a blocker.
+1. **Rust trait declaration** — `RustTrait` (`rust_backend::trait_types`), rendered via
+   `RustBackend::render_trait`. Name + visibility + generics + supertrait bounds (`: Send + Sync`) +
+   bodyless-`RustFunction` methods. A Rust trait has no target-blind IR analogue, so it is a
+   backend-native render entry point (like the Python plain-`class` renderer), not an
+   `InterfaceRenderer` impl.
+2. **Extern block** — `RustExternBlock`, rendered via `RustBackend::render_extern_block`. Carries the
+   block ABI + `unsafe` and a list of bodyless `RustFunction` items (the block owns the ABI, so items
+   carry no `abi` of their own): `unsafe extern "Rust" { fn polyplug_create_decoder(…); }`.
+3. **Bare `//` comments** — `RustFunction.comments: Vec<String>`, rendered between the `///` docs and
+   the `#[…]` attributes, so the wrapper's `// SAFETY: …` line is now reproduced. (Lowering a
+   commented function to the IR emits a dropped-comment `ConversionWarning`, per the no-silent-drop
+   rule — the IR carries only `///` docs.)
 
-`RustStruct` already carries `methods: Vec<RustFunction>` (inherent `impl`), so the guest impl
-struct + its method bodies are already expressible; the gap is specifically the **trait** and the
-**extern block**.
+`RustStruct` already carried `methods: Vec<RustFunction>` (inherent `impl`), so the guest impl struct
++ method bodies were already expressible. **Rust FORM is now complete for the contract surface.**
 
-## 6. Verdict + hand-off
+## 6. Acceptance — full contract, byte-identical
 
-- **Clean on slice #1.** The FORM/LOGIC line is real and lands exactly at `body`. Widen the seam to
-  the full `Decoder` contract only after `RustTrait` (gap 1) exists; that's the next cheap increment.
-- **polyplugc side goes through the polyplug agent + its gate** (`just gate`, lefthook; Rules: no
-  `.unwrap()`, explicit types, no cross-crate re-exports). Do NOT edit polyplugc from the langprint
-  side — two agents on the same files will collide and it won't survive the gate.
-- **Hand-off deliverable:** this spec + `examples/polyplug_seam_spike.rs` (the FORM emitter for
-  `decode_abi`). The polyplug agent implements the consuming half: for `decode`, build a
-  `RustFunction` from the `ResolvedFunction` IR, render its FORM via langprint, and keep polyplugc's
-  existing body computation as the `body: Some(Vec<String>)`. Prove one function compiles under the
-  gate, then report before generalizing to the other three `Decoder` functions.
+`examples/polyplug_seam_spike.rs` (and gate-enforced `tests/rust_trait_and_extern.rs`) reproduce the
+**entire** `pipeline.Decoder` guest FORM **byte-for-byte** against polyplugc's committed golden output:
+
+- guest trait + method → identical to `contracts.rs:13-16`
+- author-factory extern block → identical to `interfaces.rs:58-63`
+- `decode` ABI wrapper (incl. its `// SAFETY` comment) → identical to `rust.rs`'s emission; `body`
+  is the LOGIC slot.
+
+The `assert_eq!`s run on every `cargo run --example polyplug_seam_spike` and in CI via the tests.
+This is the "Rust FORM is complete" bar — the real unit the consuming half delegates against.
+
+## 7. Hand-off (trigger reached)
+
+Rust FORM is complete and the full-contract diff is byte-identical, so the polyplugc-consuming half
+is ready to build — **by the polyplug agent, behind polyplug's `just gate` + lefthook** (Rules: no
+`.unwrap()`, explicit types, no cross-crate re-exports). Do NOT edit polyplugc from the langprint
+side — two agents on the same files collide and it won't survive the gate.
+
+- **Hand-off artifacts:** this spec + `examples/polyplug_seam_spike.rs` (the complete FORM emitter) +
+  `tests/rust_trait_and_extern.rs` (the golden bars).
+- **Consuming-half plan:** for each `ResolvedContract`, build a `RustTrait` + `RustExternBlock` +
+  per-function `RustFunction` ABI wrappers from the polyplugc IR, render their FORM via langprint, and
+  keep polyplugc's existing body computation as the `body: Some(Vec<String>)` / `comments`. Prove the
+  Decoder contract's generated output is byte-identical to today's golden, then widen to the other
+  five languages (each needs its own FORM-completeness pass in langprint first).

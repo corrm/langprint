@@ -58,6 +58,7 @@ fn rust_function_honors_body_slot_contract() {
         body,
         attributes: Vec::new(),
         docs: None,
+        comments: Vec::new(),
     };
 
     let declaration = backend

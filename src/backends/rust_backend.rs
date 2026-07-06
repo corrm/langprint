@@ -10,6 +10,7 @@ pub mod function_types;
 pub mod generic_types;
 pub mod namespace_types;
 pub mod struct_types;
+pub mod trait_types;
 pub mod visibility;
 
 pub use backend::RustBackend;
@@ -29,4 +30,5 @@ pub use function_types::{
 pub use generic_types::RustGenericArgument;
 pub use namespace_types::{RustModule, RustModuleConversionOptions, RustModuleRenderOptions};
 pub use struct_types::{RustStruct, RustStructConversionOptions, RustStructRenderOptions};
+pub use trait_types::{RustExternBlock, RustTrait};
 pub use visibility::{RustVisibility, RustVisibilityConversionOptions};

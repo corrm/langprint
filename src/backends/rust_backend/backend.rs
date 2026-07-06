@@ -2,9 +2,9 @@ use std::io::{self, Write};
 
 use super::{
     RustConstant, RustConstantRenderOptions, RustDefinition, RustDefinitionRenderOptions, RustEnum,
-    RustEnumRenderOptions, RustEnumVariantRenderOptions, RustEnumVariantValue, RustField,
-    RustFunction, RustFunctionRenderOptions, RustModule, RustModuleRenderOptions, RustStruct,
-    RustStructRenderOptions,
+    RustEnumRenderOptions, RustEnumVariantRenderOptions, RustEnumVariantValue, RustExternBlock,
+    RustField, RustFunction, RustFunctionRenderOptions, RustModule, RustModuleRenderOptions,
+    RustStruct, RustStructRenderOptions, RustTrait,
     generic_types::{render_generic_decls, render_generic_uses},
 };
 use crate::{
@@ -53,6 +53,24 @@ impl RustBackend {
             write!(
                 out,
                 "{}/// {}{}",
+                self.indent(indent_level),
+                line,
+                self.new_line.as_str()
+            )?;
+        }
+        Ok(())
+    }
+
+    fn write_comments(
+        &self,
+        comments: &[String],
+        indent_level: i32,
+        out: &mut impl Write,
+    ) -> Result<(), io::Error> {
+        for line in comments {
+            write!(
+                out,
+                "{}// {}{}",
                 self.indent(indent_level),
                 line,
                 self.new_line.as_str()
@@ -111,6 +129,7 @@ impl RustBackend {
         {
             self.write_docs(docs, indent_level, out)?;
         }
+        self.write_comments(&input.comments, indent_level, out)?;
         if options.render_attributes {
             self.write_attributes(&input.attributes, indent_level, out)?;
         }
@@ -183,6 +202,122 @@ impl RustBackend {
         }
 
         Ok(())
+    }
+}
+
+impl RustBackend {
+    /// Render a `trait` declaration to a writer. Each method is a bodyless [`RustFunction`]
+    /// (`body: None`), so it renders as a `fn …;` signature. `options` gates doc/attribute
+    /// rendering for the trait and its methods.
+    pub fn render_trait_to(
+        &self,
+        input: &RustTrait,
+        options: Option<&RustFunctionRenderOptions>,
+        indent_level: &mut i32,
+        out: &mut impl Write,
+    ) -> Result<(), io::Error> {
+        let binding = <RustBackend as FunctionRenderer>::default_options();
+        let options: &RustFunctionRenderOptions = options.unwrap_or(&binding);
+
+        if options.render_docs
+            && let Some(docs) = &input.docs
+        {
+            self.write_docs(docs, *indent_level, out)?;
+        }
+        if options.render_attributes {
+            self.write_attributes(&input.attributes, *indent_level, out)?;
+        }
+
+        write!(
+            out,
+            "{}{}trait {}{}",
+            self.indent(*indent_level),
+            input.visibility.prefix(),
+            input.name,
+            render_generic_decls(&input.generic_args)
+        )?;
+        if !input.supertraits.is_empty() {
+            write!(out, ": {}", input.supertraits.join(" + "))?;
+        }
+
+        if input.methods.is_empty() {
+            write!(out, " {{}}{}", self.new_line.as_str())?;
+            return Ok(());
+        }
+        write!(out, " {{{}", self.new_line.as_str())?;
+        *indent_level += 1;
+        for method in &input.methods {
+            self.write_function(method, options, *indent_level, out)?;
+        }
+        *indent_level -= 1;
+        write!(
+            out,
+            "{}}}{}",
+            self.indent(*indent_level),
+            self.new_line.as_str()
+        )?;
+        Ok(())
+    }
+
+    /// Render a `trait` declaration to a string.
+    pub fn render_trait(
+        &self,
+        input: &RustTrait,
+        options: Option<&RustFunctionRenderOptions>,
+        indent_level: &mut i32,
+    ) -> Result<String, io::Error> {
+        let mut out = Vec::new();
+        self.render_trait_to(input, options, indent_level, &mut out)?;
+        Ok(String::from_utf8(out).expect("Rendered output is not valid UTF-8"))
+    }
+
+    /// Render an `extern` block to a writer. Each item is a bodyless [`RustFunction`]; the block
+    /// owns the ABI, so items carry no `abi` of their own.
+    pub fn render_extern_block_to(
+        &self,
+        input: &RustExternBlock,
+        options: Option<&RustFunctionRenderOptions>,
+        indent_level: &mut i32,
+        out: &mut impl Write,
+    ) -> Result<(), io::Error> {
+        let binding = <RustBackend as FunctionRenderer>::default_options();
+        let options: &RustFunctionRenderOptions = options.unwrap_or(&binding);
+
+        if options.render_docs
+            && let Some(docs) = &input.docs
+        {
+            self.write_docs(docs, *indent_level, out)?;
+        }
+
+        write!(out, "{}", self.indent(*indent_level))?;
+        if input.is_unsafe {
+            write!(out, "unsafe ")?;
+        }
+        write!(out, "extern \"{}\" {{{}", input.abi, self.new_line.as_str())?;
+        *indent_level += 1;
+        for item in &input.items {
+            self.write_function(item, options, *indent_level, out)?;
+        }
+        *indent_level -= 1;
+        write!(
+            out,
+            "{}}}{}",
+            self.indent(*indent_level),
+            self.new_line.as_str()
+        )?;
+        Ok(())
+    }
+
+    /// Render an `extern` block to a string.
+    pub fn render_extern_block(
+        &self,
+        input: &RustExternBlock,
+        options: Option<&RustFunctionRenderOptions>,
+        indent_level: &mut i32,
+    ) -> Result<String, io::Error> {
+        let mut out = Vec::new();
+        self.render_extern_block_to(input, options, indent_level, &mut out)?;
+        Ok(String::from_utf8(out).expect("Rendered output is not valid UTF-8"))
     }
 }
 
