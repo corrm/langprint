@@ -40,6 +40,18 @@ pub struct CppBackend {
     pub indent_size: i32,
 }
 
+impl Default for CppBackend {
+    fn default() -> Self {
+        CppBackend {
+            new_line: NewLineStyle::LF,
+            open_brace_on_new_line: false,
+            docs_style: DocsStyle::DoubleSlash,
+            indent_style: IndentStyle::Spaces,
+            indent_size: 4,
+        }
+    }
+}
+
 impl BackendMetadata for CppBackend {
     fn language_name(&self) -> &'static str {
         "C++"
@@ -504,7 +516,7 @@ impl FunctionRenderer for CppBackend {
             }
 
             if input.is_virtual {
-                write!(out, "/* virtual */ ")?;
+                write!(out, "virtual ")?;
             }
         } else if options.inline_definition {
             // An out-of-line member-template definition emitted into a header must be
