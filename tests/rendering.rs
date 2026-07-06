@@ -15,6 +15,7 @@ fn backend() -> CppBackend {
         docs_style: DocsStyle::DoubleSlash,
         indent_style: IndentStyle::Spaces,
         indent_size: 4,
+        space_before_enum_base: false,
     }
 }
 
@@ -88,6 +89,18 @@ fn renders_scoped_enum() {
     assert_eq!(
         rendered,
         "enum class Color: uint8_t\n{\n    Red = 0,\n    Green = 1,\n};\n"
+    );
+
+    // Opt-in spacing: `Name : type`, matching C++ inheritance-list style.
+    let mut spaced = backend();
+    spaced.space_before_enum_base = true;
+    let mut indent = 0;
+    let rendered_spaced = spaced
+        .render_enum::<&str>(&cpp_enum, None, None, None, &mut indent)
+        .unwrap();
+    assert_eq!(
+        rendered_spaced,
+        "enum class Color : uint8_t\n{\n    Red = 0,\n    Green = 1,\n};\n"
     );
 }
 

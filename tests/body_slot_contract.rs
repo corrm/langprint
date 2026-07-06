@@ -122,6 +122,7 @@ fn cpp_function_honors_body_slot_contract() {
         docs_style: DocsStyle::DoubleSlash,
         indent_style: IndentStyle::Spaces,
         indent_size: 4,
+        space_before_enum_base: false,
     };
     let make = |body: Option<Vec<String>>| CppFunction {
         name: "f".to_string(),

@@ -21,6 +21,7 @@ fn cpp() -> CppBackend {
         docs_style: DocsStyle::DoubleSlash,
         indent_style: IndentStyle::Spaces,
         indent_size: 4,
+        space_before_enum_base: false,
     }
 }
 

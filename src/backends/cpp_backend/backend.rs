@@ -38,6 +38,10 @@ pub struct CppBackend {
     pub indent_style: IndentStyle,
     /// The number of spaces to use for indentation.
     pub indent_size: i32,
+    /// Whether a scoped enum's underlying type is written as `Name : type`
+    /// (`true`, matching C++ inheritance-list spacing) or `Name: type`
+    /// (`false`, the default). Struct base lists always use ` : `.
+    pub space_before_enum_base: bool,
 }
 
 impl Default for CppBackend {
@@ -48,6 +52,7 @@ impl Default for CppBackend {
             docs_style: DocsStyle::DoubleSlash,
             indent_style: IndentStyle::Spaces,
             indent_size: 4,
+            space_before_enum_base: false,
         }
     }
 }
@@ -219,7 +224,12 @@ impl EnumRenderer for CppBackend {
 
         // Write underlying type if specified
         if let Some(underlying_type) = &input.underlying_type {
-            write!(out, ": {}", underlying_type)?;
+            let separator: &str = if self.space_before_enum_base {
+                " : "
+            } else {
+                ": "
+            };
+            write!(out, "{}{}", separator, underlying_type)?;
         }
 
         // Write enum body start
@@ -1152,6 +1162,7 @@ mod tests {
             docs_style: DocsStyle::DoubleSlash,
             indent_style: IndentStyle::Spaces,
             indent_size: 4,
+            space_before_enum_base: false,
         }
     }
 
