@@ -9,10 +9,12 @@
 
 pub mod backend;
 pub mod class_types;
+pub mod enum_types;
 pub mod function_types;
 
 pub use backend::JsBackend;
 pub use class_types::{JsClass, JsClassConversionOptions, JsClassRenderOptions, JsField};
+pub use enum_types::{JsEnum, JsEnumConversionOptions, JsEnumMember, JsEnumRenderOptions};
 pub use function_types::{
     JsFunction, JsFunctionConversionOptions, JsFunctionRenderOptions, JsParameter,
     JsParameterConversionOptions,

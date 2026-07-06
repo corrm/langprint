@@ -1,10 +1,12 @@
 use std::io::{self, Write};
 
-use super::{JsClass, JsClassRenderOptions, JsFunction, JsFunctionRenderOptions};
+use super::{
+    JsClass, JsClassRenderOptions, JsEnum, JsEnumRenderOptions, JsFunction, JsFunctionRenderOptions,
+};
 use crate::{
     backends::{BackendFeature, BackendMetadata},
     helper::indent,
-    renderers::FunctionRenderer,
+    renderers::{EnumRenderer, FunctionRenderer},
     text::{IndentStyle, NewLineStyle},
 };
 
@@ -149,7 +151,65 @@ impl BackendMetadata for JsBackend {
     }
 
     fn supported_features(&self) -> &'static [BackendFeature] {
-        &[BackendFeature::Function, BackendFeature::Class]
+        &[
+            BackendFeature::Function,
+            BackendFeature::Class,
+            BackendFeature::Enum,
+        ]
+    }
+}
+
+impl EnumRenderer for JsBackend {
+    type EnumType = JsEnum;
+    type RenderOptions = JsEnumRenderOptions;
+
+    fn render_enum_to<S: AsRef<str>>(
+        &self,
+        input: &Self::EnumType,
+        before: Option<S>,
+        after: Option<S>,
+        options: Option<&Self::RenderOptions>,
+        indent_level: &mut i32,
+        out: &mut impl Write,
+    ) -> Result<(), io::Error> {
+        let binding = <JsBackend as EnumRenderer>::default_options();
+        let options: &JsEnumRenderOptions = options.unwrap_or(&binding);
+        let pad = self.indent(*indent_level);
+        let nl = self.new_line.as_str();
+        let export = if input.export { "export " } else { "" };
+
+        if let Some(before) = before {
+            write!(out, "{}", before.as_ref())?;
+        }
+        if options.render_jsdoc
+            && let Some(doc) = &input.doc
+        {
+            write!(out, "{pad}/** {doc} */{nl}")?;
+        }
+        write!(
+            out,
+            "{pad}{export}const {} = Object.freeze({{{nl}",
+            input.name
+        )?;
+        for member in &input.members {
+            write!(
+                out,
+                "{}{}: {},{nl}",
+                self.indent(*indent_level + 1),
+                member.name,
+                member.value
+            )?;
+        }
+        write!(out, "{pad}}} as const);{nl}")?;
+        write!(
+            out,
+            "{pad}{export}type {0} = typeof {0}[keyof typeof {0}];{nl}",
+            input.name
+        )?;
+        if let Some(after) = after {
+            write!(out, "{}", after.as_ref())?;
+        }
+        Ok(())
     }
 }
 

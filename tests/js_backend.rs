@@ -4,13 +4,14 @@ use langprint::{
     AVAILABLE_BACKENDS,
     backends::BackendItem,
     backends::js_backend::{
-        JsBackend, JsClass, JsField, JsFunction, JsFunctionRenderOptions, JsParameter,
+        JsBackend, JsClass, JsEnum, JsEnumMember, JsField, JsFunction, JsFunctionRenderOptions,
+        JsParameter,
     },
     conversion::ConversionWarning,
     ir::{
         LanguageFunction, LanguageGenericArgument, LanguageStruct, LanguageStructKind, Visibility,
     },
-    renderers::FunctionRenderer,
+    renderers::{EnumRenderer, FunctionRenderer},
 };
 
 fn warns_generic_arguments(warnings: &[ConversionWarning]) -> bool {
@@ -379,4 +380,43 @@ fn typescript_flag_off_keeps_untyped_javascript_signature() {
         .unwrap();
 
     assert_eq!(rendered, "function decode_abi(impl) {\n  return 0;\n}\n");
+}
+
+#[test]
+fn renders_ts_const_object_enum() {
+    // 4-space indent to match a QuickJS-style consumer.
+    let backend = JsBackend {
+        indent_size: 4,
+        ..JsBackend::default()
+    };
+    let value = JsEnum {
+        name: "LogLevel".to_string(),
+        members: vec![
+            JsEnumMember {
+                name: "Debug".to_string(),
+                value: "0".to_string(),
+            },
+            JsEnumMember {
+                name: "Info".to_string(),
+                value: "1".to_string(),
+            },
+        ],
+        doc: Some("Enum LogLevel".to_string()),
+        export: true,
+    };
+
+    let mut level = 0;
+    let rendered = backend
+        .render_enum::<&str>(&value, None, None, None, &mut level)
+        .unwrap();
+
+    assert_eq!(
+        rendered,
+        "/** Enum LogLevel */\n\
+         export const LogLevel = Object.freeze({\n\
+         \x20   Debug: 0,\n\
+         \x20   Info: 1,\n\
+         } as const);\n\
+         export type LogLevel = typeof LogLevel[keyof typeof LogLevel];\n"
+    );
 }
