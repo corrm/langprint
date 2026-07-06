@@ -267,9 +267,10 @@ impl EnumRenderer for PythonBackend {
 
         write!(
             out,
-            "{}class {}(enum.IntEnum):{}",
+            "{}class {}({}):{}",
             self.indent(*indent_level),
             input.name,
+            input.base_class,
             self.new_line.as_str()
         )?;
 

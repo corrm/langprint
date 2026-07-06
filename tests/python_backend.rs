@@ -142,6 +142,7 @@ fn renders_int_enum() {
     let backend = PythonBackend::default();
     let value = PythonEnum {
         name: "Color".to_string(),
+        base_class: "enum.IntEnum".to_string(),
         members: vec![
             PythonEnumMember {
                 name: "RED".to_string(),
@@ -167,6 +168,36 @@ fn renders_int_enum() {
     assert_eq!(
         rendered,
         "class Color(enum.IntEnum):\n    RED = 0\n    GREEN = 1\n    BLUE = 2\n"
+    );
+}
+
+#[test]
+fn renders_int_flag_enum() {
+    let backend = PythonBackend::default();
+    let value = PythonEnum {
+        name: "Access".to_string(),
+        base_class: "enum.IntFlag".to_string(),
+        members: vec![
+            PythonEnumMember {
+                name: "READ".to_string(),
+                value: "1".to_string(),
+            },
+            PythonEnumMember {
+                name: "WRITE".to_string(),
+                value: "2".to_string(),
+            },
+        ],
+        docstring: None,
+    };
+
+    let mut level = 0;
+    let rendered = backend
+        .render_enum(&value, None::<&str>, None::<&str>, None, &mut level)
+        .unwrap();
+
+    assert_eq!(
+        rendered,
+        "class Access(enum.IntFlag):\n    READ = 1\n    WRITE = 2\n"
     );
 }
 

@@ -18,12 +18,15 @@ pub struct PythonEnumMember {
     pub value: String,
 }
 
-/// Represents a Python `enum.IntEnum`: `class Name(enum.IntEnum):` with
-/// `MEMBER = <value>` lines.
+/// Represents a Python enum: `class Name(<base_class>):` with
+/// `MEMBER = <value>` lines. `base_class` is typically `enum.IntEnum`
+/// (default) or `enum.IntFlag` for bit-flag enums.
 #[derive(Debug, Clone, PartialEq)]
 pub struct PythonEnum {
     /// The name of the enum.
     pub name: String,
+    /// The base class the enum derives from (e.g. `enum.IntEnum`, `enum.IntFlag`).
+    pub base_class: String,
     /// The members of the enum.
     pub members: Vec<PythonEnumMember>,
     /// Optional docstring, rendered as the first triple-quoted body line.
@@ -113,6 +116,7 @@ impl BackendItem for PythonEnum {
         ConversionResult::with_log(
             PythonEnum {
                 name: name.value,
+                base_class: "enum.IntEnum".to_string(),
                 members,
                 docstring: input.docs.map(|docs| docs.join("\n")),
             },
