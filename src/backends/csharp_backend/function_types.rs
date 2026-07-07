@@ -274,6 +274,12 @@ pub struct CSharpMethodRenderOptions {
     pub render_docs: bool,
     /// Whether to render attributes.
     pub render_attributes: bool,
+    /// Whether to emit each body line exactly as given, with no added
+    /// indentation. `false` (default) indents each line one level under the
+    /// signature. `true` makes the consumer own every byte of the body — the
+    /// correct seam for a language with no post-hoc formatter, where the caller
+    /// bakes exact whitespace into each line.
+    pub verbatim_body: bool,
 }
 
 impl Default for CSharpMethodRenderOptions {
@@ -286,5 +292,6 @@ impl CSharpMethodRenderOptions {
     pub const DEFAULT: Self = Self {
         render_docs: true,
         render_attributes: true,
+        verbatim_body: false,
     };
 }
