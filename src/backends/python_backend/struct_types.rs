@@ -20,12 +20,17 @@ pub struct PythonStructField {
     pub ctype: String,
 }
 
-/// Represents a ctypes structure: `class Name(ctypes.Structure):` with a
-/// `_fields_` class attribute.
+/// Represents a ctypes aggregate: `class Name(<base_class>):` with a `_fields_`
+/// class attribute. `base_class` is `ctypes.Structure` (default) for a struct or
+/// `ctypes.Union` for an overlapping union — the two share the identical
+/// `_fields_` FORM and differ only in the inherited base.
 #[derive(Debug, Clone, PartialEq)]
 pub struct PythonStruct {
     /// The name of the structure.
     pub name: String,
+    /// The base class the aggregate derives from (`ctypes.Structure` or
+    /// `ctypes.Union`).
+    pub base_class: String,
     /// The fields, rendered into the `_fields_` list as `("name", ctype)` tuples.
     pub fields: Vec<PythonStructField>,
     /// Optional docstring, rendered as the first triple-quoted body line.
@@ -130,6 +135,7 @@ impl BackendItem for PythonStruct {
         ConversionResult::with_log(
             PythonStruct {
                 name: name.value,
+                base_class: "ctypes.Structure".to_string(),
                 fields,
                 docstring: input.docs.map(|docs| docs.join("\n")),
             },

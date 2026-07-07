@@ -25,6 +25,15 @@ pub struct PythonBackend {
     pub indent_style: IndentStyle,
     /// The number of spaces per indentation level (when using spaces).
     pub indent_size: i32,
+    /// When `true`, a multi-line docstring's closing `"""` is written on its own
+    /// indented line (PEP 257 style) instead of being appended to the last
+    /// content line. Single-line docstrings are unaffected. Defaults to `false`
+    /// to preserve the compact appended form.
+    pub docstring_close_on_own_line: bool,
+    /// When `true`, a docstring whose content contains a backslash is rendered as
+    /// a raw string (`r"""…"""`), so an embedded escape sequence does not raise a
+    /// `SyntaxWarning` on import. Defaults to `false`.
+    pub docstring_raw_on_backslash: bool,
 }
 
 impl Default for PythonBackend {
@@ -33,6 +42,8 @@ impl Default for PythonBackend {
             new_line: NewLineStyle::LF,
             indent_style: IndentStyle::Spaces,
             indent_size: 4,
+            docstring_close_on_own_line: false,
+            docstring_raw_on_backslash: false,
         }
     }
 }
@@ -48,10 +59,17 @@ impl PythonBackend {
         indent_level: i32,
         out: &mut impl Write,
     ) -> Result<(), io::Error> {
+        let prefix: &str = if self.docstring_raw_on_backslash && docstring.contains('\\') {
+            "r"
+        } else {
+            ""
+        };
+        let mut multiline = false;
         for (index, line) in docstring.split('\n').enumerate() {
             if index == 0 {
-                write!(out, "{}\"\"\"{}", self.indent(indent_level), line)?;
+                write!(out, "{}{}\"\"\"{}", self.indent(indent_level), prefix, line)?;
             } else {
+                multiline = true;
                 write!(
                     out,
                     "{}{}{}",
@@ -61,7 +79,17 @@ impl PythonBackend {
                 )?;
             }
         }
-        write!(out, "\"\"\"{}", self.new_line.as_str())
+        if multiline && self.docstring_close_on_own_line {
+            write!(
+                out,
+                "{}{}\"\"\"{}",
+                self.new_line.as_str(),
+                self.indent(indent_level),
+                self.new_line.as_str()
+            )
+        } else {
+            write!(out, "\"\"\"{}", self.new_line.as_str())
+        }
     }
 
     /// Render a `def` (function or method) at the given indentation level.
@@ -198,9 +226,10 @@ impl StructRenderer for PythonBackend {
 
         write!(
             out,
-            "{}class {}(ctypes.Structure):{}",
+            "{}class {}({}):{}",
             self.indent(*indent_level),
             input.name,
+            input.base_class,
             self.new_line.as_str()
         )?;
 
