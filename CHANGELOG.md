@@ -4,6 +4,31 @@ All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.2] - 2026-07-07
+
+The ABI-mirror release: the byte-identity fixes and one new base-class field that
+let polyplug's second codegen pipeline (the `sdks/*/abi` mirrors) render its C++,
+C#, and Python declaration FORM through langprint. Every change is additive and
+defaults to preserving prior output, so 0.2.1 consumers are unaffected.
+
+### Added
+- **`PythonStruct.base_class`** — select `ctypes.Structure` (default) or `ctypes.Union`
+  for the emitted base, so a `ctypes.Union` reuses the identical `_fields_` FORM
+  (mirrors `PythonEnum.base_class`).
+- **`PythonBackend.docstring_close_on_own_line`** (default `false`) — write a multi-line
+  docstring's closing `"""` on its own PEP 257 indented line instead of appended to the
+  last content line. Single-line docstrings are unaffected.
+- **`PythonBackend.docstring_raw_on_backslash`** (default `false`) — emit `r"""…"""` when
+  the docstring contains a backslash, avoiding an import-time `SyntaxWarning`.
+
+### Fixed
+- **C++ blank doc line** — a blank `///`/`//` doc line renders as the bare marker with no
+  trailing space.
+- **C++ struct closing brace** — no spurious blank line before the closing `};` of a
+  field-only struct.
+- **C# unsafe struct** — `can_be_unsafe()` allows `unsafe struct` (needed for `fixed`
+  buffers); a blank C# doc line renders with no trailing space. Safe callers are unaffected.
+
 ## [0.2.1] - 2026-07-07
 
 The FORM-seam release: completes the declaration surface polyplugc drives to emit
