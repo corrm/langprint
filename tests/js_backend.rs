@@ -290,6 +290,7 @@ fn typescript_mode_emits_inline_param_and_return_types() {
     let options = JsFunctionRenderOptions {
         render_jsdoc: false,
         typescript: true,
+        verbatim_body: false,
     };
     let mut level = 0;
     let rendered = backend
@@ -327,6 +328,7 @@ fn typescript_mode_export_via_before_and_typed_default() {
     let options = JsFunctionRenderOptions {
         render_jsdoc: false,
         typescript: true,
+        verbatim_body: false,
     };
     let mut level = 0;
     let rendered = backend
@@ -367,6 +369,7 @@ fn typescript_flag_off_keeps_untyped_javascript_signature() {
     let options = JsFunctionRenderOptions {
         render_jsdoc: false,
         typescript: false,
+        verbatim_body: false,
     };
     let mut level = 0;
     let rendered = backend

@@ -135,9 +135,13 @@ impl JsBackend {
             None => write!(out, " {{}}{nl}"),
             Some(lines) => {
                 write!(out, " {{{nl}")?;
-                let body_level = indent_level + 1;
+                let body_indent: String = if options.verbatim_body {
+                    String::new()
+                } else {
+                    self.indent(indent_level + 1)
+                };
                 for line in lines {
-                    write!(out, "{}{line}{nl}", self.indent(body_level))?;
+                    write!(out, "{body_indent}{line}{nl}")?;
                 }
                 write!(out, "{}}}{nl}", self.indent(indent_level))
             }
@@ -292,6 +296,7 @@ impl JsBackend {
         let method_options = JsFunctionRenderOptions {
             render_jsdoc: options.render_jsdoc,
             typescript: options.typescript,
+            verbatim_body: false,
         };
         for (index, method) in input.methods.iter().enumerate() {
             if !input.fields.is_empty() || index > 0 {

@@ -236,6 +236,12 @@ pub struct JsFunctionRenderOptions {
     /// untyped JavaScript signature. Orthogonal to `render_jsdoc`; a TypeScript
     /// consumer typically sets `render_jsdoc = false`.
     pub typescript: bool,
+    /// Whether to emit each body line exactly as given, with no added
+    /// indentation. `false` (default) indents each line one level under the
+    /// signature. `true` makes the consumer own every byte of the body — the
+    /// correct seam for QuickJS output, which has no post-hoc formatter and whose
+    /// hand-baked nested indentation the re-indenting body renderer cannot match.
+    pub verbatim_body: bool,
 }
 
 impl Default for JsFunctionRenderOptions {
@@ -248,5 +254,6 @@ impl JsFunctionRenderOptions {
     pub const DEFAULT: Self = Self {
         render_jsdoc: true,
         typescript: false,
+        verbatim_body: false,
     };
 }
