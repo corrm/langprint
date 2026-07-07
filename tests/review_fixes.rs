@@ -129,7 +129,7 @@ fn cpp_class_default_base_is_private() {
     let out = cpp()
         .render_struct::<&str>(&s, None, None, None, &mut 0)
         .unwrap();
-    assert_eq!(out, "class D : private B\n{\n\n};\n");
+    assert_eq!(out, "class D : private B\n{\n};\n");
 }
 
 /// S7: C++ `Default` base access is `public` for a struct.
@@ -153,7 +153,7 @@ fn cpp_struct_default_base_is_public() {
     let out = cpp()
         .render_struct::<&str>(&s, None, None, None, &mut 0)
         .unwrap();
-    assert_eq!(out, "struct D : public B\n{\n\n};\n");
+    assert_eq!(out, "struct D : public B\n{\n};\n");
 }
 
 /// B2: an abstract IR value type cannot be a C# struct, so `from_ir` lowers it to a class (warned).

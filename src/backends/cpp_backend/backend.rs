@@ -1092,11 +1092,16 @@ impl StructRenderer for CppBackend {
         // Decrease indent after struct body
         *indent_level -= 1;
 
-        // Write struct body end
+        // Write struct body end. Fields and an empty body already end with a
+        // newline; only a trailing method declaration (rendered without one)
+        // needs a separating newline before the closing brace. Emitting that
+        // newline unconditionally left a spurious blank line before `};`.
+        if !input.methods.is_empty() {
+            write!(out, "{}", self.new_line.as_str())?;
+        }
         write!(
             out,
-            "{}{}}};{}",
-            self.new_line.as_str(),
+            "{}}};{}",
             indent(*indent_level, self.indent_size, self.indent_style),
             self.new_line.as_str()
         )?;
@@ -1260,6 +1265,30 @@ mod tests {
         assert!(
             !output.contains("/// \n"),
             "blank doc line must not carry a trailing space: {output}"
+        );
+    }
+
+    /// A field-only struct must place the closing `};` directly after the last
+    /// field — each field already ends with a newline, so an extra separating
+    /// newline would leave a spurious blank line. Consumers that need byte-exact
+    /// output (e.g. the polyplug ABI mirror) depend on this.
+    #[test]
+    fn struct_has_no_blank_line_before_closing_brace() {
+        let backend: CppBackend = test_backend();
+        let input: CppStruct = struct_with(None, vec![plain_field("x", "int", None)]);
+
+        let mut indent_level: i32 = 0;
+        let output: String = backend
+            .render_struct::<&str>(&input, None, None, None, &mut indent_level)
+            .expect("render struct");
+
+        assert!(
+            output.contains("int x;\n};"),
+            "closing brace must follow the last field directly: {output}"
+        );
+        assert!(
+            !output.contains("int x;\n\n};"),
+            "no blank line before closing brace: {output}"
         );
     }
 

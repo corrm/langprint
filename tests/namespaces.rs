@@ -124,7 +124,7 @@ fn cpp_namespace_renders() {
         .unwrap();
     assert_eq!(
         out,
-        "namespace sdk\n{\n    enum class Mode\n    {\n        A = 0,\n    };\n\n    void init();\n\n    namespace math\n    {\n        struct Vec2\n        {\n        public:\n            float x;\n\n        };\n    }\n}\n"
+        "namespace sdk\n{\n    enum class Mode\n    {\n        A = 0,\n    };\n\n    void init();\n\n    namespace math\n    {\n        struct Vec2\n        {\n        public:\n            float x;\n        };\n    }\n}\n"
     );
 }
 
