@@ -4,6 +4,37 @@ All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.1] - 2026-07-07
+
+The FORM-seam release: completes the declaration surface polyplugc drives to emit
+byte-identical guest/host bindings across all six backends. Every addition is
+additive and defaults to preserving prior output, so 0.2.0 consumers are unaffected.
+
+### Added
+- **Rust FORM completion** — `RustTrait`, extern-block, and function `comments`
+  rendering, so a consumer can drive full trait + `extern "C"` + ABI-wrapper form.
+- **`verbatim_body` render option** on the C++, C#, Python, Lua, and JS function/method
+  renderers (default `false`). When `true`, body lines are emitted exactly as given with
+  no re-indentation — the seam for formatter-less languages that must reproduce
+  hand-baked body whitespace byte-for-byte.
+- **JS class-member methods** — `JsBackend::render_method_to` renders `[static] name(params): ret { … }`
+  (no `function` keyword) for placement inside a hand-emitted `class { … }` body.
+- **JavaScript TypeScript mode** — `JsFunctionRenderOptions.typescript` (and the class
+  option) emit inline `param: T` / `): R` annotations from the existing
+  `type_doc`/`return_type` fields; default off leaves plain JS + JSDoc unchanged.
+- **Constant-table enum renderers** — `JsEnum` (`export const N = Object.freeze({…} as const)`
+  plus companion type) and `LuaEnum` (`local N = {…}`), each with an `EnumRenderer` impl.
+- **`PythonEnum.base_class`** — select `enum.IntEnum` / `enum.IntFlag` for the emitted base.
+- **Render toggles that default to prior output** — `attributes_before_derives`
+  (Rust `#[repr]` before `#[derive]`), `CSharpBackend.open_brace_on_new_line`
+  (default `true` = Allman), and `CppBackend.space_before_enum_base` (`enum class N : U`).
+- **`static` / `inline` on C++ free-function definitions** — previously emitted on
+  declarations only.
+
+### Fixed
+- **C++ virtual methods** — emit the real `virtual` keyword instead of a `/* virtual */`
+  comment, so pure-virtual `= 0` declarations compile. Added `impl Default for CppBackend`.
+
 ## [0.2.0] - 2026-06-26
 
 The emitter release: langprint becomes a complete source-declaration emitter for six
