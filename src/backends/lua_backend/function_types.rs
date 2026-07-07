@@ -146,6 +146,12 @@ pub struct LuaFunctionConversionOptions {
 pub struct LuaFunctionRenderOptions {
     /// Whether to render the doc comment.
     pub render_doc: bool,
+    /// Whether to emit each body line exactly as given, with no added
+    /// indentation. `false` (default) indents each line one level under the
+    /// `function` header. `true` makes the consumer own every byte of the body —
+    /// the correct seam for a language with no post-hoc formatter, where the
+    /// caller bakes exact whitespace (including nested blocks) into the body.
+    pub verbatim_body: bool,
 }
 
 impl Default for LuaFunctionRenderOptions {
@@ -155,5 +161,8 @@ impl Default for LuaFunctionRenderOptions {
 }
 
 impl LuaFunctionRenderOptions {
-    pub const DEFAULT: Self = Self { render_doc: true };
+    pub const DEFAULT: Self = Self {
+        render_doc: true,
+        verbatim_body: false,
+    };
 }

@@ -85,14 +85,13 @@ impl LuaBackend {
         )?;
 
         if let Some(lines) = &input.body {
+            let body_indent: String = if options.verbatim_body {
+                String::new()
+            } else {
+                self.indent(indent_level + 1)
+            };
             for line in lines {
-                write!(
-                    out,
-                    "{}{}{}",
-                    self.indent(indent_level + 1),
-                    line,
-                    self.new_line.as_str()
-                )?;
+                write!(out, "{}{}{}", body_indent, line, self.new_line.as_str())?;
             }
         }
 
