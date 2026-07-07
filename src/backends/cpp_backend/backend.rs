@@ -1127,35 +1127,16 @@ impl CppBackend {
         out: &mut impl Write,
     ) -> Result<(), io::Error> {
         for line in docs {
+            let pad: String = indent(*indent_level, self.indent_size, self.indent_style);
+            let nl: &str = self.new_line.as_str();
+            // A blank doc line emits only the comment marker — no trailing space.
+            // C++ has no formatter to strip it, so the marker must be exact.
+            let space: &str = if line.is_empty() { "" } else { " " };
             match self.docs_style {
-                DocsStyle::DoubleSlash => write!(
-                    out,
-                    "{}// {}{}",
-                    indent(*indent_level, self.indent_size, self.indent_style),
-                    line,
-                    self.new_line.as_str()
-                )?,
-                DocsStyle::TripleSlash => write!(
-                    out,
-                    "{}/// {}{}",
-                    indent(*indent_level, self.indent_size, self.indent_style),
-                    line,
-                    self.new_line.as_str()
-                )?,
-                DocsStyle::SlashAsterisk => write!(
-                    out,
-                    "{}/*{}*/{}",
-                    indent(*indent_level, self.indent_size, self.indent_style),
-                    line,
-                    self.new_line.as_str()
-                )?, // TODO: This is wrong and will print for every line
-                DocsStyle::SlashDoubleAsterisk => write!(
-                    out,
-                    "{}/**{}*/{}",
-                    indent(*indent_level, self.indent_size, self.indent_style),
-                    line,
-                    self.new_line.as_str()
-                )?, // TODO: This is wrong and will print for every line
+                DocsStyle::DoubleSlash => write!(out, "{pad}//{space}{line}{nl}")?,
+                DocsStyle::TripleSlash => write!(out, "{pad}///{space}{line}{nl}")?,
+                DocsStyle::SlashAsterisk => write!(out, "{pad}/*{line}*/{nl}")?, // TODO: This is wrong and will print for every line
+                DocsStyle::SlashDoubleAsterisk => write!(out, "{pad}/**{line}*/{nl}")?, // TODO: This is wrong and will print for every line
             };
         }
 
@@ -1247,6 +1228,38 @@ mod tests {
         assert!(
             output.contains("struct alignas(16) Foo"),
             "output was: {output}"
+        );
+    }
+
+    /// A blank line inside a doc comment must render as a bare marker (`///`)
+    /// with no trailing space — C++ has no formatter to strip it, so the marker
+    /// must be byte-exact for consumers that need deterministic output.
+    #[test]
+    fn blank_doc_line_has_no_trailing_space() {
+        let backend: CppBackend = CppBackend {
+            docs_style: DocsStyle::TripleSlash,
+            ..test_backend()
+        };
+        let mut input: CppStruct = struct_with(None, vec![plain_field("x", "int", None)]);
+        input.docs = Some(vec![
+            "first line".to_string(),
+            String::new(),
+            "third line".to_string(),
+        ]);
+
+        let mut indent_level: i32 = 0;
+        let output: String = backend
+            .render_struct::<&str>(&input, None, None, None, &mut indent_level)
+            .expect("render struct");
+
+        assert!(output.contains("/// first line"), "output was: {output}");
+        assert!(
+            output.contains("\n///\n"),
+            "blank doc line must be a bare `///`: {output}"
+        );
+        assert!(
+            !output.contains("/// \n"),
+            "blank doc line must not carry a trailing space: {output}"
         );
     }
 
