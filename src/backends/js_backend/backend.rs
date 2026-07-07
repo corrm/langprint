@@ -245,6 +245,32 @@ impl FunctionRenderer for JsBackend {
 }
 
 impl JsBackend {
+    /// Render a single class-member method (`[static] name(params): ret { … }`,
+    /// no `function` keyword) to a writer. Unlike [`FunctionRenderer::render_function_to`]
+    /// (which always emits a free `function`), this renders the method form so a
+    /// consumer can place it inside a hand-emitted `class { … }` body.
+    pub fn render_method_to<S: AsRef<str>>(
+        &self,
+        input: &JsFunction,
+        before: Option<S>,
+        after: Option<S>,
+        options: Option<&JsFunctionRenderOptions>,
+        indent_level: &mut i32,
+        out: &mut impl Write,
+    ) -> Result<(), io::Error> {
+        let binding = JsFunctionRenderOptions::default();
+        let options: &JsFunctionRenderOptions = options.unwrap_or(&binding);
+
+        if let Some(before) = before {
+            write!(out, "{}", before.as_ref())?;
+        }
+        self.write_function(input, options, true, *indent_level, out)?;
+        if let Some(after) = after {
+            write!(out, "{}", after.as_ref())?;
+        }
+        Ok(())
+    }
+
     /// Render a `class` (`class Name {` / `class Name extends Base {`) to a writer.
     ///
     /// JavaScript classes are not one of the shared renderer traits' shapes (they
