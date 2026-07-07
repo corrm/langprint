@@ -52,10 +52,13 @@ impl CSharpTypeKind {
         matches!(self, CSharpTypeKind::Class | CSharpTypeKind::Record)
     }
 
-    /// Whether the `unsafe` modifier is valid for this kind. polyplugc keeps structs safe
-    /// by design, so `unsafe` applies to every kind except `struct`.
+    /// Whether the `unsafe` modifier is valid for this kind. `unsafe` is legal on
+    /// every C# type kind, including `unsafe struct` — required for structs that
+    /// hold `fixed` buffers (e.g. an ABI byte-array mirror) — so all kinds may
+    /// carry it. Callers that want a safe struct simply leave `is_unsafe` false.
     pub fn can_be_unsafe(&self) -> bool {
-        !matches!(self, CSharpTypeKind::Struct)
+        let _ = self;
+        true
     }
 }
 
@@ -74,7 +77,8 @@ pub struct CSharpType {
     pub is_sealed: bool,
     /// Whether the type is `static`.
     pub is_static: bool,
-    /// Whether the type is `unsafe`. Never valid on a `struct`; see [`CSharpTypeKind::can_be_unsafe`].
+    /// Whether the type is `unsafe`. Valid on every kind, including `unsafe struct`
+    /// (see [`CSharpTypeKind::can_be_unsafe`]).
     pub is_unsafe: bool,
     /// Whether the type is `partial`.
     pub is_partial: bool,

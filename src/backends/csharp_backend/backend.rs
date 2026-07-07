@@ -72,10 +72,14 @@ impl CSharpBackend {
         out: &mut impl Write,
     ) -> Result<(), io::Error> {
         for line in docs {
+            // A blank doc line emits only the `///` marker — no trailing space.
+            // C# has no formatter to strip it, so the marker must be exact.
+            let space: &str = if line.is_empty() { "" } else { " " };
             write!(
                 out,
-                "{}/// {}{}",
+                "{}///{}{}{}",
                 self.indent(indent_level),
+                space,
                 line,
                 self.new_line.as_str()
             )?;

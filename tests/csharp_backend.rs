@@ -380,13 +380,31 @@ fn renders_unsafe_class() {
 }
 
 #[test]
-fn unsafe_struct_stays_safe() {
+fn renders_unsafe_struct() {
+    // `unsafe struct` is valid C# and required for structs with `fixed` buffers.
     let mut ty = empty_type(CSharpTypeKind::Struct, "Handle");
     ty.is_unsafe = true;
 
     let rendered = backend()
         .render_struct::<&str>(&ty, None, None, None, &mut 0)
         .unwrap();
-    assert!(!rendered.contains("unsafe"));
-    assert!(rendered.contains("struct Handle"));
+    assert!(rendered.contains("public unsafe struct Handle"));
+}
+
+#[test]
+fn blank_doc_line_has_no_trailing_space() {
+    let mut ty = empty_type(CSharpTypeKind::Struct, "Doced");
+    ty.docs = Some(vec![
+        "First line.".to_string(),
+        String::new(),
+        "Third line.".to_string(),
+    ]);
+
+    let rendered = backend()
+        .render_struct::<&str>(&ty, None, None, None, &mut 0)
+        .unwrap();
+    assert!(rendered.contains("/// First line.\n"));
+    // A blank doc line renders as a bare `///` — never `/// ` with a trailing space.
+    assert!(rendered.contains("///\n"));
+    assert!(!rendered.contains("/// \n"));
 }
