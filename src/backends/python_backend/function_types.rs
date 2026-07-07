@@ -217,6 +217,12 @@ pub struct PythonFunctionConversionOptions {
 pub struct PythonFunctionRenderOptions {
     /// Whether to render the docstring.
     pub render_docstring: bool,
+    /// Whether to emit each body line exactly as given, with no added
+    /// indentation. `false` (default) indents each line one level under the
+    /// `def`. `true` makes the consumer own every byte of the body — the correct
+    /// seam for a language with no post-hoc formatter, where the caller bakes
+    /// exact whitespace (including nested blocks and any docstring) into the body.
+    pub verbatim_body: bool,
 }
 
 impl Default for PythonFunctionRenderOptions {
@@ -228,5 +234,6 @@ impl Default for PythonFunctionRenderOptions {
 impl PythonFunctionRenderOptions {
     pub const DEFAULT: Self = Self {
         render_docstring: true,
+        verbatim_body: false,
     };
 }
