@@ -271,8 +271,8 @@ They are preserved in two tiers (`langprint::ir::{Annotation, RawAttribute}`):
 
 Each backend can track and render its own imports — deduplicated and deterministically ordered — in
 native syntax: C++ `#include`, C# `using`, Rust `use`, Python `import`/`from … import`, Lua
-`require`, JS `import`. An `ImportSet` collects entries; an `ImportMap` (built-in + extensible, like
-`TypeMap`) resolves a referenced type to its import so it appears automatically:
+`require`, JS/TS `import`. An `ImportSet` collects entries; an `ImportMap` (built-in + extensible,
+like `TypeMap`) resolves a referenced type to its import so it appears automatically:
 
 ```rust
 use langprint::{ImportMap, ImportSet, TargetLanguage};
@@ -284,6 +284,49 @@ let header = imports.render();
 ```
 
 Import rendering is additive: a backend that registers nothing renders exactly as before.
+
+### `ImportEntry` variants
+
+Each entry carries exactly what one language's syntax needs. `render()` switches on the target
+language and reads only the variants it uses:
+
+| Variant | Language | Renders |
+|---|---|---|
+| `Include { header, system }` | C++ | `#include <h>` / `#include "h"` |
+| `Using(ns)` | C# | `using ns;` |
+| `Use(path)` | Rust | `use path;` |
+| `PyImport(module)` | Python | `import module` |
+| `PyFrom { module, symbol }` | Python | `from module import symbol` |
+| `Require { name, module }` | Lua | `local name = require("module")` |
+| `JsDefault { name, source }` | JS/TS | `import name from 'source'` |
+| `JsNamed { name, source }` | JS/TS | `import { name } from 'source'` |
+| `JsTypeNamed { name, source }` | TS | `import type { name } from 'source'` |
+| `JsTypeNamespace { alias, source }` | TS | `import type * as alias from 'source'` |
+| `JsReexport { name, source }` | JS/TS | `export { name } from 'source'` |
+
+### Grouping and ordering
+
+`render()` emits each language's idiomatic order, and — crucially — **merges entries that share a
+target** onto a single line:
+
+- **Python** — `from __future__ import …` is emitted first (Python requires it ahead of every
+  statement), then `import x` lines, then `from x import …` lines. Multiple `PyFrom` entries with the
+  same module collapse to one `from module import a, b, c` (symbols sorted).
+- **JS/TS** — a fixed kind order (default, named, type-named, `type * as`, re-export). Multiple
+  `JsNamed` / `JsTypeNamed` / `JsReexport` entries sharing a `source` collapse to one
+  `import { a, b } from 'source'` (or `import type { … }` / `export { … } from`), names sorted.
+- **C++** — system `<…>` includes before local `"…"`, alphabetical within each.
+- **C# / Rust / Lua** — alphabetical by namespace / path / binding name.
+
+```rust
+let mut ts = ImportSet::new(TargetLanguage::Js);
+ts.add(ImportEntry::JsNamed { name: "b".into(), source: "./m".into() });
+ts.add(ImportEntry::JsNamed { name: "a".into(), source: "./m".into() });
+ts.add(ImportEntry::JsTypeNamed { name: "T".into(), source: "./m".into() });
+// import { a, b } from './m';
+// import type { T } from './m';
+assert_eq!(ts.render(), "import { a, b } from './m';\nimport type { T } from './m';\n");
+```
 
 ## Extension hooks
 

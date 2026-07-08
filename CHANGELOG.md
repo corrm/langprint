@@ -4,6 +4,30 @@ All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.3] - 2026-07-08
+
+The import-model release: extends `ImportSet` so a consumer can express the
+import shapes real generators emit — TypeScript type-only imports, namespace
+imports, and re-exports — and so multi-symbol imports from one target collapse
+onto a single line. Every change is additive and preserves prior single-symbol
+output, so 0.2.2 consumers are unaffected.
+
+### Added
+- **`ImportEntry::JsTypeNamed { name, source }`** — a TypeScript type-only named
+  import, `import type { name } from 'source'`. Groups by `source` like `JsNamed`.
+- **`ImportEntry::JsTypeNamespace { alias, source }`** — a TypeScript type-only
+  namespace import, `import type * as alias from 'source'`.
+- **`ImportEntry::JsReexport { name, source }`** — a named re-export,
+  `export { name } from 'source'`. Groups by `source`.
+
+### Changed
+- **Python `render()` puts `from __future__ import …` first**, ahead of every
+  `import`, as Python requires; its symbols merge onto one line.
+- **Multi-symbol merge** — multiple `PyFrom` entries sharing a module now render
+  as one `from module import a, b, c` (symbols sorted) instead of one line each;
+  the same merge applies to JS `JsNamed` / `JsTypeNamed` / `JsReexport` entries
+  that share a `source`. Single-symbol inputs render exactly as in 0.2.2.
+
 ## [0.2.2] - 2026-07-07
 
 The ABI-mirror release: the byte-identity fixes and one new base-class field that
