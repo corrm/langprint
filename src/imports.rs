@@ -12,7 +12,7 @@
 //!
 //! Rendering is additive: an [`ImportSet`] with no entries renders to an empty string.
 
-use std::collections::{BTreeSet, HashMap};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 
 use crate::type_map::TargetLanguage;
 
@@ -57,12 +57,59 @@ pub enum ImportEntry {
         source: String,
     },
     /// A JS named import: `import {{ {name} }} from '{source}'`.
+    ///
+    /// Multiple `JsNamed` entries sharing a `source` render as one grouped
+    /// `import {{ a, b, c }} from '{source}'` line (names sorted).
     JsNamed {
         /// The imported binding name.
         name: String,
         /// The source module specifier.
         source: String,
     },
+    /// A TypeScript type-only named import: `import type {{ {name} }} from '{source}'`.
+    ///
+    /// Groups by `source` exactly like [`JsNamed`](ImportEntry::JsNamed), but on
+    /// the `import type` line so the binding is erased at emit time.
+    JsTypeNamed {
+        /// The imported type name.
+        name: String,
+        /// The source module specifier.
+        source: String,
+    },
+    /// A TypeScript type-only namespace import: `import type * as {alias} from '{source}'`.
+    JsTypeNamespace {
+        /// The local namespace alias bound to the module's types.
+        alias: String,
+        /// The source module specifier.
+        source: String,
+    },
+    /// A JS named re-export: `export {{ {name} }} from '{source}'`.
+    ///
+    /// Groups by `source` like [`JsNamed`](ImportEntry::JsNamed).
+    JsReexport {
+        /// The re-exported binding name.
+        name: String,
+        /// The source module specifier.
+        source: String,
+    },
+}
+
+/// Collect `(name, source)` pairs selected from `entries` into a source-keyed,
+/// name-sorted map so multiple single-symbol entries render as one grouped line.
+fn group_by_source(
+    entries: &BTreeSet<ImportEntry>,
+    select: impl Fn(&ImportEntry) -> Option<(&str, &str)>,
+) -> BTreeMap<String, BTreeSet<String>> {
+    let mut grouped: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
+    for entry in entries {
+        if let Some((name, source)) = select(entry) {
+            grouped
+                .entry(source.to_string())
+                .or_default()
+                .insert(name.to_string());
+        }
+    }
+    grouped
 }
 
 /// Accumulates [`ImportEntry`] values for one target language and renders them in native syntax.
@@ -118,10 +165,14 @@ impl ImportSet {
     /// * C++ — system `#include <...>` first, then local `#include "..."`; alphabetical within each.
     /// * C# — `using X;` alphabetical by namespace.
     /// * Rust — `use a::b::C;` alphabetical by path.
-    /// * Python — `import x` lines first, then `from x import y`; alphabetical within each group.
+    /// * Python — `from __future__ import …` first (its symbols merged onto one line), then
+    ///   `import x` lines, then `from x import a, b` lines; modules alphabetical, and symbols of
+    ///   the same module merged onto one alphabetical `from` line.
     /// * Lua — `local m = require("m")` alphabetical by binding name.
-    /// * JS — `import ... from '...'` alphabetical by the [`ImportEntry`] ordering (default before
-    ///   named for a shared name, then by source).
+    /// * JS — a fixed kind order: default `import x from '…'`, grouped named `import { a, b } from
+    ///   '…'`, grouped type-only `import type { a, b } from '…'`, `import type * as ns from '…'`,
+    ///   then grouped `export { a, b } from '…'` re-exports. Entries sharing a source merge onto one
+    ///   line; sources alphabetical, names alphabetical within a line.
     pub fn render(&self) -> String {
         let mut lines: Vec<String> = Vec::with_capacity(self.entries.len());
         match self.language {
@@ -156,15 +207,36 @@ impl ImportSet {
                 }
             }
             TargetLanguage::Python => {
+                // `from __future__ import …` is special: Python requires it to be
+                // the first statement, ahead of every `import`. Collect its symbols
+                // separately and emit them before anything else.
+                let mut future: BTreeSet<&str> = BTreeSet::new();
+                let mut plain: BTreeSet<&str> = BTreeSet::new();
+                let mut froms: BTreeMap<&str, BTreeSet<&str>> = BTreeMap::new();
                 for entry in &self.entries {
-                    if let ImportEntry::PyImport(module) = entry {
-                        lines.push(format!("import {module}"));
+                    match entry {
+                        ImportEntry::PyImport(module) => {
+                            plain.insert(module.as_str());
+                        }
+                        ImportEntry::PyFrom { module, symbol } if module == "__future__" => {
+                            future.insert(symbol.as_str());
+                        }
+                        ImportEntry::PyFrom { module, symbol } => {
+                            froms.entry(module.as_str()).or_default().insert(symbol);
+                        }
+                        _ => {}
                     }
                 }
-                for entry in &self.entries {
-                    if let ImportEntry::PyFrom { module, symbol } = entry {
-                        lines.push(format!("from {module} import {symbol}"));
-                    }
+                if !future.is_empty() {
+                    let symbols: Vec<&str> = future.into_iter().collect();
+                    lines.push(format!("from __future__ import {}", symbols.join(", ")));
+                }
+                for module in &plain {
+                    lines.push(format!("import {module}"));
+                }
+                for (module, symbols) in &froms {
+                    let symbols: Vec<&str> = symbols.iter().copied().collect();
+                    lines.push(format!("from {module} import {}", symbols.join(", ")));
                 }
             }
             TargetLanguage::Lua => {
@@ -175,16 +247,49 @@ impl ImportSet {
                 }
             }
             TargetLanguage::Js => {
+                // Emit in a fixed kind order: default value imports, grouped named
+                // value imports, grouped type-only named imports, type namespace
+                // imports, then grouped named re-exports. Named/type-named/re-export
+                // entries sharing a source collapse to one `{ a, b }` line.
                 for entry in &self.entries {
-                    match entry {
-                        ImportEntry::JsDefault { name, source } => {
-                            lines.push(format!("import {name} from '{source}';"));
-                        }
-                        ImportEntry::JsNamed { name, source } => {
-                            lines.push(format!("import {{ {name} }} from '{source}';"));
-                        }
-                        _ => {}
+                    if let ImportEntry::JsDefault { name, source } = entry {
+                        lines.push(format!("import {name} from '{source}';"));
                     }
+                }
+                for (source, names) in group_by_source(&self.entries, |e| match e {
+                    ImportEntry::JsNamed { name, source } => Some((name, source)),
+                    _ => None,
+                }) {
+                    let names: Vec<&str> = names.iter().map(String::as_str).collect();
+                    lines.push(format!(
+                        "import {{ {} }} from '{source}';",
+                        names.join(", ")
+                    ));
+                }
+                for (source, names) in group_by_source(&self.entries, |e| match e {
+                    ImportEntry::JsTypeNamed { name, source } => Some((name, source)),
+                    _ => None,
+                }) {
+                    let names: Vec<&str> = names.iter().map(String::as_str).collect();
+                    lines.push(format!(
+                        "import type {{ {} }} from '{source}';",
+                        names.join(", ")
+                    ));
+                }
+                for entry in &self.entries {
+                    if let ImportEntry::JsTypeNamespace { alias, source } = entry {
+                        lines.push(format!("import type * as {alias} from '{source}';"));
+                    }
+                }
+                for (source, names) in group_by_source(&self.entries, |e| match e {
+                    ImportEntry::JsReexport { name, source } => Some((name, source)),
+                    _ => None,
+                }) {
+                    let names: Vec<&str> = names.iter().map(String::as_str).collect();
+                    lines.push(format!(
+                        "export {{ {} }} from '{source}';",
+                        names.join(", ")
+                    ));
                 }
             }
         }

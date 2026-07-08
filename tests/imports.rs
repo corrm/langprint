@@ -123,6 +123,52 @@ fn python_auto_from_type_ref() {
     assert_eq!(set.render(), "import ctypes\nfrom enum import IntEnum\n");
 }
 
+#[test]
+fn python_future_first_then_imports_then_grouped_froms() {
+    let mut set = ImportSet::new(TargetLanguage::Python);
+    // Added out of order to prove __future__ leads regardless of insertion order.
+    set.add(ImportEntry::PyFrom {
+        module: "typing".to_string(),
+        symbol: "Optional".to_string(),
+    });
+    set.add(ImportEntry::PyImport("ctypes".to_string()));
+    set.add(ImportEntry::PyFrom {
+        module: "__future__".to_string(),
+        symbol: "annotations".to_string(),
+    });
+    set.add(ImportEntry::PyFrom {
+        module: "typing".to_string(),
+        symbol: "Any".to_string(),
+    });
+    set.add(ImportEntry::PyFrom {
+        module: "typing".to_string(),
+        symbol: "Callable".to_string(),
+    });
+    assert_eq!(
+        set.render(),
+        "from __future__ import annotations\n\
+         import ctypes\n\
+         from typing import Any, Callable, Optional\n"
+    );
+}
+
+#[test]
+fn python_multi_symbol_from_merges_onto_one_line() {
+    let mut set = ImportSet::new(TargetLanguage::Python);
+    set.add(ImportEntry::PyFrom {
+        module: "polyplug_abi".to_string(),
+        symbol: "StringView".to_string(),
+    });
+    set.add(ImportEntry::PyFrom {
+        module: "polyplug_abi".to_string(),
+        symbol: "Buffer".to_string(),
+    });
+    assert_eq!(
+        set.render(),
+        "from polyplug_abi import Buffer, StringView\n"
+    );
+}
+
 // ---------- Lua ----------
 
 #[test]
@@ -173,6 +219,56 @@ fn js_named_and_default_syntax() {
         source: "c".to_string(),
     });
     assert_eq!(set.render(), "import C from 'c';\nimport { A } from 'b';\n");
+}
+
+#[test]
+fn js_named_multi_symbol_merges_and_kinds_order() {
+    let mut set = ImportSet::new(TargetLanguage::Js);
+    set.add(ImportEntry::JsNamed {
+        name: "buildHostContractInterface".to_string(),
+        source: "polyplug".to_string(),
+    });
+    set.add(ImportEntry::JsTypeNamed {
+        name: "Runtime".to_string(),
+        source: "polyplug".to_string(),
+    });
+    set.add(ImportEntry::JsTypeNamespace {
+        alias: "contracts".to_string(),
+        source: "./contracts".to_string(),
+    });
+    assert_eq!(
+        set.render(),
+        "import { buildHostContractInterface } from 'polyplug';\n\
+         import type { Runtime } from 'polyplug';\n\
+         import type * as contracts from './contracts';\n"
+    );
+}
+
+#[test]
+fn js_named_group_by_source_sorted() {
+    let mut set = ImportSet::new(TargetLanguage::Js);
+    set.add(ImportEntry::JsNamed {
+        name: "B_INTERFACE".to_string(),
+        source: "./contracts".to_string(),
+    });
+    set.add(ImportEntry::JsNamed {
+        name: "A_INTERFACE".to_string(),
+        source: "./contracts".to_string(),
+    });
+    assert_eq!(
+        set.render(),
+        "import { A_INTERFACE, B_INTERFACE } from './contracts';\n"
+    );
+}
+
+#[test]
+fn js_reexport_syntax() {
+    let mut set = ImportSet::new(TargetLanguage::Js);
+    set.add(ImportEntry::JsReexport {
+        name: "polyplug_init".to_string(),
+        source: "./init".to_string(),
+    });
+    assert_eq!(set.render(), "export { polyplug_init } from './init';\n");
 }
 
 #[test]
