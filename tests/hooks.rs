@@ -50,6 +50,7 @@ fn ir_struct(name: &str) -> LanguageStruct {
 
 fn ir_function(name: &str) -> LanguageFunction {
     LanguageFunction {
+        return_raw_attributes: Vec::new(),
         name: name.to_string(),
         visibility: Visibility::Public,
         parameters: Vec::new(),
@@ -83,12 +84,14 @@ fn native_struct(name: &str) -> RustStruct {
 
 fn native_function(name: &str) -> RustFunction {
     RustFunction {
+        return_attributes: Vec::new(),
         name: name.to_string(),
         visibility: RustVisibility::Pub,
         self_kind: RustSelfKind::None,
         parameters: vec![RustParameter {
             name: "x".to_string(),
             param_type: "i32".to_string(),
+            attributes: Vec::new(),
         }],
         generic_args: Vec::new(),
         return_type: None,
@@ -111,6 +114,7 @@ fn ir_enum(name: &str) -> LanguageEnum {
             name: "A".to_string(),
             value: EnumVariantValue::NoValue,
             docs: None,
+            raw_attributes: Vec::new(),
         }],
         underlying_type: None,
         docs: None,

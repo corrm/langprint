@@ -28,6 +28,7 @@ impl BackendItem for CppParameter {
             name: self.name,
             param_type: self.param_type,
             default_value: self.default_value,
+            raw_attributes: Vec::new(),
         })
     }
 
@@ -175,6 +176,7 @@ impl BackendItem for CppFunction {
             docs: self.docs,
             annotations: Vec::new(),
             raw_attributes: Vec::new(),
+            return_raw_attributes: Vec::new(),
         };
         if let Some(hooks) = options.and_then(|options| options.config.hooks.as_ref()) {
             hooks.after_to_ir_function(&mut lang_function);

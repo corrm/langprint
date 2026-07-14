@@ -255,6 +255,7 @@ fn from_ir_defaults_enum_to_scoped() {
             name: "None".to_string(),
             value: EnumVariantValue::Value("0".to_string()),
             docs: None,
+            raw_attributes: Vec::new(),
         }],
         underlying_type: None,
         docs: None,

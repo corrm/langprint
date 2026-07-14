@@ -297,6 +297,7 @@ fn cpp_enum_keyword_name_is_escaped() {
             name: "default".to_string(),
             value: EnumVariantValue::NoValue,
             docs: None,
+            raw_attributes: Vec::new(),
         }],
         underlying_type: None,
         docs: None,

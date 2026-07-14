@@ -88,6 +88,7 @@ impl BackendItem for CppNamespace {
             functions: namespace_items_to_ir(self.functions, &mut result_log),
             namespaces: namespace_items_to_ir(self.namespaces, &mut result_log),
             docs: None,
+            raw_attributes: Vec::new(),
         };
 
         ConversionResult::with_log(language_namespace, result_log)

@@ -1,6 +1,6 @@
 use super::{
     LanguageConstant, LanguageDefinition, LanguageEnum, LanguageFunction, LanguageStruct,
-    Visibility,
+    RawAttribute, Visibility,
 };
 
 /// Represents a namespace/module in a language-agnostic way.
@@ -24,4 +24,9 @@ pub struct LanguageNamespace {
     pub namespaces: Option<Vec<LanguageNamespace>>,
     /// Optional documentation for the namespace.
     pub docs: Option<Vec<String>>,
+    /// Opaque source-tagged attributes applied to this module/namespace.
+    ///
+    /// Each entry is an inner attribute value. The target renderer owns the
+    /// surrounding syntax.
+    pub raw_attributes: Vec<RawAttribute>,
 }

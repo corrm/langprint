@@ -331,11 +331,13 @@ fn from_ir_warns_on_data_carrying_enum_variant() {
                 name: "None".to_string(),
                 value: EnumVariantValue::NoValue,
                 docs: None,
+                raw_attributes: Vec::new(),
             },
             EnumVariant {
                 name: "Circle".to_string(),
                 value: EnumVariantValue::Tuple(vec!["float".to_string()]),
                 docs: None,
+                raw_attributes: Vec::new(),
             },
         ],
         underlying_type: None,

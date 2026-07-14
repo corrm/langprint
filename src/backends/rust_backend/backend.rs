@@ -131,6 +131,7 @@ impl RustBackend {
         }
         self.write_comments(&input.comments, indent_level, out)?;
         if options.render_attributes {
+            self.write_attributes(&input.return_attributes, indent_level, out)?;
             self.write_attributes(&input.attributes, indent_level, out)?;
         }
 
@@ -167,6 +168,9 @@ impl RustBackend {
         for param in &input.parameters {
             if !first {
                 write!(out, ", ")?;
+            }
+            for attribute in &param.attributes {
+                write!(out, "#[{}] ", attribute)?;
             }
             write!(out, "{}: {}", param.name, param.param_type)?;
             first = false;

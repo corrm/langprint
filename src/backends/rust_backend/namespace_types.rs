@@ -92,6 +92,7 @@ impl BackendItem for RustModule {
             functions: module_items_to_ir(self.functions, &mut log),
             namespaces: module_items_to_ir(self.modules, &mut log),
             docs: self.docs,
+            raw_attributes: Vec::new(),
         };
 
         ConversionResult::with_log(language_namespace, log)

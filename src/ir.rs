@@ -16,7 +16,9 @@ mod language_namespace;
 mod language_struct;
 mod visibility;
 
-pub use annotation::{Annotation, AnnotationKind, RawAttribute};
+pub use annotation::{
+    Annotation, AnnotationKind, AttributeSite, RawAttribute, render_raw_attributes,
+};
 pub use language_constant::LanguageConstant;
 pub use language_definition::LanguageDefinition;
 pub use language_enum::{EnumVariant, EnumVariantValue, LanguageEnum};

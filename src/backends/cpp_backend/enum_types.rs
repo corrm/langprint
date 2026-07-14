@@ -29,6 +29,7 @@ impl BackendItem for CppEnumVariant {
                 name: self.name,
                 value: EnumVariantValue::Value(value),
                 docs: self.docs,
+                raw_attributes: Vec::new(),
             });
         }
 
@@ -36,6 +37,7 @@ impl BackendItem for CppEnumVariant {
             name: self.name,
             value: EnumVariantValue::NoValue,
             docs: self.docs,
+            raw_attributes: Vec::new(),
         })
     }
 

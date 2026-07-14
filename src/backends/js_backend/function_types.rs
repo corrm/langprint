@@ -33,6 +33,7 @@ impl BackendItem for JsParameter {
             name: self.name,
             param_type: self.type_doc.unwrap_or_default(),
             default_value: self.default,
+            raw_attributes: Vec::new(),
         })
     }
 
@@ -129,6 +130,7 @@ impl BackendItem for JsFunction {
             docs: self.doc.map(|doc| vec![doc]),
             annotations: Vec::new(),
             raw_attributes: Vec::new(),
+            return_raw_attributes: Vec::new(),
         };
         if let Some(hooks) = options.and_then(|options| options.config.hooks.as_ref()) {
             hooks.after_to_ir_function(&mut ir);

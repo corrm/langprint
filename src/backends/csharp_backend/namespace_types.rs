@@ -93,6 +93,7 @@ impl BackendItem for CSharpNamespace {
             functions: None,
             namespaces: items_to_ir(self.namespaces, &mut log),
             docs: self.docs,
+            raw_attributes: Vec::new(),
         };
         ConversionResult::with_log(language_namespace, log)
     }

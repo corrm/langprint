@@ -27,6 +27,7 @@ fn cpp() -> CppBackend {
 
 fn rust_function(name: &str, self_kind: RustSelfKind, body: Option<Vec<String>>) -> RustFunction {
     RustFunction {
+        return_attributes: Vec::new(),
         name: name.to_string(),
         visibility: RustVisibility::Pub,
         self_kind,

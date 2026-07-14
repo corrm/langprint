@@ -51,6 +51,7 @@ impl BackendItem for JsEnum {
                 name: member.name,
                 value: EnumVariantValue::Value(member.value),
                 docs: None,
+                raw_attributes: Vec::new(),
             })
             .collect();
 

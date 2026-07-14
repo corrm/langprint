@@ -127,6 +127,7 @@ fn renders_data_carrying_enum() {
 fn renders_free_function() {
     let backend = RustBackend::default();
     let function = RustFunction {
+        return_attributes: Vec::new(),
         name: "add".to_string(),
         visibility: RustVisibility::Pub,
         self_kind: RustSelfKind::None,
@@ -134,10 +135,12 @@ fn renders_free_function() {
             RustParameter {
                 name: "a".to_string(),
                 param_type: "i32".to_string(),
+                attributes: Vec::new(),
             },
             RustParameter {
                 name: "b".to_string(),
                 param_type: "i32".to_string(),
+                attributes: Vec::new(),
             },
         ],
         generic_args: vec![],
@@ -167,6 +170,7 @@ fn renders_free_function() {
 fn renders_unsafe_extern_c_function() {
     let backend = RustBackend::default();
     let function = RustFunction {
+        return_attributes: Vec::new(),
         name: "polyplug_init".to_string(),
         visibility: RustVisibility::Pub,
         self_kind: RustSelfKind::None,
@@ -195,6 +199,7 @@ fn renders_unsafe_extern_c_function() {
 fn non_extern_function_omits_extern_specifier() {
     let backend = RustBackend::default();
     let function = RustFunction {
+        return_attributes: Vec::new(),
         name: "plain".to_string(),
         visibility: RustVisibility::Pub,
         self_kind: RustSelfKind::None,
@@ -224,12 +229,14 @@ fn non_extern_function_omits_extern_specifier() {
 fn renders_declaration_only_function_when_body_is_none() {
     let backend = RustBackend::default();
     let function = RustFunction {
+        return_attributes: Vec::new(),
         name: "callback".to_string(),
         visibility: RustVisibility::Pub,
         self_kind: RustSelfKind::None,
         parameters: vec![RustParameter {
             name: "x".to_string(),
             param_type: "i32".to_string(),
+            attributes: Vec::new(),
         }],
         generic_args: vec![],
         return_type: Some("i32".to_string()),
@@ -285,6 +292,7 @@ fn renders_struct_with_impl_block() {
             parameters: vec![RustParameter {
                 name: "amount".to_string(),
                 param_type: "f32".to_string(),
+                attributes: Vec::new(),
             }],
             generic_args: vec![],
             return_type: None,
@@ -296,6 +304,7 @@ fn renders_struct_with_impl_block() {
             attributes: vec![],
             docs: None,
             comments: Vec::new(),
+            return_attributes: Vec::new(),
         }],
         derives: vec!["Debug".to_string()],
         attributes: vec!["repr(C)".to_string()],
@@ -416,6 +425,7 @@ fn parameter_default_value_is_dropped_with_warning() {
     use langprint::ir::LanguageFunctionParameter;
 
     let param = LanguageFunctionParameter {
+        raw_attributes: Vec::new(),
         name: "count".to_string(),
         param_type: "i32".to_string(),
         default_value: Some("0".to_string()),

@@ -34,6 +34,7 @@ unsafe extern \"Rust\" {
 
 fn param(name: &str, ty: &str) -> RustParameter {
     RustParameter {
+        attributes: Vec::new(),
         name: name.to_string(),
         param_type: ty.to_string(),
     }
@@ -47,6 +48,7 @@ fn signature(
     docs: Option<Vec<String>>,
 ) -> RustFunction {
     RustFunction {
+        return_attributes: Vec::new(),
         name: name.to_string(),
         visibility: RustVisibility::Private,
         self_kind,
@@ -135,6 +137,7 @@ fn empty_trait_renders_unit_block() {
 #[test]
 fn bare_line_comment_renders_between_docs_and_attributes() {
     let func = RustFunction {
+        return_attributes: Vec::new(),
         comments: vec!["SAFETY: caller upholds the invariant.".to_string()],
         attributes: vec!["inline".to_string()],
         docs: Some(vec!["A documented function.".to_string()]),
@@ -152,6 +155,7 @@ fn bare_line_comment_renders_between_docs_and_attributes() {
 #[test]
 fn bare_line_comments_warn_when_lowered_to_ir() {
     let func = RustFunction {
+        return_attributes: Vec::new(),
         comments: vec!["a line comment".to_string()],
         ..signature("f", RustSelfKind::None, Vec::new(), None, None)
     };

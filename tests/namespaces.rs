@@ -155,6 +155,7 @@ fn rust_module_renders() {
             parameters: vec![],
             generic_args: vec![],
             return_type: None,
+            return_attributes: Vec::new(),
             is_unsafe: false,
             is_async: false,
             is_const: false,

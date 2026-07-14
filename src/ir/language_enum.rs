@@ -6,6 +6,11 @@ pub struct EnumVariant {
     pub name: String,
     pub value: EnumVariantValue,
     pub docs: Option<Vec<String>>,
+    /// Opaque source-tagged attributes applied to this variant.
+    ///
+    /// Each entry is an inner attribute value. The target renderer owns the
+    /// surrounding syntax.
+    pub raw_attributes: Vec<RawAttribute>,
 }
 
 /// Represents different kinds of enum variants.

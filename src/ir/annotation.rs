@@ -73,3 +73,63 @@ pub struct RawAttribute {
     /// The attribute body, verbatim, in the source language's syntax.
     pub text: String,
 }
+
+/// A declaration attachment point for an attribute list.
+///
+/// Backends own the concrete delimiters. Sites that have no native attribute
+/// grammar use the backend's identity-preserving metadata form.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AttributeSite {
+    Root,
+    Module,
+    Type,
+    Field,
+    Enum,
+    Variant,
+    Function,
+    Parameter,
+    Return,
+}
+
+/// Render source-tagged inner attribute values at a specific declaration site.
+///
+/// Entries from another source language are intentionally omitted: opaque
+/// values are not translatable. Empty inputs emit no bytes.
+pub fn render_raw_attributes(
+    language: TargetLanguage,
+    site: AttributeSite,
+    attributes: &[RawAttribute],
+) -> Vec<String> {
+    attributes
+        .iter()
+        .filter(|attribute| attribute.source == language)
+        .map(|attribute| render_raw_attribute(language, site, &attribute.text))
+        .collect()
+}
+
+fn render_raw_attribute(language: TargetLanguage, site: AttributeSite, value: &str) -> String {
+    match language {
+        TargetLanguage::Rust => match site {
+            AttributeSite::Root => format!("#![{value}]"),
+            _ => format!("#[{value}]"),
+        },
+        TargetLanguage::Cpp => match site {
+            AttributeSite::Root => format!("// [[langprint::root({value})]]"),
+            _ => format!("[[{value}]]"),
+        },
+        TargetLanguage::CSharp => match site {
+            AttributeSite::Root => format!("[assembly: {value}]"),
+            AttributeSite::Module => format!("[module: {value}]"),
+            AttributeSite::Return => format!("[return: {value}]"),
+            _ => format!("[{value}]"),
+        },
+        TargetLanguage::Python => match site {
+            AttributeSite::Type | AttributeSite::Enum | AttributeSite::Function => {
+                format!("@{value}")
+            }
+            _ => format!("# @langprint {site:?}: {value}"),
+        },
+        TargetLanguage::Lua => format!("---@langprint {site:?}: {value}"),
+        TargetLanguage::Js => format!("/** @langprint {site:?}: {value} */"),
+    }
+}

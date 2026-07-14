@@ -114,6 +114,7 @@ impl BackendItem for RustEnum {
                     RustEnumVariantValue::Struct(fields) => EnumVariantValue::Struct(fields),
                 },
                 docs: variant.docs,
+                raw_attributes: Vec::new(),
             })
             .collect();
 

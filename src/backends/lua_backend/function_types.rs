@@ -45,6 +45,7 @@ impl BackendItem for LuaFunction {
                 name,
                 param_type: String::new(),
                 default_value: None,
+                raw_attributes: Vec::new(),
             })
             .collect();
 
@@ -63,6 +64,7 @@ impl BackendItem for LuaFunction {
             docs: self.doc.map(|doc| vec![doc]),
             annotations: Vec::new(),
             raw_attributes: Vec::new(),
+            return_raw_attributes: Vec::new(),
         };
         if let Some(hooks) = options.and_then(|options| options.config.hooks.as_ref()) {
             hooks.after_to_ir_function(&mut ir);

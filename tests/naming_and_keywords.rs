@@ -184,6 +184,7 @@ fn from_ir_escapes_rust_enum_variant_keyword() {
             name: "type".to_string(),
             value: EnumVariantValue::NoValue,
             docs: None,
+            raw_attributes: Vec::new(),
         }],
         underlying_type: None,
         docs: None,

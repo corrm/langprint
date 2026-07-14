@@ -263,9 +263,23 @@ They are preserved in two tiers (`langprint::ir::{Annotation, RawAttribute}`):
   admitted only when at least two backends each map it to native syntax, so Rust `#[repr(C)]`
   becomes C# `[StructLayout(LayoutKind.Sequential)]`, and Rust `#[repr(align(8))]` becomes C++
   `alignas(8)`. The IR stays target-blind: a variant names a fact, not a target's spelling.
-- **Tier 2 — opaque carry.** Everything else (`derive(Clone)`, `[DllImport]`, …) is carried verbatim
-  as a `RawAttribute { source, text }`. It round-trips **losslessly within its own language** and is
-  dropped — with a warning — only when projected to a *different* target.
+- **Tier 2 — opaque carry.** Everything else (`derive(Clone)`, `[DllImport]`, …) is carried as a
+  `RawAttribute { source, text }`: `text` is always the inner value, never pre-wrapped syntax.
+  `render_raw_attributes(language, site, values)` owns delimiters and emits each entry as its own
+  line. For example, Rust `repr(u32)` becomes `#[repr(u32)]`, C# `Flags` becomes `[Flags]`, and
+  a C# return value becomes `[return: Flags]`.
+
+  Rust root attributes are rendered as inner attributes (`#![value]`); all other Rust declaration
+  sites, including returns, use ordinary outer attributes on the function declaration
+  (`#[must_use]`). C++ uses standard `[[value]]` attributes where grammar permits; return values
+  use that same grammar-valid function-prefix position. Root metadata is
+  `// [[langprint::root(value)]]` because C++ has no translation-unit attachment point. C# uses
+  `[assembly: value]`, `[module: value]`, and `[return: value]` for its three targeted sites.
+  Python can attach native decorators only to types, enums, and functions; root, module, field,
+  variant, parameter, and return values use `# @langprint Site: value` metadata. Lua uses
+  `---@langprint Site: value`, and JavaScript/TypeScript uses
+  `/** @langprint Site: value */`. These metadata forms retain the exact node identity at sites
+  whose language grammar has no native attribute position.
 
 ## Imports
 
@@ -408,9 +422,8 @@ could not carry.
 
 ### Known scope boundaries
 
-The IR carries no per-field/per-parameter annotations and no field initializers today — conversion
-hooks operate at type/function granularity. These are deliberate scope boundaries and future
-schema-extension points, not oversights.
+The neutral IR carries opaque attribute lists on modules, types, fields, enums, variants,
+functions, parameters, and returns. Field initializers remain outside the neutral IR.
 
 ## License
 

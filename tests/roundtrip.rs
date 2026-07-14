@@ -149,6 +149,7 @@ fn clean_cpp_param() -> CppParameter {
 
 fn clean_rust_param() -> RustParameter {
     RustParameter {
+        attributes: Vec::new(),
         name: "x".into(),
         param_type: "i32".into(),
     }
@@ -206,6 +207,7 @@ fn clean_cpp_function() -> CppFunction {
 
 fn clean_rust_function() -> RustFunction {
     RustFunction {
+        return_attributes: Vec::new(),
         name: "foo".into(),
         visibility: RustVisibility::Pub,
         self_kind: RustSelfKind::None,

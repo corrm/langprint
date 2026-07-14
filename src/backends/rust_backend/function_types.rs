@@ -41,6 +41,8 @@ pub struct RustParameter {
     pub name: String,
     /// The type of the parameter.
     pub param_type: String,
+    /// Attributes applied to this parameter, without the leading `#[`.
+    pub attributes: Vec<String>,
 }
 
 impl BackendItem for RustParameter {
@@ -52,6 +54,14 @@ impl BackendItem for RustParameter {
             name: self.name,
             param_type: self.param_type,
             default_value: None,
+            raw_attributes: self
+                .attributes
+                .into_iter()
+                .map(|text| RawAttribute {
+                    source: TargetLanguage::Rust,
+                    text,
+                })
+                .collect(),
         })
     }
 
@@ -78,6 +88,12 @@ impl BackendItem for RustParameter {
             RustParameter {
                 name: input.name,
                 param_type: param_type.value,
+                attributes: input
+                    .raw_attributes
+                    .into_iter()
+                    .filter(|attribute| attribute.source == TargetLanguage::Rust)
+                    .map(|attribute| attribute.text)
+                    .collect(),
             },
             log,
         )
@@ -106,6 +122,11 @@ pub struct RustFunction {
     pub generic_args: Vec<RustGenericArgument>,
     /// The return type of the function; `None` for `()`.
     pub return_type: Option<String>,
+    /// Attributes requested for the return value, without the leading `#[`.
+    ///
+    /// Rust has no return-type attribute site, so the renderer emits these as
+    /// ordinary outer attributes on the function declaration.
+    pub return_attributes: Vec<String>,
     /// Whether the function is `unsafe`.
     pub is_unsafe: bool,
     /// Whether the function is `async`.
@@ -219,6 +240,14 @@ impl BackendItem for RustFunction {
             is_final: false,
             body: self.body,
             docs: self.docs,
+            return_raw_attributes: self
+                .return_attributes
+                .into_iter()
+                .map(|text| RawAttribute {
+                    source: TargetLanguage::Rust,
+                    text,
+                })
+                .collect(),
             annotations,
             raw_attributes,
         };
@@ -309,6 +338,12 @@ impl BackendItem for RustFunction {
             }
             None => None,
         };
+        let return_attributes = input
+            .return_raw_attributes
+            .into_iter()
+            .filter(|attribute| attribute.source == TargetLanguage::Rust)
+            .map(|attribute| attribute.text)
+            .collect();
 
         let self_kind = if input.is_static {
             RustSelfKind::None
@@ -350,6 +385,7 @@ impl BackendItem for RustFunction {
                 abi: None,
                 body: input.body,
                 attributes,
+                return_attributes,
                 docs: input.docs,
                 comments: Vec::new(),
             },

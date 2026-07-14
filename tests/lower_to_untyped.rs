@@ -56,6 +56,7 @@ fn ctypes_config_with_override(
 /// an `f64` return. Lowering must rename to the target convention and re-spell the types.
 fn neutral_function() -> LanguageFunction {
     LanguageFunction {
+        return_raw_attributes: Vec::new(),
         name: "ComputeTotal".to_string(),
         visibility: Visibility::Public,
         parameters: vec![
@@ -63,11 +64,13 @@ fn neutral_function() -> LanguageFunction {
                 name: "ItemCount".to_string(),
                 param_type: "i32".to_string(),
                 default_value: None,
+                raw_attributes: Vec::new(),
             },
             LanguageFunctionParameter {
                 name: "UnitPrice".to_string(),
                 param_type: "f64".to_string(),
                 default_value: None,
+                raw_attributes: Vec::new(),
             },
         ],
         generic_args: Vec::new(),

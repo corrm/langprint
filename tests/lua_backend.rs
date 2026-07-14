@@ -132,6 +132,7 @@ fn module_fields_round_trip_through_constants() {
 #[test]
 fn module_from_ir_warns_on_dropped_namespace_members() {
     let namespace = LanguageNamespace {
+        raw_attributes: Vec::new(),
         name: "M".to_string(),
         visibility: Visibility::Public,
         defines: None,

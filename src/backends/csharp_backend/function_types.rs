@@ -29,6 +29,7 @@ impl BackendItem for CSharpParameter {
             name: self.name,
             param_type: self.param_type,
             default_value: self.default_value,
+            raw_attributes: Vec::new(),
         })
     }
 
@@ -157,6 +158,7 @@ impl BackendItem for CSharpMethod {
             docs: self.docs,
             annotations,
             raw_attributes,
+            return_raw_attributes: Vec::new(),
         };
         if let Some(hooks) = options.and_then(|options| options.config.hooks.as_ref()) {
             hooks.after_to_ir_function(&mut function);

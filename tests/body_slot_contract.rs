@@ -45,6 +45,7 @@ fn assert_contract(language: &str, declaration: &str, definition: &str) {
 fn rust_function_honors_body_slot_contract() {
     let backend = RustBackend::default();
     let make = |body: Option<Vec<String>>| RustFunction {
+        return_attributes: Vec::new(),
         name: "f".to_string(),
         visibility: RustVisibility::Pub,
         self_kind: RustSelfKind::None,

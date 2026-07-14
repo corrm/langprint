@@ -85,6 +85,7 @@ impl BackendItem for LuaModule {
                 functions: Some(functions),
                 namespaces: None,
                 docs: self.doc.map(|doc| vec![doc]),
+                raw_attributes: Vec::new(),
             },
             log,
         )

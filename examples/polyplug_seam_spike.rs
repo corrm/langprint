@@ -37,6 +37,7 @@ unsafe extern \"Rust\" {
 
 fn param(name: &str, ty: &str) -> RustParameter {
     RustParameter {
+        attributes: Vec::new(),
         name: name.to_string(),
         param_type: ty.to_string(),
     }
@@ -52,6 +53,7 @@ fn signature(
     docs: Option<Vec<String>>,
 ) -> RustFunction {
     RustFunction {
+        return_attributes: Vec::new(),
         name: name.to_string(),
         visibility: RustVisibility::Private,
         self_kind,
@@ -114,6 +116,7 @@ fn factory_extern_block() -> RustExternBlock {
 /// LOGIC slot polyplugc fills. The `// SAFETY` line rides in `comments` (gap 3).
 fn decode_abi_form(body: Option<Vec<String>>) -> RustFunction {
     RustFunction {
+        return_attributes: Vec::new(),
         name: "decoder_decode_abi".to_string(),
         visibility: RustVisibility::Private,
         self_kind: RustSelfKind::None,

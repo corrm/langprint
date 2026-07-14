@@ -213,6 +213,7 @@ fn renders_class_extends() {
 #[test]
 fn function_from_ir_warns_on_dropped_generics() {
     let function = LanguageFunction {
+        return_raw_attributes: Vec::new(),
         name: "identity".to_string(),
         visibility: Visibility::Public,
         parameters: vec![],

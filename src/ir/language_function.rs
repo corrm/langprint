@@ -9,8 +9,12 @@ pub struct LanguageFunctionParameter {
     pub param_type: String,
     /// Default value for the parameter, if any.
     pub default_value: Option<String>,
+    /// Opaque source-tagged attributes applied to this parameter.
+    ///
+    /// Each entry is an inner attribute value. The target renderer owns the
+    /// surrounding syntax.
+    pub raw_attributes: Vec<RawAttribute>,
 }
-
 /// Represents a function in a language-agnostic way.
 #[derive(Debug, Clone, PartialEq)]
 pub struct LanguageFunction {
@@ -38,6 +42,11 @@ pub struct LanguageFunction {
     pub body: Option<Vec<String>>,
     /// Documentation for the function.
     pub docs: Option<Vec<String>>,
+    /// Opaque source-tagged attributes applied to the return value.
+    ///
+    /// Each entry is an inner attribute value. The target renderer owns the
+    /// surrounding syntax.
+    pub return_raw_attributes: Vec<RawAttribute>,
     /// Curated source-neutral annotations (Tier 1).
     pub annotations: Vec<Annotation>,
     /// Opaque source-tagged attributes carried verbatim (Tier 2).

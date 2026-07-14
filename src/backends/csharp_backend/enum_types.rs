@@ -77,6 +77,7 @@ impl BackendItem for CSharpEnum {
                     None => EnumVariantValue::NoValue,
                 },
                 docs: member.docs,
+                raw_attributes: Vec::new(),
             })
             .collect();
 
